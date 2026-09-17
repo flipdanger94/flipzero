@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+.composer .send-button{transition:.18s ease}.composer .send-button:hover{transform:translateY(-1px);box-shadow:0 6px 18px rgba(223,72,174,.2)}.composer .send-button:disabled{opacity:.35;cursor:not-allowed;transform:none;box-shadow:none}
+
 :root { --bg:#121116; --panel:#19181f; --deep:#0d0c10; --raised:#242229; --text:#f7f4fb; --muted:#8d8896; --border:rgba(255,255,255,.075); --pink:#ff5c70; --lime:#b7f35a; }
 *{box-sizing:border-box} html,body{height:100%} body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif}button,input,textarea{font:inherit}button{color:inherit}button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px solid #ff7182;outline-offset:2px}
 .app-shell{display:grid;grid-template-columns:72px 248px minmax(420px,1fr) 292px;height:100dvh;min-height:640px;overflow:hidden;background:radial-gradient(circle at 50% 0,rgba(107,56,125,.13),transparent 34%),#121116}

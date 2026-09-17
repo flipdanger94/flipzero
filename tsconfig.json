@@ -38,6 +38,10 @@
   ],
   "exclude": [
     "node_modules",
-    "examples"
+    "examples",
+    "db",
+    "build",
+    "components",
+    "hooks"
   ]
 }
