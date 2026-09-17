@@ -22,3 +22,11 @@ pnpm dev
 ## Архитектура
 
 Веб-клиент построен на Next.js 16, React 19 и TypeScript. Следующие этапы: аутентификация, PostgreSQL/Drizzle, API, WebSocket gateway, Redis presence и голосовые комнаты через LiveKit.
+
+Подробности: [архитектура](docs/ARCHITECTURE.md) и [дорожная карта](docs/ROADMAP.md).
+
+## Проверка API
+
+```bash
+curl http://localhost:3000/api/health
+```
