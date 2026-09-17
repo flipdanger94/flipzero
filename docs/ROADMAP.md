@@ -6,7 +6,8 @@
 - [x] Интерактивный многоканальный прототип
 - [x] Базовая доменная модель и RBAC permissions
 - [x] Health API и production pipeline
-- [ ] PostgreSQL и миграции
+- [x] PostgreSQL-схема и первая миграция
+- [ ] Production PostgreSQL и применение миграции
 - [ ] Регистрация, вход, сессии и восстановление доступа
 - [ ] WebSocket gateway
 
