@@ -1,6 +1,6 @@
 "use client";
 
-import { type FormEvent, useState } from "react";
+import { type FormEvent, useEffect, useState } from "react";
 import { Bell, BookOpen, ChevronDown, CirclePlus, Compass, Gamepad2, Gift, Hash, Headphones, HelpCircle, Image as ImageIcon, Mic, Plus, Search, SendHorizontal, Settings, Smile, Sparkles, Users, Volume2 } from "lucide-react";
 
 const spaces = [{ label: "FZ", style: "space-logo" }, { label: "GG", style: "space-orchid" }, { label: "UX", style: "space-sky" }, { label: "24", style: "space-amber" }];
@@ -22,6 +22,31 @@ export default function Home() {
   const [messages, setMessages] = useState(initialMessages);
   const [draft, setDraft] = useState("");
   const [activeChannel, setActiveChannel] = useState("общий-чат");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [showMembers, setShowMembers] = useState(true);
+  const [notifications, setNotifications] = useState(true);
+  const [storageReady, setStorageReady] = useState(false);
+
+  useEffect(() => {
+    const saved = window.localStorage.getItem("flipzero:messages");
+    if (saved) {
+      try {
+        setMessages(JSON.parse(saved) as Message[]);
+      } catch {
+        window.localStorage.removeItem("flipzero:messages");
+      }
+    }
+    setStorageReady(true);
+  }, []);
+
+  useEffect(() => {
+    if (storageReady) window.localStorage.setItem("flipzero:messages", JSON.stringify(messages));
+  }, [messages, storageReady]);
+
+  const visibleMessages = messages.filter((message) => {
+    const query = searchQuery.trim().toLocaleLowerCase("ru");
+    return !query || message.text.toLocaleLowerCase("ru").includes(query) || message.name.toLocaleLowerCase("ru").includes(query);
+  });
 
   function sendMessage(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -32,7 +57,7 @@ export default function Home() {
   }
 
   return (
-    <main className="app-shell">
+    <main className={`app-shell ${showMembers ? "" : "members-hidden"}`}>
       <nav className="space-rail" aria-label="Сообщества">
         <button className="rail-action home-action" aria-label="Главная"><Sparkles size={21} /></button>
         <span className="rail-separator" />
@@ -54,11 +79,11 @@ export default function Home() {
       </aside>
 
       <section className="chat-panel">
-        <header className="chat-header"><div className="channel-title"><Hash size={21} /><strong>{activeChannel}</strong><span>Разговоры обо всём</span></div><div className="header-actions"><button aria-label="Уведомления"><Bell size={19} /></button><button aria-label="Участники"><Users size={19} /></button><label className="search-box"><Search size={16} /><input aria-label="Поиск" placeholder="Поиск" /></label></div></header>
+        <header className="chat-header"><div className="channel-title"><Hash size={21} /><strong>{activeChannel}</strong><span>Разговоры обо всём</span></div><div className="header-actions"><button className={notifications ? "is-active" : ""} aria-label={notifications ? "Выключить уведомления" : "Включить уведомления"} aria-pressed={notifications} onClick={() => setNotifications((value) => !value)}><Bell size={19} /></button><button className={showMembers ? "is-active" : ""} aria-label={showMembers ? "Скрыть участников" : "Показать участников"} aria-pressed={showMembers} onClick={() => setShowMembers((value) => !value)}><Users size={19} /></button><label className="search-box"><Search size={16} /><input aria-label="Поиск" placeholder="Поиск" value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} /></label></div></header>
         <div className="message-list">
           <div className="channel-intro"><div className="intro-icon"><Hash size={31} /></div><h1>Добро пожаловать в общий чат</h1><p>Это начало канала <strong>#общий-чат</strong>. Знакомьтесь, делитесь идеями и создавайте что-то новое вместе.</p></div>
           <div className="day-divider"><span>17 сентября 2026</span></div>
-          {messages.map((message) => (
+          {visibleMessages.map((message) => (
             <article className="message" key={message.name}>
               <div className={`avatar ${message.accent}`}>{message.initials}</div>
               <div className="message-body"><div className="message-meta"><strong>{message.name}</strong>{message.badge && <span className="bot-badge">{message.badge}</span>}<time>{message.time}</time></div><p>{message.text}</p>
@@ -67,6 +92,7 @@ export default function Home() {
               </div>
             </article>
           ))}
+          {visibleMessages.length === 0 && <div className="search-empty"><Search size={24} /><strong>Ничего не найдено</strong><span>Попробуйте изменить поисковый запрос.</span></div>}
         </div>
         <div className="composer-wrap"><div className="typing"><span /><span /><span /> Mira печатает...</div><form className="composer" onSubmit={sendMessage}><button type="button" aria-label="Добавить"><CirclePlus size={22} /></button><textarea aria-label="Сообщение" placeholder={`Написать в #${activeChannel}`} rows={1} value={draft} onChange={(event) => setDraft(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); event.currentTarget.form?.requestSubmit(); } }} /><button type="button" aria-label="Изображение"><ImageIcon size={20} /></button><button type="button" aria-label="Эмодзи"><Smile size={20} /></button><button className="send-button" type="submit" aria-label="Отправить" disabled={!draft.trim()}><SendHorizontal size={18} /></button></form></div>
       </section>
