@@ -1,13 +1,14 @@
 "use client";
 
 import { type FormEvent, useState } from "react";
-import { Hash, LoaderCircle, Volume2, X } from "lucide-react";
+import { Bell, Columns3, Hash, LoaderCircle, MessagesSquare, Volume2, X } from "lucide-react";
 
-export type CreatedChannel = { id: string; spaceId: string; parentId: string | null; name: string; topic: string | null; kind: "text" | "voice"; position: number };
+type ChannelKind = "text" | "forum" | "voice" | "announcement" | "board";
+export type CreatedChannel = { id: string; spaceId: string; parentId: string | null; name: string; topic: string | null; kind: ChannelKind; position: number };
 type CategoryOption = { id: string; name: string };
 
 export function CreateChannelDialog({ spaceId, categories, initialKind, initialParentId, onClose, onCreated }: { spaceId: string; categories: CategoryOption[]; initialKind: "text" | "voice"; initialParentId?: string | null; onClose: () => void; onCreated: (channel: CreatedChannel) => void }) {
-  const [kind, setKind] = useState<"text" | "voice">(initialKind);
+  const [kind, setKind] = useState<ChannelKind>(initialKind);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -30,6 +31,9 @@ export function CreateChannelDialog({ spaceId, categories, initialKind, initialP
       <div className="channel-kind-picker">
         <button className={kind === "text" ? "active" : ""} onClick={() => setKind("text")}><Hash size={20} /><span><strong>Текстовый</strong><small>Сообщения и обсуждения</small></span></button>
         <button className={kind === "voice" ? "active" : ""} onClick={() => setKind("voice")}><Volume2 size={20} /><span><strong>Голосовой</strong><small>Живое общение</small></span></button>
+        <button className={kind === "forum" ? "active" : ""} onClick={() => setKind("forum")}><MessagesSquare size={20} /><span><strong>Форум</strong><small>Темы и обсуждения</small></span></button>
+        <button className={kind === "announcement" ? "active" : ""} onClick={() => setKind("announcement")}><Bell size={20} /><span><strong>Объявления</strong><small>Новости сообщества</small></span></button>
+        <button className={kind === "board" ? "active" : ""} onClick={() => setKind("board")}><Columns3 size={20} /><span><strong>Доска</strong><small>Задачи и события</small></span></button>
       </div>
       <form onSubmit={submit}>
         {error ? <div className="auth-error" role="alert">{error}</div> : null}

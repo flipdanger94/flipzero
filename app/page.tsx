@@ -13,6 +13,7 @@ import { ChannelPermissionsDialog } from "@/components/channel-permissions-dialo
 import { ModerationDialog } from "@/components/moderation-dialog";
 import { GamificationDialog } from "@/components/gamification-dialog";
 import { PersistentChat } from "@/components/persistent-chat";
+import { ChannelBoard } from "@/components/channel-board";
 
 type ApiChannel = { id: string; parentId: string | null; name: string; topic: string | null; kind: string; position?: number };
 type ApiCategory = { id: string; spaceId: string; name: string; position: number };
@@ -103,9 +104,12 @@ export default function Home() {
     if (storageReady) window.localStorage.setItem("flipzero:messages:v2", JSON.stringify(channelMessages));
   }, [channelMessages, storageReady]);
 
+  useEffect(() => { const handler = (event: Event) => selectChannel((event as CustomEvent<string>).detail); window.addEventListener("flipzero:select-channel", handler); return () => window.removeEventListener("flipzero:select-channel", handler); });
+
   const activeMessages = channelMessages[activeChannel] ?? [];
   const activeSpace = userSpaces.find((space) => space.id === activeSpaceId) ?? null;
   const activeApiChannel = activeSpace?.channels.find((channel) => channel.name === activeChannel && ["text", "forum", "announcement"].includes(channel.kind)) ?? null;
+  const activeBoardChannel = activeSpace?.channels.find((channel) => channel.name === activeChannel && channel.kind === "board") ?? null;
   const activeDetails = channelDetails[activeChannel] ?? { title: activeChannel, description: "Канал пространства FlipZero." };
   const visibleMessages = activeMessages.filter((message) => {
     const query = searchQuery.trim().toLocaleLowerCase("ru");
@@ -138,7 +142,7 @@ export default function Home() {
 
   function addChannel(channel: CreatedChannel) {
     setUserSpaces((current) => current.map((space) => space.id === channel.spaceId ? { ...space, channels: [...space.channels, channel] } : space));
-    if (channel.kind === "text") selectChannel(channel.name);
+    if (channel.kind !== "voice") selectChannel(channel.name);
     setCreateChannelTarget(null);
   }
 
@@ -196,7 +200,7 @@ export default function Home() {
 
       <section className="chat-panel">
         <header className="chat-header"><div className="channel-title"><Hash size={21} /><strong>{activeChannel}</strong><span>Разговоры обо всём</span></div><div className="header-actions"><button className={notifications ? "is-active" : ""} aria-label={notifications ? "Выключить уведомления" : "Включить уведомления"} aria-pressed={notifications} onClick={() => setNotifications((value) => !value)}><Bell size={19} /></button><button className={showMembers ? "is-active" : ""} aria-label={showMembers ? "Скрыть участников" : "Показать участников"} aria-pressed={showMembers} onClick={() => setShowMembers((value) => !value)}><Users size={19} /></button><label className="search-box"><Search size={16} /><input aria-label="Поиск" placeholder="Поиск" value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} /></label></div></header>
-        {activeApiChannel && user ? <PersistentChat channelId={activeApiChannel.id} channelName={activeApiChannel.name} spaceId={activeSpace!.id} currentUserId={user.id} ownerId={activeSpace?.ownerId} searchQuery={searchQuery} /> : <><div className="message-list">
+        {activeBoardChannel ? <ChannelBoard channelId={activeBoardChannel.id} channelName={activeBoardChannel.name} /> : activeApiChannel && user ? <PersistentChat channelId={activeApiChannel.id} channelName={activeApiChannel.name} spaceId={activeSpace!.id} currentUserId={user.id} ownerId={activeSpace?.ownerId} searchQuery={searchQuery} /> : <><div className="message-list">
           <div className="channel-intro"><div className="intro-icon"><Hash size={31} /></div><h1>{activeDetails.title}</h1><p>Это начало канала <strong>#{activeChannel}</strong>. {activeDetails.description}</p></div>
           <div className="day-divider"><span>17 сентября 2026</span></div>
           {visibleMessages.map((message) => (
@@ -226,5 +230,5 @@ function ChannelGroup({ title, onAdd, onDelete, children }: { title: string; onA
   return <section className="channel-group"><h2><span>{title}</span><span className="category-actions">{onAdd ? <button aria-label={`Добавить в ${title}`} onClick={onAdd}><Plus size={15} /></button> : null}{onDelete ? <button aria-label={`Удалить категорию ${title}`} onClick={onDelete}><Trash2 size={13} /></button> : null}</span></h2>{children}</section>;
 }
 function Channel({ icon, label, active = false, badge, voice = false, onSelect, onManage, onDelete }: { icon: React.ReactNode; label: string; active?: boolean; badge?: string; voice?: boolean; onSelect?: (channel: string) => void; onManage?: () => void; onDelete?: () => void }) {
-  return <div className={`channel-row ${active ? "active" : ""}`}><button className="channel" onClick={() => onSelect?.(label)}><span>{icon}</span><strong>{label}</strong>{voice ? <span className="live-pill">LIVE</span> : null}{badge ? <b>{badge}</b> : null}</button>{onManage ? <button className="channel-manage" aria-label={`Настроить права канала ${label}`} onClick={onManage}><Settings2 size={14} /></button> : null}{onDelete ? <button className="channel-delete" aria-label={`Удалить канал ${label}`} onClick={onDelete}><Trash2 size={14} /></button> : null}</div>;
+  return <div className={`channel-row ${active ? "active" : ""}`}><button className="channel" onClick={() => { if (onSelect) onSelect(label); else if (!voice) window.dispatchEvent(new CustomEvent("flipzero:select-channel", { detail: label })); }}><span>{icon}</span><strong>{label}</strong>{voice ? <span className="live-pill">LIVE</span> : null}{badge ? <b>{badge}</b> : null}</button>{onManage ? <button className="channel-manage" aria-label={`Настроить права канала ${label}`} onClick={onManage}><Settings2 size={14} /></button> : null}{onDelete ? <button className="channel-delete" aria-label={`Удалить канал ${label}`} onClick={onDelete}><Trash2 size={14} /></button> : null}</div>;
 }
