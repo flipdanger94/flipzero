@@ -1,9 +1,12 @@
 "use client";
 
 import { type FormEvent, useEffect, useState } from "react";
-import { Bell, BookOpen, ChevronDown, CirclePlus, Compass, Gamepad2, Gift, Hash, Headphones, HelpCircle, Image as ImageIcon, Mic, Plus, Search, SendHorizontal, Settings, Smile, Sparkles, Users, Volume2 } from "lucide-react";
+import { Bell, BookOpen, ChevronDown, CirclePlus, Compass, Gift, Hash, Headphones, HelpCircle, Image as ImageIcon, LoaderCircle, Mic, Plus, Search, SendHorizontal, Settings, Smile, Sparkles, Users, Volume2 } from "lucide-react";
+import { CreateSpaceDialog } from "@/components/create-space-dialog";
 
-const spaces = [{ label: "FZ", style: "space-logo" }, { label: "GG", style: "space-orchid" }, { label: "UX", style: "space-sky" }, { label: "24", style: "space-amber" }];
+type ApiChannel = { id: string; name: string; topic: string | null; kind: string; position?: number };
+type ApiSpace = { id: string; ownerId?: string; name: string; slug: string; description: string | null; iconUrl?: string | null; visibility?: string; accentColor: string; channels: ApiChannel[] };
+type CurrentUser = { id: string; username: string; displayName: string; globalLevel: number; globalXp: number };
 type Message = { initials: string; name: string; time: string; text: string; accent: string; reactions: string[]; badge?: string; quest?: boolean };
 
 const generalMessages: Message[] = [
@@ -40,6 +43,24 @@ export default function Home() {
   const [showMembers, setShowMembers] = useState(true);
   const [notifications, setNotifications] = useState(true);
   const [storageReady, setStorageReady] = useState(false);
+  const [user, setUser] = useState<CurrentUser | null>(null);
+  const [userSpaces, setUserSpaces] = useState<ApiSpace[]>([]);
+  const [activeSpaceId, setActiveSpaceId] = useState<string | null>(null);
+  const [spacesLoading, setSpacesLoading] = useState(true);
+  const [showCreateSpace, setShowCreateSpace] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    Promise.all([fetch("/api/v1/auth/me").then((response) => response.json()), fetch("/api/v1/spaces").then((response) => response.json())]).then(([profile, spaceData]) => {
+      if (cancelled) return;
+      setUser(profile.user ?? null);
+      const loadedSpaces = (spaceData.spaces ?? []) as ApiSpace[];
+      setUserSpaces(loadedSpaces);
+      setActiveSpaceId(loadedSpaces[0]?.id ?? null);
+      setSpacesLoading(false);
+    }).catch(() => { if (!cancelled) setSpacesLoading(false); });
+    return () => { cancelled = true; };
+  }, []);
 
   useEffect(() => {
     const saved = window.localStorage.getItem("flipzero:messages:v2");
@@ -62,6 +83,9 @@ export default function Home() {
   }, [channelMessages, storageReady]);
 
   const activeMessages = channelMessages[activeChannel] ?? [];
+  const activeSpace = userSpaces.find((space) => space.id === activeSpaceId) ?? null;
+  const textChannels = activeSpace?.channels.filter((channel) => channel.kind === "text") ?? [];
+  const voiceChannels = activeSpace?.channels.filter((channel) => channel.kind === "voice") ?? [];
   const activeDetails = channelDetails[activeChannel] ?? { title: activeChannel, description: "Канал пространства FlipZero." };
   const visibleMessages = activeMessages.filter((message) => {
     const query = searchQuery.trim().toLocaleLowerCase("ru");
@@ -72,7 +96,9 @@ export default function Home() {
     event.preventDefault();
     const text = draft.trim();
     if (!text) return;
-    setChannelMessages((current) => ({ ...current, [activeChannel]: [...(current[activeChannel] ?? []), { initials: "AP", name: "Alex Push", time: "Только что", text, accent: "avatar-coral", reactions: [] }] }));
+    const displayName = user?.displayName ?? "Alex Push";
+    const initials = displayName.split(/\s+/).map((part) => part[0]).join("").slice(0, 2).toLocaleUpperCase("ru");
+    setChannelMessages((current) => ({ ...current, [activeChannel]: [...(current[activeChannel] ?? []), { initials, name: displayName, time: "Только что", text, accent: "avatar-coral", reactions: [] }] }));
     setDraft("");
   }
 
@@ -83,25 +109,23 @@ export default function Home() {
   }
 
   return (
-    <main className={`app-shell ${showMembers ? "" : "members-hidden"}`}>
+    <><main className={`app-shell ${showMembers ? "" : "members-hidden"}`}>
       <nav className="space-rail" aria-label="Сообщества">
         <button className="rail-action home-action" aria-label="Главная"><Sparkles size={21} /></button>
         <span className="rail-separator" />
-        {spaces.map((space, index) => <button key={space.label} className={`space-button ${space.style} ${index === 0 ? "active" : ""}`} aria-label={`Сообщество ${space.label}`}>{space.label}</button>)}
-        <button className="rail-action add-space" aria-label="Добавить сообщество"><Plus size={22} /></button>
+        {spacesLoading ? <LoaderCircle className="rail-loader spin" size={20} /> : userSpaces.map((space) => <button key={space.id} className={`space-button ${space.id === activeSpaceId ? "active" : ""}`} style={{ background: `linear-gradient(145deg, ${space.accentColor}, #7136ad)` }} aria-label={`Сообщество ${space.name}`} title={space.name} onClick={() => { setActiveSpaceId(space.id); const first = space.channels.find((channel) => channel.kind === "text"); if (first) selectChannel(first.name); }}>{space.name.slice(0, 2).toLocaleUpperCase("ru")}</button>)}
+        <button className="rail-action add-space" aria-label="Добавить сообщество" onClick={() => setShowCreateSpace(true)}><Plus size={22} /></button>
         <button className="rail-action discover" aria-label="Обзор сообществ"><Compass size={21} /></button>
         <div className="rail-bottom"><button className="rail-action" aria-label="Помощь"><HelpCircle size={20} /></button></div>
       </nav>
 
       <aside className="channel-panel">
-        <button className="space-heading"><span className="brand-mark">FZ</span><span><strong>FlipZero</strong><small>Пространство команды</small></span><ChevronDown size={17} /></button>
+        <button className="space-heading"><span className="brand-mark" style={activeSpace ? { background: `linear-gradient(135deg, ${activeSpace.accentColor}, #b33bd4)` } : undefined}>{activeSpace ? activeSpace.name.slice(0, 2).toLocaleUpperCase("ru") : "FZ"}</span><span><strong>{activeSpace?.name ?? "FlipZero"}</strong><small>{activeSpace?.description ?? (userSpaces.length ? "Пространство команды" : "Создайте пространство")}</small></span><ChevronDown size={17} /></button>
         <div className="channel-scroll">
           <button className="boost-card"><span className="boost-icon"><Sparkles size={17} /></span><span><strong>Уровень пространства</strong><small>2 из 5 усилений</small></span><span className="boost-level">2</span></button>
-          <ChannelGroup title="СТАРТ"><Channel icon={<Hash size={17} />} label="добро-пожаловать" active={activeChannel === "добро-пожаловать"} onSelect={selectChannel} /><Channel icon={<BookOpen size={17} />} label="правила" active={activeChannel === "правила"} onSelect={selectChannel} /></ChannelGroup>
-          <ChannelGroup title="ОБЩЕНИЕ" action><Channel active={activeChannel === "общий-чат"} icon={<Hash size={17} />} label="общий-чат" badge="24" onSelect={selectChannel} /><Channel icon={<Hash size={17} />} label="творчество" active={activeChannel === "творчество"} onSelect={selectChannel} /><Channel icon={<Gamepad2 size={17} />} label="игры" active={activeChannel === "игры"} onSelect={selectChannel} /></ChannelGroup>
-          <ChannelGroup title="ГОЛОСОВЫЕ" action><Channel icon={<Volume2 size={17} />} label="Лаунж" voice /><div className="voice-people"><span className="mini-avatar avatar-violet">MK</span><span className="voice-name">Mira K.</span><Mic size={13} /></div><Channel icon={<Volume2 size={17} />} label="Фокус-комната" /></ChannelGroup>
+          {activeSpace ? <><ChannelGroup title="ТЕКСТОВЫЕ" action>{textChannels.map((channel) => <Channel key={channel.id} active={activeChannel === channel.name} icon={channel.name === "добро-пожаловать" ? <BookOpen size={17} /> : <Hash size={17} />} label={channel.name} onSelect={selectChannel} />)}</ChannelGroup><ChannelGroup title="ГОЛОСОВЫЕ" action>{voiceChannels.map((channel) => <Channel key={channel.id} icon={<Volume2 size={17} />} label={channel.name} voice />)}</ChannelGroup></> : <div className="space-empty"><strong>Здесь пока пусто</strong><span>Создайте первое пространство, чтобы открыть каналы и роли.</span><button onClick={() => setShowCreateSpace(true)}>Создать пространство</button></div>}
         </div>
-        <div className="user-dock"><div className="avatar avatar-coral">AP<span className="presence" /></div><div className="dock-copy"><strong>Alex Push</strong><small>Уровень 12</small></div><button aria-label="Микрофон"><Mic size={17} /></button><button aria-label="Наушники"><Headphones size={17} /></button><button aria-label="Настройки"><Settings size={17} /></button></div>
+        <div className="user-dock"><div className="avatar avatar-coral">{user?.displayName.split(/\s+/).map((part) => part[0]).join("").slice(0, 2).toLocaleUpperCase("ru") ?? "AP"}<span className="presence" /></div><div className="dock-copy"><strong>{user?.displayName ?? "Профиль"}</strong><small>Уровень {user?.globalLevel ?? 1}</small></div><button aria-label="Микрофон"><Mic size={17} /></button><button aria-label="Наушники"><Headphones size={17} /></button><button aria-label="Настройки"><Settings size={17} /></button></div>
       </aside>
 
       <section className="chat-panel">
@@ -128,7 +152,7 @@ export default function Home() {
         <div className="member-section"><h2>В СЕТИ — 4</h2>{members.map((member) => <button className="member" key={member.name}><span className={`mini-avatar ${member.accent}`}>{member.initials}<i /></span><span><strong>{member.name}</strong><small>{member.status}</small></span><b>{member.level}</b></button>)}</div>
         <div className="achievement"><div className="achievement-icon">✦</div><div><small>ПОЧТИ ПОЛУЧЕНО</small><strong>Ранний участник</strong><span>92% выполнено</span></div></div>
       </aside>
-    </main>
+    </main>{showCreateSpace ? <CreateSpaceDialog onClose={() => setShowCreateSpace(false)} onCreated={(space) => { setUserSpaces((current) => [...current, space]); setActiveSpaceId(space.id); const first = space.channels.find((channel) => channel.kind === "text"); if (first) selectChannel(first.name); setShowCreateSpace(false); }} /> : null}</>
   );
 }
 
