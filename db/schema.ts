@@ -143,6 +143,25 @@ export const boardItems = pgTable("board_items", {
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 }, (table) => [index("board_items_channel_status_idx").on(table.channelId, table.status, table.position)]);
 
+export const communityEvents = pgTable("community_events", {
+  id: text("id").primaryKey(),
+  spaceId: text("space_id").notNull().references(() => spaces.id, { onDelete: "cascade" }),
+  creatorId: text("creator_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  title: text("title").notNull(),
+  description: text("description"),
+  location: text("location"),
+  startsAt: timestamp("starts_at", { withTimezone: true }).notNull(),
+  endsAt: timestamp("ends_at", { withTimezone: true }),
+  capacity: integer("capacity"),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [index("community_events_space_start_idx").on(table.spaceId, table.startsAt)]);
+
+export const eventAttendees = pgTable("event_attendees", {
+  eventId: text("event_id").notNull().references(() => communityEvents.id, { onDelete: "cascade" }),
+  userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  joinedAt: timestamp("joined_at", { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [primaryKey({ columns: [table.eventId, table.userId] }), index("event_attendees_user_idx").on(table.userId)]);
+
 export const reactions = pgTable("reactions", {
   messageId: text("message_id").notNull().references(() => messages.id, { onDelete: "cascade" }),
   userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
