@@ -238,6 +238,24 @@ export const moderationCases = pgTable("moderation_cases", {
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 }, (table) => [index("moderation_space_target_idx").on(table.spaceId, table.targetUserId)]);
 
+export const moderationFlags = pgTable("moderation_flags", {
+  id: text("id").primaryKey(),
+  spaceId: text("space_id").notNull().references(() => spaces.id, { onDelete: "cascade" }),
+  channelId: text("channel_id").notNull().references(() => channels.id, { onDelete: "cascade" }),
+  messageId: text("message_id").notNull().references(() => messages.id, { onDelete: "cascade" }),
+  authorId: text("author_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  category: text("category").notNull(),
+  severity: text("severity").notNull(),
+  confidence: integer("confidence").notNull(),
+  summary: text("summary").notNull(),
+  evidence: jsonb("evidence").default([]).notNull(),
+  status: text("status").default("pending").notNull(),
+  autoHidden: boolean("auto_hidden").default(false).notNull(),
+  reviewedById: text("reviewed_by_id").references(() => users.id, { onDelete: "set null" }),
+  reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [uniqueIndex("moderation_flags_message_unique").on(table.messageId), index("moderation_flags_space_status_idx").on(table.spaceId, table.status, table.createdAt)]);
+
 export const xpEvents = pgTable("xp_events", {
   id: text("id").primaryKey(),
   userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),

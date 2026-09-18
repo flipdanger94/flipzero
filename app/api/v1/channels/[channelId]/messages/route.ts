@@ -1,9 +1,10 @@
 import { randomUUID } from "node:crypto";
-import { and, asc, desc, eq, ilike, inArray, isNull, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gt, ilike, inArray, isNull, or, sql } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { getDatabase } from "@/db/client";
-import { channels, channelNotificationSettings, members, messages, reactions, spaces, users } from "@/db/schema";
+import { channels, channelNotificationSettings, members, messages, moderationCases, moderationFlags, reactions, spaces, users } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
+import { assessMessageSafety } from "@/lib/trust-safety";
 
 async function accessChannel(channelId: string) {
   const user = await getCurrentUser();
@@ -32,8 +33,18 @@ export async function POST(request: Request, { params }: { params: Promise<{ cha
   const content = typeof body?.content === "string" ? body.content.trim().slice(0, 4000) : ""; const attachments = Array.isArray(body?.attachments) ? body.attachments.filter((item: unknown) => { if (!item || typeof item !== "object") return false; const attachment = item as Record<string, unknown>; return attachment.type === "voice" && typeof attachment.url === "string" && attachment.url.startsWith("data:audio/") && attachment.url.length <= 3_000_000 && typeof attachment.duration === "number" && attachment.duration > 0 && attachment.duration <= 65; }).slice(0, 1) : [];
   if (access.channel.kind === "announcement" && access.channel.ownerId !== access.user.id) return NextResponse.json({ code: "READ_ONLY", message: "Публиковать объявления может только владелец." }, { status: 403 });
   if (!content && !attachments.length) return NextResponse.json({ code: "EMPTY_MESSAGE", message: "Сообщение пустое." }, { status: 400 });
-  const id = randomUUID(); await access.database.insert(messages).values({ id, channelId, authorId: access.user.id, content, attachments, replyToId: body?.replyToId || null, threadRootId: body?.threadRootId || null });
-  return NextResponse.json({ message: { id, channelId, authorId: access.user.id, displayName: access.user.displayName, username: access.user.username, content, attachments, replyToId: body?.replyToId || null, threadRootId: body?.threadRootId || null, reactions: [], createdAt: new Date().toISOString() } }, { status: 201 });
+  if (access.channel.ownerId !== access.user.id) {
+    const [timeout] = await access.database.select({ expiresAt: moderationCases.expiresAt }).from(moderationCases).where(and(eq(moderationCases.spaceId, access.channel.spaceId), eq(moderationCases.targetUserId, access.user.id), eq(moderationCases.action, "timeout"), gt(moderationCases.expiresAt, new Date()))).orderBy(desc(moderationCases.createdAt)).limit(1);
+    if (timeout?.expiresAt) return NextResponse.json({ code: "TIMED_OUT", message: `Отправка сообщений ограничена до ${timeout.expiresAt.toLocaleString("ru-RU")}.` }, { status: 403 });
+  }
+  const assessment = assessMessageSafety(content);
+  const id = randomUUID();
+  await access.database.transaction(async (tx) => {
+    await tx.insert(messages).values({ id, channelId, authorId: access.user.id, content, attachments, replyToId: body?.replyToId || null, threadRootId: body?.threadRootId || null, deletedAt: assessment.autoHide ? new Date() : null });
+    if (assessment.flagged) await tx.insert(moderationFlags).values({ id: randomUUID(), spaceId: access.channel.spaceId, channelId, messageId: id, authorId: access.user.id, category: assessment.category!, severity: assessment.severity, confidence: assessment.confidence, summary: assessment.summary, evidence: assessment.signals, autoHidden: assessment.autoHide });
+  });
+  if (assessment.autoHide) return NextResponse.json({ code: "MODERATION_HELD", message: "Сообщение временно скрыто автоматической защитой и отправлено на проверку модератору." }, { status: 422 });
+  return NextResponse.json({ message: { id, channelId, authorId: access.user.id, displayName: access.user.displayName, username: access.user.username, content, attachments, replyToId: body?.replyToId || null, threadRootId: body?.threadRootId || null, reactions: [], createdAt: new Date().toISOString() }, moderation: assessment.flagged ? { status: "pending", severity: assessment.severity } : null }, { status: 201 });
 }
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ channelId: string }> }) {
@@ -41,7 +52,14 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ ch
   if (body?.action === "notifications") { const mode = ["all", "mentions", "none"].includes(body.mode) ? body.mode : "mentions"; await access.database.insert(channelNotificationSettings).values({ userId: access.user.id, channelId, mode }).onConflictDoUpdate({ target: [channelNotificationSettings.userId, channelNotificationSettings.channelId], set: { mode, updatedAt: new Date() } }); return NextResponse.json({ mode }); }
   const messageId = String(body?.messageId ?? ""); const [message] = await access.database.select().from(messages).where(and(eq(messages.id, messageId), eq(messages.channelId, channelId))).limit(1); if (!message) return NextResponse.json({ message: "Сообщение не найдено." }, { status: 404 });
   if (body?.action === "pin") { if (access.channel.ownerId !== access.user.id) return NextResponse.json({ message: "Закреплять может только владелец." }, { status: 403 }); await access.database.update(messages).set({ pinnedAt: message.pinnedAt ? null : new Date(), pinnedById: message.pinnedAt ? null : access.user.id }).where(eq(messages.id, messageId)); return NextResponse.json({ pinned: !message.pinnedAt }); }
-  if (message.authorId !== access.user.id) return NextResponse.json({ message: "Можно редактировать только свои сообщения." }, { status: 403 }); const content = String(body?.content ?? "").trim().slice(0, 4000); if (!content) return NextResponse.json({ message: "Сообщение пустое." }, { status: 400 }); await access.database.update(messages).set({ content, editedAt: new Date() }).where(eq(messages.id, messageId)); return NextResponse.json({ content });
+  if (message.authorId !== access.user.id) return NextResponse.json({ message: "Можно редактировать только свои сообщения." }, { status: 403 }); const content = String(body?.content ?? "").trim().slice(0, 4000); if (!content) return NextResponse.json({ message: "Сообщение пустое." }, { status: 400 });
+  const assessment = assessMessageSafety(content);
+  await access.database.transaction(async (tx) => {
+    await tx.update(messages).set({ content, editedAt: new Date(), deletedAt: assessment.autoHide ? new Date() : message.deletedAt }).where(eq(messages.id, messageId));
+    if (assessment.flagged) await tx.insert(moderationFlags).values({ id: randomUUID(), spaceId: access.channel.spaceId, channelId, messageId, authorId: access.user.id, category: assessment.category!, severity: assessment.severity, confidence: assessment.confidence, summary: assessment.summary, evidence: assessment.signals, autoHidden: assessment.autoHide }).onConflictDoUpdate({ target: moderationFlags.messageId, set: { category: assessment.category!, severity: assessment.severity, confidence: assessment.confidence, summary: assessment.summary, evidence: assessment.signals, status: "pending", autoHidden: assessment.autoHide, reviewedById: null, reviewedAt: null } });
+  });
+  if (assessment.autoHide) return NextResponse.json({ code: "MODERATION_HELD", message: "Изменённое сообщение скрыто до проверки модератором." }, { status: 422 });
+  return NextResponse.json({ content, moderation: assessment.flagged ? { status: "pending", severity: assessment.severity } : null });
 }
 
 export async function DELETE(request: Request, { params }: { params: Promise<{ channelId: string }> }) { const { channelId } = await params; const access = await accessChannel(channelId); if ("error" in access) return access.error; const messageId = new URL(request.url).searchParams.get("messageId") ?? ""; const [message] = await access.database.select().from(messages).where(and(eq(messages.id, messageId), eq(messages.channelId, channelId))).limit(1); if (!message) return NextResponse.json({ message: "Сообщение не найдено." }, { status: 404 }); if (message.authorId !== access.user.id && access.channel.ownerId !== access.user.id) return NextResponse.json({ message: "Недостаточно прав." }, { status: 403 }); await access.database.update(messages).set({ deletedAt: new Date(), content: "" }).where(eq(messages.id, messageId)); return NextResponse.json({ ok: true }); }
