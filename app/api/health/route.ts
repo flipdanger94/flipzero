@@ -6,7 +6,7 @@ export function GET() {
   return NextResponse.json({
     service: "flipzero-web",
     status: "ok",
-    version: "0.3.0",
+    version: "0.4.0",
     databaseConfigured: Boolean(process.env.DATABASE_URL),
     timestamp: new Date().toISOString(),
   });

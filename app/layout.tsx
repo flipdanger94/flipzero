@@ -1,4 +1,5 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
+import { PwaClient } from "./pwa-client";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -7,8 +8,14 @@ export const metadata: Metadata = {
   icons: {
     icon: "/favicon.svg",
     shortcut: "/favicon.svg",
+    apple: "/pwa-icon-192.svg",
   },
+  applicationName: "FlipZero",
+  appleWebApp: { capable: true, statusBarStyle: "black-translucent", title: "FlipZero" },
+  formatDetection: { telephone: false },
 };
+
+export const viewport: Viewport = { width: "device-width", initialScale: 1, viewportFit: "cover", themeColor: "#151319" };
 
 export default function RootLayout({
   children,
@@ -17,7 +24,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ru">
-      <body className="antialiased">{children}</body>
+      <body className="antialiased">{children}<PwaClient /></body>
     </html>
   );
 }
