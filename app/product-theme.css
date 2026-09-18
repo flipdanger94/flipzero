@@ -328,6 +328,158 @@
   background: rgba(0, 212, 255, 0.07);
 }
 
+/* Feature surfaces */
+.forum-view,
+.discovery-grid article,
+.event-list article,
+.flag-card,
+.service-grid article {
+  background: #121319;
+}
+
+.forum-view header small,
+.wiki-reader-head small,
+.wiki-editor small,
+.developer-app-head small,
+.api-example small,
+.system-status-heading small {
+  color: #00d4ff;
+}
+
+.forum-view header > button,
+.forum-create button,
+.thread-composer button,
+.discovery-grid article > button,
+.event-actions button,
+.wiki-form-actions .auth-submit,
+.token-title button,
+.install-action,
+.offline-page a {
+  color: #05070a;
+  background: linear-gradient(135deg, #00d4ff, #6f5cff);
+  box-shadow: 0 8px 24px rgba(0, 212, 255, 0.1);
+}
+
+.forum-grid > button,
+.thread-replies article,
+.forum-create,
+.thread-composer,
+.event-create,
+.wiki-layout,
+.developer-layout,
+.developer-create,
+.slo-panel {
+  background: #101116;
+}
+
+.forum-grid > button:hover {
+  border-color: rgba(0, 212, 255, 0.24);
+  background: #171920;
+}
+
+.forum-author,
+.event-date,
+.install-mark,
+.offline-logo {
+  background: linear-gradient(135deg, #00d4ff, #6f5cff);
+}
+
+.discovery-search,
+.event-create input,
+.event-create textarea,
+.wiki-layout > aside > label,
+.wiki-editor input,
+.wiki-editor textarea,
+.developer-create input {
+  background: #0d0f14;
+}
+
+.discovery-search:focus-within,
+.event-create input:focus,
+.event-create textarea:focus,
+.wiki-editor input:focus,
+.wiki-editor textarea:focus,
+.developer-create input:focus {
+  border-color: rgba(0, 212, 255, 0.5);
+  box-shadow: 0 0 0 3px rgba(0, 212, 255, 0.06);
+}
+
+.event-list article.attending {
+  border-color: rgba(0, 212, 255, 0.2);
+  background: linear-gradient(90deg, rgba(0, 212, 255, 0.06), transparent), #121319;
+}
+
+.wiki-layout > aside,
+.developer-layout > aside {
+  background: #0c0d11;
+}
+
+.wiki-layout > aside button.active,
+.wiki-layout > aside button:hover,
+.developer-layout > aside > button.active,
+.developer-layout > aside > button:hover {
+  color: #00d4ff;
+  background: rgba(0, 212, 255, 0.065);
+}
+
+.wiki-reader-head button:hover,
+.moderation-tabs button.active {
+  color: #00d4ff;
+}
+
+.moderation-tabs button.active {
+  border-bottom-color: #00d4ff;
+}
+
+.moderation-tabs button b {
+  color: #00d4ff;
+  background: rgba(0, 212, 255, 0.08);
+}
+
+.slo-panel > header {
+  color: #8878ff;
+}
+
+.install-app-card {
+  border-color: rgba(255, 255, 255, 0.085);
+  background: rgba(12, 13, 17, 0.94);
+}
+
+.offline-page {
+  background:
+    radial-gradient(circle at 50% 0, rgba(111, 92, 255, 0.17), transparent 42%),
+    #0a0a0d;
+}
+
+.offline-kicker {
+  color: #00d4ff !important;
+}
+
+.invite-page {
+  background:
+    radial-gradient(circle at 50% 12%, rgba(111, 92, 255, 0.16), transparent 38%),
+    #0a0a0d;
+}
+
+.invite-space-icon {
+  box-shadow: 0 14px 36px rgba(0, 212, 255, 0.14);
+}
+
+@media (max-width: 1120px) and (min-width: 761px) {
+  .app-shell,
+  .app-shell.members-hidden {
+    grid-template-columns: 68px 230px minmax(0, 1fr);
+  }
+
+  .app-shell .member-panel {
+    display: none;
+  }
+
+  .app-shell .message-list {
+    padding-inline: clamp(22px, 5vw, 52px);
+  }
+}
+
 @media (max-width: 760px) {
   .app-shell.app-shell {
     background:
@@ -383,6 +535,25 @@
   .app-shell .message-body > p,
   .app-shell .composer textarea {
     font-size: 0.78rem;
+  }
+
+  .forum-view,
+  .board-view {
+    padding: 18px 14px 84px;
+  }
+
+  .forum-view > header,
+  .board-view > header {
+    gap: 10px;
+  }
+
+  .forum-view h1,
+  .board-view h1 {
+    font-size: 1.15rem;
+  }
+
+  .install-app-card {
+    bottom: calc(76px + env(safe-area-inset-bottom));
   }
 }
 
