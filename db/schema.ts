@@ -162,6 +162,30 @@ export const eventAttendees = pgTable("event_attendees", {
   joinedAt: timestamp("joined_at", { withTimezone: true }).defaultNow().notNull(),
 }, (table) => [primaryKey({ columns: [table.eventId, table.userId] }), index("event_attendees_user_idx").on(table.userId)]);
 
+export const wikiPages = pgTable("wiki_pages", {
+  id: text("id").primaryKey(),
+  spaceId: text("space_id").notNull().references(() => spaces.id, { onDelete: "cascade" }),
+  authorId: text("author_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  slug: text("slug").notNull(),
+  title: text("title").notNull(),
+  summary: text("summary"),
+  content: text("content").notNull(),
+  revision: integer("revision").default(1).notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [uniqueIndex("wiki_pages_space_slug_unique").on(table.spaceId, table.slug), index("wiki_pages_space_updated_idx").on(table.spaceId, table.updatedAt)]);
+
+export const wikiRevisions = pgTable("wiki_revisions", {
+  id: text("id").primaryKey(),
+  pageId: text("page_id").notNull().references(() => wikiPages.id, { onDelete: "cascade" }),
+  editorId: text("editor_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  revision: integer("revision").notNull(),
+  title: text("title").notNull(),
+  summary: text("summary"),
+  content: text("content").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [uniqueIndex("wiki_revisions_page_revision_unique").on(table.pageId, table.revision), index("wiki_revisions_page_idx").on(table.pageId)]);
+
 export const reactions = pgTable("reactions", {
   messageId: text("message_id").notNull().references(() => messages.id, { onDelete: "cascade" }),
   userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
