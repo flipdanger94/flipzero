@@ -14,6 +14,7 @@ import { ModerationDialog } from "@/components/moderation-dialog";
 import { GamificationDialog } from "@/components/gamification-dialog";
 import { PersistentChat } from "@/components/persistent-chat";
 import { ChannelBoard } from "@/components/channel-board";
+import { ForumChannel } from "@/components/forum-channel";
 
 type ApiChannel = { id: string; parentId: string | null; name: string; topic: string | null; kind: string; position?: number };
 type ApiCategory = { id: string; spaceId: string; name: string; position: number };
@@ -110,6 +111,7 @@ export default function Home() {
   const activeSpace = userSpaces.find((space) => space.id === activeSpaceId) ?? null;
   const activeApiChannel = activeSpace?.channels.find((channel) => channel.name === activeChannel && ["text", "forum", "announcement"].includes(channel.kind)) ?? null;
   const activeBoardChannel = activeSpace?.channels.find((channel) => channel.name === activeChannel && channel.kind === "board") ?? null;
+  const activeForumChannel = activeSpace?.channels.find((channel) => channel.name === activeChannel && channel.kind === "forum") ?? null;
   const activeDetails = channelDetails[activeChannel] ?? { title: activeChannel, description: "Канал пространства FlipZero." };
   const visibleMessages = activeMessages.filter((message) => {
     const query = searchQuery.trim().toLocaleLowerCase("ru");
@@ -200,7 +202,7 @@ export default function Home() {
 
       <section className="chat-panel">
         <header className="chat-header"><div className="channel-title"><Hash size={21} /><strong>{activeChannel}</strong><span>Разговоры обо всём</span></div><div className="header-actions"><button className={notifications ? "is-active" : ""} aria-label={notifications ? "Выключить уведомления" : "Включить уведомления"} aria-pressed={notifications} onClick={() => setNotifications((value) => !value)}><Bell size={19} /></button><button className={showMembers ? "is-active" : ""} aria-label={showMembers ? "Скрыть участников" : "Показать участников"} aria-pressed={showMembers} onClick={() => setShowMembers((value) => !value)}><Users size={19} /></button><label className="search-box"><Search size={16} /><input aria-label="Поиск" placeholder="Поиск" value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} /></label></div></header>
-        {activeBoardChannel ? <ChannelBoard channelId={activeBoardChannel.id} channelName={activeBoardChannel.name} /> : activeApiChannel && user ? <PersistentChat channelId={activeApiChannel.id} channelName={activeApiChannel.name} spaceId={activeSpace!.id} currentUserId={user.id} ownerId={activeSpace?.ownerId} searchQuery={searchQuery} /> : <><div className="message-list">
+        {activeBoardChannel ? <ChannelBoard channelId={activeBoardChannel.id} channelName={activeBoardChannel.name} /> : activeForumChannel ? <ForumChannel channelId={activeForumChannel.id} channelName={activeForumChannel.name} /> : activeApiChannel && user ? <PersistentChat channelId={activeApiChannel.id} channelName={activeApiChannel.name} spaceId={activeSpace!.id} currentUserId={user.id} ownerId={activeSpace?.ownerId} searchQuery={searchQuery} /> : <><div className="message-list">
           <div className="channel-intro"><div className="intro-icon"><Hash size={31} /></div><h1>{activeDetails.title}</h1><p>Это начало канала <strong>#{activeChannel}</strong>. {activeDetails.description}</p></div>
           <div className="day-divider"><span>17 сентября 2026</span></div>
           {visibleMessages.map((message) => (
