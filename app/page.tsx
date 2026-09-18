@@ -12,6 +12,7 @@ import { MemberManagerDialog } from "@/components/member-manager-dialog";
 import { ChannelPermissionsDialog } from "@/components/channel-permissions-dialog";
 import { ModerationDialog } from "@/components/moderation-dialog";
 import { GamificationDialog } from "@/components/gamification-dialog";
+import { PersistentChat } from "@/components/persistent-chat";
 
 type ApiChannel = { id: string; parentId: string | null; name: string; topic: string | null; kind: string; position?: number };
 type ApiCategory = { id: string; spaceId: string; name: string; position: number };
@@ -104,6 +105,7 @@ export default function Home() {
 
   const activeMessages = channelMessages[activeChannel] ?? [];
   const activeSpace = userSpaces.find((space) => space.id === activeSpaceId) ?? null;
+  const activeApiChannel = activeSpace?.channels.find((channel) => channel.name === activeChannel && ["text", "forum", "announcement"].includes(channel.kind)) ?? null;
   const activeDetails = channelDetails[activeChannel] ?? { title: activeChannel, description: "Канал пространства FlipZero." };
   const visibleMessages = activeMessages.filter((message) => {
     const query = searchQuery.trim().toLocaleLowerCase("ru");
@@ -194,7 +196,7 @@ export default function Home() {
 
       <section className="chat-panel">
         <header className="chat-header"><div className="channel-title"><Hash size={21} /><strong>{activeChannel}</strong><span>Разговоры обо всём</span></div><div className="header-actions"><button className={notifications ? "is-active" : ""} aria-label={notifications ? "Выключить уведомления" : "Включить уведомления"} aria-pressed={notifications} onClick={() => setNotifications((value) => !value)}><Bell size={19} /></button><button className={showMembers ? "is-active" : ""} aria-label={showMembers ? "Скрыть участников" : "Показать участников"} aria-pressed={showMembers} onClick={() => setShowMembers((value) => !value)}><Users size={19} /></button><label className="search-box"><Search size={16} /><input aria-label="Поиск" placeholder="Поиск" value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} /></label></div></header>
-        <div className="message-list">
+        {activeApiChannel && user ? <PersistentChat channelId={activeApiChannel.id} channelName={activeApiChannel.name} spaceId={activeSpace!.id} currentUserId={user.id} ownerId={activeSpace?.ownerId} searchQuery={searchQuery} /> : <><div className="message-list">
           <div className="channel-intro"><div className="intro-icon"><Hash size={31} /></div><h1>{activeDetails.title}</h1><p>Это начало канала <strong>#{activeChannel}</strong>. {activeDetails.description}</p></div>
           <div className="day-divider"><span>17 сентября 2026</span></div>
           {visibleMessages.map((message) => (
@@ -208,7 +210,7 @@ export default function Home() {
           ))}
           {visibleMessages.length === 0 && <div className="search-empty"><Search size={24} /><strong>Ничего не найдено</strong><span>Попробуйте изменить поисковый запрос.</span></div>}
         </div>
-        <div className="composer-wrap"><div className="typing"><span /><span /><span /> Mira печатает...</div><form className="composer" onSubmit={sendMessage}><button type="button" aria-label="Добавить"><CirclePlus size={22} /></button><textarea aria-label="Сообщение" placeholder={`Написать в #${activeChannel}`} rows={1} value={draft} onChange={(event) => setDraft(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); event.currentTarget.form?.requestSubmit(); } }} /><button type="button" aria-label="Изображение"><ImageIcon size={20} /></button><button type="button" aria-label="Эмодзи"><Smile size={20} /></button><button className="send-button" type="submit" aria-label="Отправить" disabled={!draft.trim()}><SendHorizontal size={18} /></button></form></div>
+        <div className="composer-wrap"><div className="typing"><span /><span /><span /> Mira печатает...</div><form className="composer" onSubmit={sendMessage}><button type="button" aria-label="Добавить"><CirclePlus size={22} /></button><textarea aria-label="Сообщение" placeholder={`Написать в #${activeChannel}`} rows={1} value={draft} onChange={(event) => setDraft(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); event.currentTarget.form?.requestSubmit(); } }} /><button type="button" aria-label="Изображение"><ImageIcon size={20} /></button><button type="button" aria-label="Эмодзи"><Smile size={20} /></button><button className="send-button" type="submit" aria-label="Отправить" disabled={!draft.trim()}><SendHorizontal size={18} /></button></form></div></>}
       </section>
 
       <aside className="member-panel">

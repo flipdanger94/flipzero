@@ -112,12 +112,23 @@ export const messages = pgTable("messages", {
   channelId: text("channel_id").notNull().references(() => channels.id, { onDelete: "cascade" }),
   authorId: text("author_id").notNull().references(() => users.id),
   replyToId: text("reply_to_id"),
+  threadRootId: text("thread_root_id"),
   content: text("content").notNull(),
   attachments: jsonb("attachments").default([]).notNull(),
   editedAt: timestamp("edited_at", { withTimezone: true }),
+  pinnedAt: timestamp("pinned_at", { withTimezone: true }),
+  pinnedById: text("pinned_by_id").references(() => users.id, { onDelete: "set null" }),
   deletedAt: timestamp("deleted_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 }, (table) => [index("messages_channel_created_idx").on(table.channelId, table.createdAt), index("messages_author_idx").on(table.authorId)]);
+
+export const channelNotificationSettings = pgTable("channel_notification_settings", {
+  userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  channelId: text("channel_id").notNull().references(() => channels.id, { onDelete: "cascade" }),
+  mode: text("mode").default("mentions").notNull(),
+  mutedUntil: timestamp("muted_until", { withTimezone: true }),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [primaryKey({ columns: [table.userId, table.channelId] })]);
 
 export const reactions = pgTable("reactions", {
   messageId: text("message_id").notNull().references(() => messages.id, { onDelete: "cascade" }),
