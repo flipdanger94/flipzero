@@ -12,10 +12,16 @@ export async function GET(request: Request) {
   const id = requestId(request);
   let databaseStatus: "ok" | "error" = "error";
   let databaseLatencyMs: number | null = null;
+  let placementCount = 0;
+  let migratingPlacementCount = 0;
 
   try {
     const databaseStartedAt = performance.now();
-    await getDatabase().execute(sql`select 1 as ready`);
+    const database = getDatabase();
+    await database.execute(sql`select 1 as ready`);
+    const [placementSummary] = await database.execute(sql<{ total: number; migrating: number }>`select count(*)::int as total, count(*) filter (where state <> 'active')::int as migrating from space_placements`);
+    placementCount = Number(placementSummary?.total ?? 0);
+    migratingPlacementCount = Number(placementSummary?.migrating ?? 0);
     databaseLatencyMs = Math.round(performance.now() - databaseStartedAt);
     databaseStatus = "ok";
   } catch (error) {
@@ -30,7 +36,7 @@ export async function GET(request: Request) {
   return NextResponse.json({
     service: "flipzero-web",
     status: healthy ? "ok" : "degraded",
-    version: "0.6.1",
+    version: "0.6.2",
     timestamp: new Date().toISOString(),
     durationMs,
     deployment: {
@@ -42,7 +48,7 @@ export async function GET(request: Request) {
       api: { status: "ok", latencyMs: durationMs },
       database: { status: databaseStatus, latencyMs: databaseLatencyMs },
     },
-    topology,
+    topology: { ...topology, placementCount, migratingPlacementCount },
     slo: {
       availabilityTarget: 99.9,
       apiP95TargetMs: 500,
