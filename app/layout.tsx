@@ -1,4 +1,6 @@
 import type { Metadata, Viewport } from "next";
+import { Analytics } from "@vercel/analytics/next";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import { PwaClient } from "./pwa-client";
 import "./globals.css";
 
@@ -24,7 +26,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ru">
-      <body className="antialiased">{children}<PwaClient /></body>
+      <body className="antialiased">{children}<PwaClient /><Analytics /><SpeedInsights /></body>
     </html>
   );
 }

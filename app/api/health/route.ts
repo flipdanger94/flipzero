@@ -1,13 +1,60 @@
+import { sql } from "drizzle-orm";
 import { NextResponse } from "next/server";
+import { getDatabase } from "@/db/client";
+import { logEvent, requestId } from "@/lib/observability";
 
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
-export function GET() {
+export async function GET(request: Request) {
+  const startedAt = performance.now();
+  const id = requestId(request);
+  let databaseStatus: "ok" | "error" = "error";
+  let databaseLatencyMs: number | null = null;
+
+  try {
+    const databaseStartedAt = performance.now();
+    await getDatabase().execute(sql`select 1 as ready`);
+    databaseLatencyMs = Math.round(performance.now() - databaseStartedAt);
+    databaseStatus = "ok";
+  } catch (error) {
+    logEvent("error", "health_database_failed", { requestId: id, error: error instanceof Error ? error.message : String(error) });
+  }
+
+  const durationMs = Math.round(performance.now() - startedAt);
+  const healthy = databaseStatus === "ok";
+  logEvent(healthy ? "info" : "warn", "health_check_completed", { requestId: id, status: healthy ? "ok" : "degraded", durationMs, databaseLatencyMs });
+
   return NextResponse.json({
     service: "flipzero-web",
-    status: "ok",
-    version: "0.4.0",
-    databaseConfigured: Boolean(process.env.DATABASE_URL),
+    status: healthy ? "ok" : "degraded",
+    version: "0.5.0",
     timestamp: new Date().toISOString(),
+    durationMs,
+    deployment: {
+      environment: process.env.VERCEL_ENV ?? "local",
+      region: process.env.VERCEL_REGION ?? "local",
+      commit: process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 7) ?? "local",
+    },
+    checks: {
+      api: { status: "ok", latencyMs: durationMs },
+      database: { status: databaseStatus, latencyMs: databaseLatencyMs },
+    },
+    slo: {
+      availabilityTarget: 99.9,
+      apiP95TargetMs: 500,
+      databaseP95TargetMs: 250,
+      lcpTargetMs: 2500,
+      inpTargetMs: 200,
+      clsTarget: 0.1,
+    },
+  }, {
+    status: healthy ? 200 : 503,
+    headers: {
+      "cache-control": "no-store, max-age=0",
+      "server-timing": `database;dur=${databaseLatencyMs ?? 0}, total;dur=${durationMs}`,
+      "x-flipzero-status": healthy ? "ok" : "degraded",
+      "x-request-id": id,
+    },
   });
 }
