@@ -1,0 +1,397 @@
+/* FlipZero product theme: shared visual language for the app, auth and dialogs. */
+
+.app-shell {
+  --bg: #0a0a0d;
+  --panel: #111218;
+  --deep: #07080b;
+  --raised: #191b22;
+  --text: rgba(255, 255, 255, 0.94);
+  --muted: rgba(255, 255, 255, 0.48);
+  --border: rgba(255, 255, 255, 0.075);
+  --pink: #00d4ff;
+  --lime: #00d4ff;
+  color: var(--text);
+  background:
+    radial-gradient(circle at 60% -15%, rgba(111, 92, 255, 0.14), transparent 34%),
+    radial-gradient(circle at 20% 110%, rgba(0, 212, 255, 0.055), transparent 30%),
+    #0a0a0d;
+}
+
+.app-shell button:focus-visible,
+.app-shell input:focus-visible,
+.app-shell textarea:focus-visible,
+.auth-page button:focus-visible,
+.auth-page input:focus-visible {
+  outline-color: #00d4ff;
+}
+
+.app-shell .space-rail {
+  background: rgba(7, 8, 11, 0.96);
+  border-right-color: rgba(255, 255, 255, 0.065);
+}
+
+.app-shell .rail-action {
+  background: #15171d;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.app-shell .rail-action:hover {
+  background: #1d2028;
+}
+
+.app-shell .home-action,
+.app-shell .brand-mark,
+.app-shell .intro-icon,
+.app-shell .composer .send-button {
+  color: #05070a;
+  background: linear-gradient(135deg, #00d4ff 0%, #75e8ff 42%, #6f5cff 100%);
+  box-shadow: 0 10px 30px rgba(0, 212, 255, 0.16);
+}
+
+.app-shell .space-button {
+  background: #171920;
+}
+
+.app-shell .space-button.active::before {
+  background: #00d4ff;
+  box-shadow: 0 0 14px rgba(0, 212, 255, 0.72);
+}
+
+.app-shell .channel-panel {
+  background: rgba(16, 17, 22, 0.96);
+  border-right-color: rgba(255, 255, 255, 0.07);
+  backdrop-filter: blur(24px);
+}
+
+.app-shell .space-heading {
+  background: rgba(255, 255, 255, 0.012);
+}
+
+.app-shell .space-heading strong {
+  font-size: 0.94rem;
+  letter-spacing: -0.02em;
+}
+
+.app-shell .space-heading small,
+.app-shell .dock-copy small {
+  font-size: 0.68rem;
+}
+
+.app-shell .boost-card {
+  border-color: rgba(0, 212, 255, 0.15);
+  background: linear-gradient(115deg, rgba(0, 212, 255, 0.09), rgba(111, 92, 255, 0.09));
+}
+
+.app-shell .boost-icon {
+  color: #00d4ff;
+  background: rgba(0, 212, 255, 0.1);
+}
+
+.app-shell .boost-level,
+.app-shell .level-row span,
+.app-shell .header-actions > button.is-active,
+.app-shell .board-view > header small {
+  color: #00d4ff;
+}
+
+.app-shell .channel-group h2 {
+  color: rgba(255, 255, 255, 0.38);
+  font-size: 0.67rem;
+}
+
+.app-shell .channel {
+  min-height: 38px;
+  height: auto;
+  color: rgba(255, 255, 255, 0.54);
+}
+
+.app-shell .channel strong {
+  font-size: 0.79rem;
+  font-weight: 570;
+}
+
+.app-shell .channel.active,
+.app-shell .channel-row.active {
+  background: linear-gradient(90deg, rgba(0, 212, 255, 0.12), rgba(111, 92, 255, 0.055));
+}
+
+.app-shell .channel.active > span:first-child,
+.app-shell .channel-row.active .channel > span:first-child {
+  color: #00d4ff;
+}
+
+.app-shell .user-dock {
+  background: rgba(8, 9, 12, 0.88);
+}
+
+.app-shell .chat-panel,
+.app-shell .board-view {
+  background: #101116;
+}
+
+.app-shell .chat-header {
+  background: rgba(12, 13, 17, 0.82);
+  backdrop-filter: blur(24px) saturate(130%);
+}
+
+.app-shell .channel-title strong {
+  font-size: 0.9rem;
+}
+
+.app-shell .channel-title span,
+.app-shell .search-box input {
+  font-size: 0.72rem;
+}
+
+.app-shell .search-box {
+  border: 1px solid rgba(255, 255, 255, 0.065);
+  background: #08090d;
+}
+
+.app-shell .intro-icon {
+  color: #fff;
+}
+
+.app-shell .channel-intro h1 {
+  font-size: 1.55rem;
+}
+
+.app-shell .channel-intro p {
+  font-size: 0.82rem;
+}
+
+.app-shell .message {
+  padding-block: 11px;
+}
+
+.app-shell .message-meta strong {
+  font-size: 0.8rem;
+}
+
+.app-shell .message-meta time {
+  font-size: 0.62rem;
+}
+
+.app-shell .message-body > p {
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 0.8rem;
+  line-height: 1.58;
+}
+
+.app-shell .bot-badge {
+  background: #6f5cff;
+}
+
+.app-shell .composer {
+  border-color: rgba(255, 255, 255, 0.085);
+  background: #191b22;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.2);
+}
+
+.app-shell .composer:focus-within {
+  border-color: rgba(0, 212, 255, 0.42);
+  box-shadow: 0 0 0 3px rgba(0, 212, 255, 0.055), 0 12px 36px rgba(0, 0, 0, 0.2);
+}
+
+.app-shell .composer textarea {
+  font-size: 0.8rem;
+}
+
+.app-shell .member-panel {
+  background: #0d0e12;
+}
+
+.app-shell .profile-card {
+  background: #16181e;
+}
+
+.app-shell .profile-art {
+  background:
+    radial-gradient(circle at 15% 120%, rgba(0, 212, 255, 0.95), transparent 48%),
+    radial-gradient(circle at 90% -25%, rgba(111, 92, 255, 0.95), transparent 55%),
+    #161b2d;
+}
+
+.app-shell .profile-avatar {
+  border-color: #16181e;
+}
+
+.app-shell .profile-progress i,
+.app-shell .level-progress i,
+.app-shell .mini-progress b,
+.app-shell .achievement-progress b,
+.app-shell .progress i {
+  background: linear-gradient(90deg, #00d4ff, #6f5cff);
+}
+
+.app-shell .board-view > header button,
+.app-shell .board-create button {
+  background: linear-gradient(135deg, #00d4ff, #6f5cff);
+}
+
+.auth-page {
+  background: #0a0a0d;
+}
+
+.auth-story {
+  background:
+    radial-gradient(circle at 8% 92%, rgba(0, 212, 255, 0.28), transparent 38%),
+    radial-gradient(circle at 92% 8%, rgba(111, 92, 255, 0.35), transparent 40%),
+    linear-gradient(145deg, #10131a, #08090d 72%);
+}
+
+.auth-brand > span,
+.auth-mobile-brand > span,
+.dialog-symbol {
+  color: #05070a;
+  background: linear-gradient(135deg, #00d4ff, #6f5cff);
+  box-shadow: 0 10px 28px rgba(0, 212, 255, 0.16);
+}
+
+.auth-kicker,
+.auth-alternate a,
+.invite-home-link,
+.invite-kicker {
+  color: #00d4ff;
+}
+
+.auth-story h1 em {
+  background: linear-gradient(90deg, #00d4ff, #9befff 48%, #8878ff);
+  color: transparent;
+  background-clip: text;
+}
+
+.auth-form-side {
+  background:
+    radial-gradient(circle at 100% 0, rgba(111, 92, 255, 0.12), transparent 36%),
+    #0d0e12;
+}
+
+.auth-card h2 {
+  font-size: 1.9rem;
+}
+
+.auth-description,
+.auth-form label > span,
+.auth-alternate {
+  font-size: 0.78rem;
+}
+
+.auth-input {
+  background: #16181e;
+}
+
+.auth-input input {
+  font-size: 0.82rem;
+}
+
+.auth-input:focus-within {
+  color: #00d4ff;
+  border-color: rgba(0, 212, 255, 0.5);
+  box-shadow: 0 0 0 3px rgba(0, 212, 255, 0.07);
+}
+
+.auth-submit {
+  color: #05070a;
+  background: linear-gradient(135deg, #00d4ff, #6f5cff);
+  box-shadow: 0 12px 32px rgba(0, 212, 255, 0.13);
+  font-size: 0.82rem;
+}
+
+.dialog-backdrop {
+  background: rgba(3, 4, 7, 0.8);
+}
+
+.space-dialog,
+.invite-card {
+  border-color: rgba(255, 255, 255, 0.085);
+  background: linear-gradient(150deg, #181a21, #0d0e12 72%);
+}
+
+.space-dialog input:not(.color-input),
+.space-dialog textarea,
+.space-dialog select {
+  background: #0d0f14;
+  font-size: 0.78rem;
+}
+
+.space-dialog input:focus,
+.space-dialog textarea:focus,
+.space-dialog select:focus {
+  border-color: rgba(0, 212, 255, 0.5);
+  box-shadow: 0 0 0 3px rgba(0, 212, 255, 0.065);
+}
+
+.channel-kind-picker > button.active {
+  color: #00d4ff;
+  border-color: rgba(0, 212, 255, 0.4);
+  background: rgba(0, 212, 255, 0.07);
+}
+
+@media (max-width: 760px) {
+  .app-shell.app-shell {
+    background:
+      radial-gradient(circle at 80% -10%, rgba(111, 92, 255, 0.16), transparent 34%),
+      #0a0a0d;
+  }
+
+  .app-shell .chat-panel {
+    background: #101116;
+  }
+
+  .app-shell .channel-panel {
+    background: rgba(10, 11, 15, 0.97);
+  }
+
+  .app-shell .mobile-space-switcher button.active {
+    box-shadow: 0 0 0 2px #00d4ff, 0 8px 24px rgba(0, 0, 0, 0.45);
+  }
+
+  .app-shell .mobile-space-switcher .mobile-add-space {
+    color: #00d4ff;
+    background: #181a21;
+  }
+
+  .app-shell .mobile-drawer-close,
+  .app-shell .mobile-menu-button {
+    background: #191b22 !important;
+  }
+
+  .app-shell .chat-header {
+    background: rgba(9, 10, 13, 0.88);
+  }
+
+  .app-shell .composer {
+    background: #191b22;
+  }
+
+  .app-shell .mobile-tab-bar {
+    border-top-color: rgba(255, 255, 255, 0.075);
+    background: rgba(7, 8, 11, 0.93);
+  }
+
+  .app-shell .mobile-tab-bar button {
+    color: rgba(255, 255, 255, 0.38);
+    font-size: 0.53rem;
+  }
+
+  .app-shell .mobile-tab-bar button.active {
+    color: #00d4ff;
+    background: rgba(0, 212, 255, 0.07);
+  }
+
+  .app-shell .message-body > p,
+  .app-shell .composer textarea {
+    font-size: 0.78rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-shell *,
+  .auth-page * {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}

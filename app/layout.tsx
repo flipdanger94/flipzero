@@ -3,6 +3,7 @@ import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { PwaClient } from "./pwa-client";
 import "./globals.css";
+import "./product-theme.css";
 
 export const metadata: Metadata = {
   title: "FlipZero — чаты, голос и сообщества",
