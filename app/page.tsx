@@ -43,14 +43,18 @@ export default function Home() {
 
   useEffect(() => {
     const saved = window.localStorage.getItem("flipzero:messages:v2");
+    let restoredMessages = initialChannelMessages;
     if (saved) {
       try {
-        setChannelMessages(JSON.parse(saved) as Record<string, Message[]>);
+        restoredMessages = JSON.parse(saved) as Record<string, Message[]>;
       } catch {
         window.localStorage.removeItem("flipzero:messages:v2");
       }
     }
-    setStorageReady(true);
+    queueMicrotask(() => {
+      setChannelMessages(restoredMessages);
+      setStorageReady(true);
+    });
   }, []);
 
   useEffect(() => {
