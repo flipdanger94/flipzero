@@ -3,7 +3,7 @@
 import { type FormEvent, useState } from "react";
 import { LoaderCircle, Sparkles, X } from "lucide-react";
 
-type CreatedSpace = { id: string; name: string; slug: string; description: string | null; accentColor: string; channels: Array<{ id: string; name: string; kind: string; topic: string | null }> };
+type CreatedSpace = { id: string; name: string; slug: string; description: string | null; accentColor: string; categories: Array<{ id: string; spaceId: string; name: string; position: number }>; channels: Array<{ id: string; name: string; kind: string; topic: string | null; parentId: string | null }> };
 
 export function CreateSpaceDialog({ onClose, onCreated }: { onClose: () => void; onCreated: (space: CreatedSpace) => void }) {
   const [loading, setLoading] = useState(false);

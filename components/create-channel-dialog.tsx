@@ -3,9 +3,10 @@
 import { type FormEvent, useState } from "react";
 import { Hash, LoaderCircle, Volume2, X } from "lucide-react";
 
-export type CreatedChannel = { id: string; spaceId: string; name: string; topic: string | null; kind: "text" | "voice"; position: number };
+export type CreatedChannel = { id: string; spaceId: string; parentId: string | null; name: string; topic: string | null; kind: "text" | "voice"; position: number };
+type CategoryOption = { id: string; name: string };
 
-export function CreateChannelDialog({ spaceId, initialKind, onClose, onCreated }: { spaceId: string; initialKind: "text" | "voice"; onClose: () => void; onCreated: (channel: CreatedChannel) => void }) {
+export function CreateChannelDialog({ spaceId, categories, initialKind, initialParentId, onClose, onCreated }: { spaceId: string; categories: CategoryOption[]; initialKind: "text" | "voice"; initialParentId?: string | null; onClose: () => void; onCreated: (channel: CreatedChannel) => void }) {
   const [kind, setKind] = useState<"text" | "voice">(initialKind);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -15,7 +16,8 @@ export function CreateChannelDialog({ spaceId, initialKind, onClose, onCreated }
     setLoading(true);
     setError("");
     const data = new FormData(event.currentTarget);
-    const response = await fetch(`/api/v1/spaces/${spaceId}/channels`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ name: data.get("name"), topic: data.get("topic"), kind }) });
+    const parentId = data.get("parentId");
+    const response = await fetch(`/api/v1/spaces/${spaceId}/channels`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ name: data.get("name"), topic: data.get("topic"), kind, parentId: parentId || null }) });
     const result = await response.json();
     if (!response.ok) { setError(result.message ?? "Не удалось создать канал."); setLoading(false); return; }
     onCreated(result.channel);
@@ -32,6 +34,7 @@ export function CreateChannelDialog({ spaceId, initialKind, onClose, onCreated }
       <form onSubmit={submit}>
         {error ? <div className="auth-error" role="alert">{error}</div> : null}
         <label><span>Название канала</span><input name="name" minLength={2} maxLength={48} placeholder={kind === "text" ? "новый-канал" : "Лаунж"} autoFocus required /></label>
+        <label><span>Категория</span><select name="parentId" defaultValue={initialParentId ?? ""}><option value="">Без категории</option>{categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}</select></label>
         <label><span>Описание</span><textarea name="topic" maxLength={240} placeholder="Для чего этот канал?" rows={2} /></label>
         <button className="auth-submit" disabled={loading}>{loading ? <><LoaderCircle className="spin" size={18} /> Создаём...</> : "Создать канал"}</button>
       </form>

@@ -76,10 +76,18 @@ export const memberRoles = pgTable("member_roles", {
   roleId: text("role_id").notNull().references(() => roles.id, { onDelete: "cascade" }),
 }, (table) => [primaryKey({ columns: [table.userId, table.spaceId, table.roleId] })]);
 
+export const channelCategories = pgTable("channel_categories", {
+  id: text("id").primaryKey(),
+  spaceId: text("space_id").notNull().references(() => spaces.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  position: integer("position").default(0).notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [index("channel_categories_space_position_idx").on(table.spaceId, table.position)]);
+
 export const channels = pgTable("channels", {
   id: text("id").primaryKey(),
   spaceId: text("space_id").notNull().references(() => spaces.id, { onDelete: "cascade" }),
-  parentId: text("parent_id"),
+  parentId: text("parent_id").references(() => channelCategories.id, { onDelete: "set null" }),
   name: text("name").notNull(),
   topic: text("topic"),
   kind: channelKind("kind").default("text").notNull(),

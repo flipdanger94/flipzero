@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { and, count, eq, max } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { getDatabase } from "@/db/client";
-import { channels, spaces } from "@/db/schema";
+import { channelCategories, channels, spaces } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
 import { createChannelSchema } from "@/lib/space-validation";
 
@@ -17,10 +17,15 @@ export async function POST(request: Request, { params }: { params: Promise<{ spa
   if (!space) return NextResponse.json({ code: "NOT_FOUND", message: "Пространство не найдено." }, { status: 404 });
   if (space.ownerId !== user.id) return NextResponse.json({ code: "FORBIDDEN", message: "Создавать каналы может только владелец." }, { status: 403 });
 
+  if (parsed.data.parentId) {
+    const [category] = await database.select({ id: channelCategories.id }).from(channelCategories).where(and(eq(channelCategories.id, parsed.data.parentId), eq(channelCategories.spaceId, spaceId))).limit(1);
+    if (!category) return NextResponse.json({ code: "INVALID_CATEGORY", message: "Категория не найдена." }, { status: 400 });
+  }
+
   const [duplicate] = await database.select({ id: channels.id }).from(channels).where(and(eq(channels.spaceId, spaceId), eq(channels.name, parsed.data.name))).limit(1);
   if (duplicate) return NextResponse.json({ code: "CHANNEL_EXISTS", message: "Канал с таким названием уже существует." }, { status: 409 });
   const [positionResult] = await database.select({ value: max(channels.position) }).from(channels).where(eq(channels.spaceId, spaceId));
-  const channel = { id: randomUUID(), spaceId, name: parsed.data.name, topic: parsed.data.topic || null, kind: parsed.data.kind, position: (positionResult?.value ?? -1) + 1 };
+  const channel = { id: randomUUID(), spaceId, parentId: parsed.data.parentId, name: parsed.data.name, topic: parsed.data.topic || null, kind: parsed.data.kind, position: (positionResult?.value ?? -1) + 1 };
   await database.insert(channels).values(channel);
   return NextResponse.json({ channel }, { status: 201 });
 }

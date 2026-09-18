@@ -11,4 +11,7 @@ export const createChannelSchema = z.object({
   name: z.string().trim().min(2).max(48).transform((value) => value.replace(/\s+/g, "-")),
   topic: z.string().trim().max(240).optional().default(""),
   kind: z.enum(["text", "voice"]),
+  parentId: z.string().uuid().nullable().optional().default(null),
 });
+
+export const createCategorySchema = z.object({ name: z.string().trim().min(2).max(32) });

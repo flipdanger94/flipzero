@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { asc, eq, inArray } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { getDatabase } from "@/db/client";
-import { channels, memberRoles, members, roles, spaces } from "@/db/schema";
+import { channelCategories, channels, memberRoles, members, roles, spaces } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
 import { DEFAULT_MEMBER_PERMISSIONS, Permission } from "@/lib/permissions";
 import { createSpaceSchema } from "@/lib/space-validation";
@@ -36,9 +36,11 @@ export async function GET() {
     topic: channels.topic,
     kind: channels.kind,
     position: channels.position,
+    parentId: channels.parentId,
   }).from(channels).where(inArray(channels.spaceId, spaceIds)).orderBy(asc(channels.position)) : [];
+  const categories = spaceIds.length ? await database.select().from(channelCategories).where(inArray(channelCategories.spaceId, spaceIds)).orderBy(asc(channelCategories.position)) : [];
 
-  return NextResponse.json({ spaces: joinedSpaces.map((space) => ({ ...space, channels: spaceChannels.filter((channel) => channel.spaceId === space.id) })) });
+  return NextResponse.json({ spaces: joinedSpaces.map((space) => ({ ...space, categories: categories.filter((category) => category.spaceId === space.id), channels: spaceChannels.filter((channel) => channel.spaceId === space.id) })) });
 }
 
 export async function POST(request: Request) {
@@ -52,10 +54,13 @@ export async function POST(request: Request) {
   const ownerRoleId = randomUUID();
   const memberRoleId = randomUUID();
   const slug = makeSlug(parsed.data.name);
+  const textCategoryId = randomUUID();
+  const voiceCategoryId = randomUUID();
+  const defaultCategories = [{ id: textCategoryId, spaceId, name: "Общение", position: 0 }, { id: voiceCategoryId, spaceId, name: "Голосовые", position: 1 }];
   const defaultChannels = [
-    { id: randomUUID(), spaceId, name: "добро-пожаловать", topic: "Начните знакомство с пространством", kind: "text" as const, position: 0 },
-    { id: randomUUID(), spaceId, name: "общий-чат", topic: "Главный канал сообщества", kind: "text" as const, position: 1 },
-    { id: randomUUID(), spaceId, name: "Лаунж", topic: "Голосовая комната", kind: "voice" as const, position: 2 },
+    { id: randomUUID(), spaceId, parentId: textCategoryId, name: "добро-пожаловать", topic: "Начните знакомство с пространством", kind: "text" as const, position: 0 },
+    { id: randomUUID(), spaceId, parentId: textCategoryId, name: "общий-чат", topic: "Главный канал сообщества", kind: "text" as const, position: 1 },
+    { id: randomUUID(), spaceId, parentId: voiceCategoryId, name: "Лаунж", topic: "Голосовая комната", kind: "voice" as const, position: 2 },
   ];
 
   await database.transaction(async (tx) => {
@@ -66,8 +71,9 @@ export async function POST(request: Request) {
     ]);
     await tx.insert(members).values({ userId: user.id, spaceId });
     await tx.insert(memberRoles).values([{ userId: user.id, spaceId, roleId: ownerRoleId }, { userId: user.id, spaceId, roleId: memberRoleId }]);
+    await tx.insert(channelCategories).values(defaultCategories);
     await tx.insert(channels).values(defaultChannels);
   });
 
-  return NextResponse.json({ space: { id: spaceId, ownerId: user.id, name: parsed.data.name, slug, description: parsed.data.description || null, visibility: parsed.data.visibility, accentColor: parsed.data.accentColor, iconUrl: null, channels: defaultChannels } }, { status: 201 });
+  return NextResponse.json({ space: { id: spaceId, ownerId: user.id, name: parsed.data.name, slug, description: parsed.data.description || null, visibility: parsed.data.visibility, accentColor: parsed.data.accentColor, iconUrl: null, categories: defaultCategories, channels: defaultChannels } }, { status: 201 });
 }

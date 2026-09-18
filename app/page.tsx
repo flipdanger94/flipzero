@@ -4,9 +4,11 @@ import { type FormEvent, useEffect, useState } from "react";
 import { Bell, BookOpen, ChevronDown, CirclePlus, Compass, Gift, Hash, Headphones, HelpCircle, Image as ImageIcon, LoaderCircle, Mic, Plus, Search, SendHorizontal, Settings, Smile, Sparkles, Trash2, Users, Volume2 } from "lucide-react";
 import { CreateSpaceDialog } from "@/components/create-space-dialog";
 import { CreateChannelDialog, type CreatedChannel } from "@/components/create-channel-dialog";
+import { CreateCategoryDialog, type CreatedCategory } from "@/components/create-category-dialog";
 
-type ApiChannel = { id: string; name: string; topic: string | null; kind: string; position?: number };
-type ApiSpace = { id: string; ownerId?: string; name: string; slug: string; description: string | null; iconUrl?: string | null; visibility?: string; accentColor: string; channels: ApiChannel[] };
+type ApiChannel = { id: string; parentId: string | null; name: string; topic: string | null; kind: string; position?: number };
+type ApiCategory = { id: string; spaceId: string; name: string; position: number };
+type ApiSpace = { id: string; ownerId?: string; name: string; slug: string; description: string | null; iconUrl?: string | null; visibility?: string; accentColor: string; categories: ApiCategory[]; channels: ApiChannel[] };
 type CurrentUser = { id: string; username: string; displayName: string; globalLevel: number; globalXp: number };
 type Message = { initials: string; name: string; time: string; text: string; accent: string; reactions: string[]; badge?: string; quest?: boolean };
 
@@ -49,7 +51,8 @@ export default function Home() {
   const [activeSpaceId, setActiveSpaceId] = useState<string | null>(null);
   const [spacesLoading, setSpacesLoading] = useState(true);
   const [showCreateSpace, setShowCreateSpace] = useState(false);
-  const [createChannelKind, setCreateChannelKind] = useState<"text" | "voice" | null>(null);
+  const [createChannelTarget, setCreateChannelTarget] = useState<{ kind: "text" | "voice"; parentId: string | null } | null>(null);
+  const [showCreateCategory, setShowCreateCategory] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -86,8 +89,6 @@ export default function Home() {
 
   const activeMessages = channelMessages[activeChannel] ?? [];
   const activeSpace = userSpaces.find((space) => space.id === activeSpaceId) ?? null;
-  const textChannels = activeSpace?.channels.filter((channel) => channel.kind === "text") ?? [];
-  const voiceChannels = activeSpace?.channels.filter((channel) => channel.kind === "voice") ?? [];
   const activeDetails = channelDetails[activeChannel] ?? { title: activeChannel, description: "Канал пространства FlipZero." };
   const visibleMessages = activeMessages.filter((message) => {
     const query = searchQuery.trim().toLocaleLowerCase("ru");
@@ -113,7 +114,7 @@ export default function Home() {
   function addChannel(channel: CreatedChannel) {
     setUserSpaces((current) => current.map((space) => space.id === channel.spaceId ? { ...space, channels: [...space.channels, channel] } : space));
     if (channel.kind === "text") selectChannel(channel.name);
-    setCreateChannelKind(null);
+    setCreateChannelTarget(null);
   }
 
   async function deleteChannel(channel: ApiChannel) {
@@ -124,6 +125,19 @@ export default function Home() {
     const nextChannels = activeSpace.channels.filter((item) => item.id !== channel.id);
     setUserSpaces((current) => current.map((space) => space.id === activeSpace.id ? { ...space, channels: nextChannels } : space));
     if (activeChannel === channel.name) selectChannel(nextChannels.find((item) => item.kind === "text")?.name ?? "общий-чат");
+  }
+
+  function addCategory(category: CreatedCategory) {
+    setUserSpaces((current) => current.map((space) => space.id === category.spaceId ? { ...space, categories: [...space.categories, category] } : space));
+    setShowCreateCategory(false);
+  }
+
+  async function deleteCategory(category: ApiCategory) {
+    if (!activeSpace || !window.confirm(`Удалить категорию «${category.name}»? Каналы останутся без категории.`)) return;
+    const response = await fetch(`/api/v1/spaces/${activeSpace.id}/categories?categoryId=${category.id}`, { method: "DELETE" });
+    const result = await response.json();
+    if (!response.ok) { window.alert(result.message ?? "Не удалось удалить категорию."); return; }
+    setUserSpaces((current) => current.map((space) => space.id === activeSpace.id ? { ...space, categories: space.categories.filter((item) => item.id !== category.id), channels: space.channels.map((channel) => channel.parentId === category.id ? { ...channel, parentId: null } : channel) } : space));
   }
 
   return (
@@ -141,7 +155,7 @@ export default function Home() {
         <button className="space-heading"><span className="brand-mark" style={activeSpace ? { background: `linear-gradient(135deg, ${activeSpace.accentColor}, #b33bd4)` } : undefined}>{activeSpace ? activeSpace.name.slice(0, 2).toLocaleUpperCase("ru") : "FZ"}</span><span><strong>{activeSpace?.name ?? "FlipZero"}</strong><small>{activeSpace?.description ?? (userSpaces.length ? "Пространство команды" : "Создайте пространство")}</small></span><ChevronDown size={17} /></button>
         <div className="channel-scroll">
           <button className="boost-card"><span className="boost-icon"><Sparkles size={17} /></span><span><strong>Уровень пространства</strong><small>2 из 5 усилений</small></span><span className="boost-level">2</span></button>
-          {activeSpace ? <><ChannelGroup title="ТЕКСТОВЫЕ" onAdd={activeSpace.ownerId === user?.id ? () => setCreateChannelKind("text") : undefined}>{textChannels.map((channel) => <Channel key={channel.id} active={activeChannel === channel.name} icon={channel.name === "добро-пожаловать" ? <BookOpen size={17} /> : <Hash size={17} />} label={channel.name} onSelect={selectChannel} onDelete={activeSpace.ownerId === user?.id ? () => deleteChannel(channel) : undefined} />)}</ChannelGroup><ChannelGroup title="ГОЛОСОВЫЕ" onAdd={activeSpace.ownerId === user?.id ? () => setCreateChannelKind("voice") : undefined}>{voiceChannels.map((channel) => <Channel key={channel.id} icon={<Volume2 size={17} />} label={channel.name} voice onDelete={activeSpace.ownerId === user?.id ? () => deleteChannel(channel) : undefined} />)}</ChannelGroup></> : <div className="space-empty"><strong>Здесь пока пусто</strong><span>Создайте первое пространство, чтобы открыть каналы и роли.</span><button onClick={() => setShowCreateSpace(true)}>Создать пространство</button></div>}
+          {activeSpace ? <>{activeSpace.categories.map((category) => <ChannelGroup key={category.id} title={category.name.toLocaleUpperCase("ru")} onAdd={activeSpace.ownerId === user?.id ? () => setCreateChannelTarget({ kind: "text", parentId: category.id }) : undefined} onDelete={activeSpace.ownerId === user?.id ? () => deleteCategory(category) : undefined}>{activeSpace.channels.filter((channel) => channel.parentId === category.id).map((channel) => <Channel key={channel.id} active={activeChannel === channel.name} icon={channel.kind === "voice" ? <Volume2 size={17} /> : channel.name === "добро-пожаловать" ? <BookOpen size={17} /> : <Hash size={17} />} label={channel.name} voice={channel.kind === "voice"} onSelect={channel.kind === "text" ? selectChannel : undefined} onDelete={activeSpace.ownerId === user?.id ? () => deleteChannel(channel) : undefined} />)}</ChannelGroup>)}{activeSpace.channels.some((channel) => !channel.parentId) ? <ChannelGroup title="БЕЗ КАТЕГОРИИ" onAdd={activeSpace.ownerId === user?.id ? () => setCreateChannelTarget({ kind: "text", parentId: null }) : undefined}>{activeSpace.channels.filter((channel) => !channel.parentId).map((channel) => <Channel key={channel.id} active={activeChannel === channel.name} icon={channel.kind === "voice" ? <Volume2 size={17} /> : <Hash size={17} />} label={channel.name} voice={channel.kind === "voice"} onSelect={channel.kind === "text" ? selectChannel : undefined} onDelete={activeSpace.ownerId === user?.id ? () => deleteChannel(channel) : undefined} />)}</ChannelGroup> : null}{activeSpace.ownerId === user?.id ? <button className="category-add" onClick={() => setShowCreateCategory(true)}><Plus size={14} /> Новая категория</button> : null}</> : <div className="space-empty"><strong>Здесь пока пусто</strong><span>Создайте первое пространство, чтобы открыть каналы и роли.</span><button onClick={() => setShowCreateSpace(true)}>Создать пространство</button></div>}
         </div>
         <div className="user-dock"><div className="avatar avatar-coral">{user?.displayName.split(/\s+/).map((part) => part[0]).join("").slice(0, 2).toLocaleUpperCase("ru") ?? "AP"}<span className="presence" /></div><div className="dock-copy"><strong>{user?.displayName ?? "Профиль"}</strong><small>Уровень {user?.globalLevel ?? 1}</small></div><button aria-label="Микрофон"><Mic size={17} /></button><button aria-label="Наушники"><Headphones size={17} /></button><button aria-label="Настройки"><Settings size={17} /></button></div>
       </aside>
@@ -170,12 +184,12 @@ export default function Home() {
         <div className="member-section"><h2>В СЕТИ — 4</h2>{members.map((member) => <button className="member" key={member.name}><span className={`mini-avatar ${member.accent}`}>{member.initials}<i /></span><span><strong>{member.name}</strong><small>{member.status}</small></span><b>{member.level}</b></button>)}</div>
         <div className="achievement"><div className="achievement-icon">✦</div><div><small>ПОЧТИ ПОЛУЧЕНО</small><strong>Ранний участник</strong><span>92% выполнено</span></div></div>
       </aside>
-    </main>{showCreateSpace ? <CreateSpaceDialog onClose={() => setShowCreateSpace(false)} onCreated={(space) => { setUserSpaces((current) => [...current, space]); setActiveSpaceId(space.id); const first = space.channels.find((channel) => channel.kind === "text"); if (first) selectChannel(first.name); setShowCreateSpace(false); }} /> : null}{activeSpace && createChannelKind ? <CreateChannelDialog spaceId={activeSpace.id} initialKind={createChannelKind} onClose={() => setCreateChannelKind(null)} onCreated={addChannel} /> : null}</>
+    </main>{showCreateSpace ? <CreateSpaceDialog onClose={() => setShowCreateSpace(false)} onCreated={(space) => { setUserSpaces((current) => [...current, space]); setActiveSpaceId(space.id); const first = space.channels.find((channel) => channel.kind === "text"); if (first) selectChannel(first.name); setShowCreateSpace(false); }} /> : null}{activeSpace && createChannelTarget ? <CreateChannelDialog spaceId={activeSpace.id} categories={activeSpace.categories} initialKind={createChannelTarget.kind} initialParentId={createChannelTarget.parentId} onClose={() => setCreateChannelTarget(null)} onCreated={addChannel} /> : null}{activeSpace && showCreateCategory ? <CreateCategoryDialog spaceId={activeSpace.id} onClose={() => setShowCreateCategory(false)} onCreated={addCategory} /> : null}</>
   );
 }
 
-function ChannelGroup({ title, onAdd, children }: { title: string; onAdd?: () => void; children: React.ReactNode }) {
-  return <section className="channel-group"><h2><span>{title}</span>{onAdd ? <button aria-label={`Добавить в ${title}`} onClick={onAdd}><Plus size={15} /></button> : null}</h2>{children}</section>;
+function ChannelGroup({ title, onAdd, onDelete, children }: { title: string; onAdd?: () => void; onDelete?: () => void; children: React.ReactNode }) {
+  return <section className="channel-group"><h2><span>{title}</span><span className="category-actions">{onAdd ? <button aria-label={`Добавить в ${title}`} onClick={onAdd}><Plus size={15} /></button> : null}{onDelete ? <button aria-label={`Удалить категорию ${title}`} onClick={onDelete}><Trash2 size={13} /></button> : null}</span></h2>{children}</section>;
 }
 function Channel({ icon, label, active = false, badge, voice = false, onSelect, onDelete }: { icon: React.ReactNode; label: string; active?: boolean; badge?: string; voice?: boolean; onSelect?: (channel: string) => void; onDelete?: () => void }) {
   return <div className={`channel-row ${active ? "active" : ""}`}><button className="channel" onClick={() => onSelect?.(label)}><span>{icon}</span><strong>{label}</strong>{voice ? <span className="live-pill">LIVE</span> : null}{badge ? <b>{badge}</b> : null}</button>{onDelete ? <button className="channel-delete" aria-label={`Удалить канал ${label}`} onClick={onDelete}><Trash2 size={14} /></button> : null}</div>;
