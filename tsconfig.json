@@ -42,6 +42,8 @@
     "db",
     "build",
     "components",
-    "hooks"
+    "hooks",
+    "vite.config.ts",
+    "lib/utils.ts"
   ]
 }
