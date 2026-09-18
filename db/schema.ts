@@ -4,6 +4,8 @@ export const presenceStatus = pgEnum("presence_status", ["online", "idle", "dnd"
 export const spaceVisibility = pgEnum("space_visibility", ["private", "application", "public", "invite_only"]);
 export const channelKind = pgEnum("channel_kind", ["text", "forum", "voice", "stage", "announcement", "board"]);
 export const moderationAction = pgEnum("moderation_action", ["warn", "timeout", "kick", "ban", "unban"]);
+export const progressPath = pgEnum("progress_path", ["social", "voice", "organizer", "creator"]);
+export const achievementRarity = pgEnum("achievement_rarity", ["common", "rare", "epic", "legendary"]);
 
 const timestamps = {
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
@@ -156,3 +158,46 @@ export const xpEvents = pgTable("xp_events", {
   idempotencyKey: text("idempotency_key").notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 }, (table) => [uniqueIndex("xp_events_idempotency_unique").on(table.idempotencyKey), index("xp_events_user_created_idx").on(table.userId, table.createdAt)]);
+
+export const pathProgress = pgTable("path_progress", {
+  userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  scopeId: text("scope_id").default("global").notNull(),
+  path: progressPath("path").notNull(),
+  xp: bigint("xp", { mode: "number" }).default(0).notNull(),
+  level: integer("level").default(1).notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [primaryKey({ columns: [table.userId, table.scopeId, table.path] }), index("path_progress_user_idx").on(table.userId)]);
+
+export const achievementDefinitions = pgTable("achievement_definitions", {
+  id: text("id").primaryKey(),
+  spaceId: text("space_id").references(() => spaces.id, { onDelete: "cascade" }),
+  key: text("key").notNull(),
+  name: text("name").notNull(),
+  description: text("description").notNull(),
+  icon: text("icon").default("✦").notNull(),
+  rarity: achievementRarity("rarity").default("common").notNull(),
+  eventSource: text("event_source").notNull(),
+  target: integer("target").notNull(),
+  xpReward: integer("xp_reward").default(0).notNull(),
+  isSecret: boolean("is_secret").default(false).notNull(),
+  createdBy: text("created_by").references(() => users.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [uniqueIndex("achievement_definitions_scope_key_unique").on(table.spaceId, table.key), index("achievement_definitions_space_idx").on(table.spaceId)]);
+
+export const userAchievements = pgTable("user_achievements", {
+  userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  achievementId: text("achievement_id").notNull().references(() => achievementDefinitions.id, { onDelete: "cascade" }),
+  progress: integer("progress").default(0).notNull(),
+  unlockedAt: timestamp("unlocked_at", { withTimezone: true }),
+  isShowcased: boolean("is_showcased").default(false).notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [primaryKey({ columns: [table.userId, table.achievementId] }), index("user_achievements_showcase_idx").on(table.userId, table.isShowcased)]);
+
+export const profileCosmetics = pgTable("profile_cosmetics", {
+  userId: text("user_id").primaryKey().references(() => users.id, { onDelete: "cascade" }),
+  title: text("title").default("Путешественник").notNull(),
+  avatarFrame: text("avatar_frame").default("coral").notNull(),
+  profileEffect: text("profile_effect").default("glow").notNull(),
+  showcasedPath: progressPath("showcased_path").default("social").notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+});

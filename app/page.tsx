@@ -1,7 +1,7 @@
 "use client";
 
 import { type FormEvent, useEffect, useState } from "react";
-import { Bell, BookOpen, ChevronDown, CirclePlus, Compass, Gavel, Gift, Hash, Headphones, HelpCircle, Image as ImageIcon, Link2, LoaderCircle, Mic, Plus, Search, SendHorizontal, Settings, Settings2, ShieldCheck, Smile, Sparkles, Trash2, Users, Volume2 } from "lucide-react";
+import { Bell, BookOpen, ChevronDown, CirclePlus, Compass, Gavel, Gift, Hash, Headphones, HelpCircle, Image as ImageIcon, Link2, LoaderCircle, Mic, Plus, Search, SendHorizontal, Settings, Settings2, ShieldCheck, Smile, Sparkles, Trash2, Trophy, Users, Volume2 } from "lucide-react";
 import { CreateSpaceDialog } from "@/components/create-space-dialog";
 import { CreateChannelDialog, type CreatedChannel } from "@/components/create-channel-dialog";
 import { CreateCategoryDialog, type CreatedCategory } from "@/components/create-category-dialog";
@@ -11,6 +11,7 @@ import { InviteManagerDialog } from "@/components/invite-manager-dialog";
 import { MemberManagerDialog } from "@/components/member-manager-dialog";
 import { ChannelPermissionsDialog } from "@/components/channel-permissions-dialog";
 import { ModerationDialog } from "@/components/moderation-dialog";
+import { GamificationDialog } from "@/components/gamification-dialog";
 
 type ApiChannel = { id: string; parentId: string | null; name: string; topic: string | null; kind: string; position?: number };
 type ApiCategory = { id: string; spaceId: string; name: string; position: number };
@@ -65,6 +66,8 @@ export default function Home() {
   const [showMemberManager, setShowMemberManager] = useState(false);
   const [permissionsChannel, setPermissionsChannel] = useState<ApiChannel | null>(null);
   const [showModeration, setShowModeration] = useState(false);
+  const [showGamification, setShowGamification] = useState(false);
+  const [levelUp, setLevelUp] = useState<number | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -107,7 +110,7 @@ export default function Home() {
     return !query || message.text.toLocaleLowerCase("ru").includes(query) || message.name.toLocaleLowerCase("ru").includes(query);
   });
 
-  function sendMessage(event: FormEvent<HTMLFormElement>) {
+  async function sendMessage(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const text = draft.trim();
     if (!text) return;
@@ -115,6 +118,14 @@ export default function Home() {
     const initials = displayName.split(/\s+/).map((part) => part[0]).join("").slice(0, 2).toLocaleUpperCase("ru");
     setChannelMessages((current) => ({ ...current, [activeChannel]: [...(current[activeChannel] ?? []), { initials, name: displayName, time: "Только что", text, accent: "avatar-coral", reactions: [] }] }));
     setDraft("");
+    if (activeSpace) {
+      const response = await fetch("/api/v1/gamification/award", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ source: "message", spaceId: activeSpace.id, idempotencyKey: `message:${activeSpace.id}:${crypto.randomUUID()}` }) });
+      const result = await response.json().catch(() => null);
+      if (response.ok && result?.profile) {
+        setUser((current) => current ? { ...current, globalXp: result.profile.globalXp, globalLevel: result.profile.globalLevel } : current);
+        if (result.profile.levelUp) { setLevelUp(result.profile.globalLevel); window.setTimeout(() => setLevelUp(null), 4200); }
+      }
+    }
   }
 
   function selectChannel(channel: string) {
@@ -171,14 +182,14 @@ export default function Home() {
       <aside className="channel-panel">
         <button className="space-heading" aria-label={activeSpace?.ownerId === user?.id ? "Открыть настройки пространства" : "Информация о пространстве"} onClick={() => { if (activeSpace?.ownerId === user?.id) setShowSpaceSettings(true); }}><span className="brand-mark" style={activeSpace ? { background: `linear-gradient(135deg, ${activeSpace.accentColor}, #b33bd4)` } : undefined}>{activeSpace ? activeSpace.name.slice(0, 2).toLocaleUpperCase("ru") : "FZ"}</span><span><strong>{activeSpace?.name ?? "FlipZero"}</strong><small>{activeSpace?.description ?? (userSpaces.length ? "Пространство команды" : "Создайте пространство")}</small></span><ChevronDown size={17} /></button>
         <div className="channel-scroll">
-          <button className="boost-card"><span className="boost-icon"><Sparkles size={17} /></span><span><strong>Уровень пространства</strong><small>2 из 5 усилений</small></span><span className="boost-level">2</span></button>
+          <button className="boost-card" onClick={() => setShowGamification(true)}><span className="boost-icon"><Trophy size={17} /></span><span><strong>Прогресс и награды</strong><small>Уровни, пути и рейтинг</small></span><span className="boost-level">{user?.globalLevel ?? 1}</span></button>
           {activeSpace?.ownerId === user?.id ? <button className="category-add role-manage-button" onClick={() => setShowRoleManager(true)}><ShieldCheck size={14} /> Роли и права</button> : null}
           {activeSpace?.ownerId === user?.id ? <button className="category-add invite-manage-button" onClick={() => setShowInviteManager(true)}><Link2 size={14} /> Пригласить участников</button> : null}
           {activeSpace?.ownerId === user?.id ? <button className="category-add member-manage-button" onClick={() => setShowMemberManager(true)}><Users size={14} /> Управление участниками</button> : null}
           {activeSpace?.ownerId === user?.id ? <button className="category-add moderation-manage-button" onClick={() => setShowModeration(true)}><Gavel size={14} /> Модерация и журнал</button> : null}
           {activeSpace ? <>{activeSpace.categories.map((category) => <ChannelGroup key={category.id} title={category.name.toLocaleUpperCase("ru")} onAdd={activeSpace.ownerId === user?.id ? () => setCreateChannelTarget({ kind: "text", parentId: category.id }) : undefined} onDelete={activeSpace.ownerId === user?.id ? () => deleteCategory(category) : undefined}>{activeSpace.channels.filter((channel) => channel.parentId === category.id).map((channel) => <Channel key={channel.id} active={activeChannel === channel.name} icon={channel.kind === "voice" ? <Volume2 size={17} /> : channel.name === "добро-пожаловать" ? <BookOpen size={17} /> : <Hash size={17} />} label={channel.name} voice={channel.kind === "voice"} onSelect={channel.kind === "text" ? selectChannel : undefined} onManage={activeSpace.ownerId === user?.id ? () => setPermissionsChannel(channel) : undefined} onDelete={activeSpace.ownerId === user?.id ? () => deleteChannel(channel) : undefined} />)}</ChannelGroup>)}{activeSpace.channels.some((channel) => !channel.parentId) ? <ChannelGroup title="БЕЗ КАТЕГОРИИ" onAdd={activeSpace.ownerId === user?.id ? () => setCreateChannelTarget({ kind: "text", parentId: null }) : undefined}>{activeSpace.channels.filter((channel) => !channel.parentId).map((channel) => <Channel key={channel.id} active={activeChannel === channel.name} icon={channel.kind === "voice" ? <Volume2 size={17} /> : <Hash size={17} />} label={channel.name} voice={channel.kind === "voice"} onSelect={channel.kind === "text" ? selectChannel : undefined} onManage={activeSpace.ownerId === user?.id ? () => setPermissionsChannel(channel) : undefined} onDelete={activeSpace.ownerId === user?.id ? () => deleteChannel(channel) : undefined} />)}</ChannelGroup> : null}{activeSpace.ownerId === user?.id ? <button className="category-add" onClick={() => setShowCreateCategory(true)}><Plus size={14} /> Новая категория</button> : null}</> : <div className="space-empty"><strong>Здесь пока пусто</strong><span>Создайте первое пространство, чтобы открыть каналы и роли.</span><button onClick={() => setShowCreateSpace(true)}>Создать пространство</button></div>}
         </div>
-        <div className="user-dock"><div className="avatar avatar-coral">{user?.displayName.split(/\s+/).map((part) => part[0]).join("").slice(0, 2).toLocaleUpperCase("ru") ?? "AP"}<span className="presence" /></div><div className="dock-copy"><strong>{user?.displayName ?? "Профиль"}</strong><small>Уровень {user?.globalLevel ?? 1}</small></div><button aria-label="Микрофон"><Mic size={17} /></button><button aria-label="Наушники"><Headphones size={17} /></button><button aria-label="Настройки пространства" onClick={() => { if (activeSpace?.ownerId === user?.id) setShowSpaceSettings(true); }}><Settings size={17} /></button></div>
+        <div className="user-dock"><button className="dock-profile" onClick={() => activeSpace && setShowGamification(true)}><span className="avatar avatar-coral">{user?.displayName.split(/\s+/).map((part) => part[0]).join("").slice(0, 2).toLocaleUpperCase("ru") ?? "AP"}<span className="presence" /></span><span className="dock-copy"><strong>{user?.displayName ?? "Профиль"}</strong><small>Уровень {user?.globalLevel ?? 1}</small></span></button><button aria-label="Микрофон"><Mic size={17} /></button><button aria-label="Наушники"><Headphones size={17} /></button><button aria-label="Настройки пространства" onClick={() => { if (activeSpace?.ownerId === user?.id) setShowSpaceSettings(true); }}><Settings size={17} /></button></div>
       </aside>
 
       <section className="chat-panel">
@@ -205,7 +216,7 @@ export default function Home() {
         <div className="member-section"><h2>В СЕТИ — 4</h2>{members.map((member) => <button className="member" key={member.name}><span className={`mini-avatar ${member.accent}`}>{member.initials}<i /></span><span><strong>{member.name}</strong><small>{member.status}</small></span><b>{member.level}</b></button>)}</div>
         <div className="achievement"><div className="achievement-icon">✦</div><div><small>ПОЧТИ ПОЛУЧЕНО</small><strong>Ранний участник</strong><span>92% выполнено</span></div></div>
       </aside>
-    </main>{showCreateSpace ? <CreateSpaceDialog onClose={() => setShowCreateSpace(false)} onCreated={(space) => { setUserSpaces((current) => [...current, space]); setActiveSpaceId(space.id); const first = space.channels.find((channel) => channel.kind === "text"); if (first) selectChannel(first.name); setShowCreateSpace(false); }} /> : null}{activeSpace && createChannelTarget ? <CreateChannelDialog spaceId={activeSpace.id} categories={activeSpace.categories} initialKind={createChannelTarget.kind} initialParentId={createChannelTarget.parentId} onClose={() => setCreateChannelTarget(null)} onCreated={addChannel} /> : null}{activeSpace && showCreateCategory ? <CreateCategoryDialog spaceId={activeSpace.id} onClose={() => setShowCreateCategory(false)} onCreated={addCategory} /> : null}{activeSpace && showSpaceSettings ? <SpaceSettingsDialog space={activeSpace} onClose={() => setShowSpaceSettings(false)} onSaved={saveSpaceSettings} /> : null}{activeSpace && showRoleManager ? <RoleManagerDialog spaceId={activeSpace.id} onClose={() => setShowRoleManager(false)} /> : null}{activeSpace && showInviteManager ? <InviteManagerDialog spaceId={activeSpace.id} onClose={() => setShowInviteManager(false)} /> : null}{activeSpace && showMemberManager ? <MemberManagerDialog spaceId={activeSpace.id} onClose={() => setShowMemberManager(false)} /> : null}{activeSpace && permissionsChannel ? <ChannelPermissionsDialog spaceId={activeSpace.id} channel={permissionsChannel} onClose={() => setPermissionsChannel(null)} /> : null}{activeSpace && showModeration ? <ModerationDialog spaceId={activeSpace.id} onClose={() => setShowModeration(false)} /> : null}</>
+    </main>{levelUp ? <div className="level-up-toast"><Sparkles size={22} /><div><small>НОВЫЙ УРОВЕНЬ</small><strong>Вы достигли уровня {levelUp}!</strong></div></div> : null}{showCreateSpace ? <CreateSpaceDialog onClose={() => setShowCreateSpace(false)} onCreated={(space) => { setUserSpaces((current) => [...current, space]); setActiveSpaceId(space.id); const first = space.channels.find((channel) => channel.kind === "text"); if (first) selectChannel(first.name); setShowCreateSpace(false); }} /> : null}{activeSpace && createChannelTarget ? <CreateChannelDialog spaceId={activeSpace.id} categories={activeSpace.categories} initialKind={createChannelTarget.kind} initialParentId={createChannelTarget.parentId} onClose={() => setCreateChannelTarget(null)} onCreated={addChannel} /> : null}{activeSpace && showCreateCategory ? <CreateCategoryDialog spaceId={activeSpace.id} onClose={() => setShowCreateCategory(false)} onCreated={addCategory} /> : null}{activeSpace && showSpaceSettings ? <SpaceSettingsDialog space={activeSpace} onClose={() => setShowSpaceSettings(false)} onSaved={saveSpaceSettings} /> : null}{activeSpace && showRoleManager ? <RoleManagerDialog spaceId={activeSpace.id} onClose={() => setShowRoleManager(false)} /> : null}{activeSpace && showInviteManager ? <InviteManagerDialog spaceId={activeSpace.id} onClose={() => setShowInviteManager(false)} /> : null}{activeSpace && showMemberManager ? <MemberManagerDialog spaceId={activeSpace.id} onClose={() => setShowMemberManager(false)} /> : null}{activeSpace && permissionsChannel ? <ChannelPermissionsDialog spaceId={activeSpace.id} channel={permissionsChannel} onClose={() => setPermissionsChannel(null)} /> : null}{activeSpace && showModeration ? <ModerationDialog spaceId={activeSpace.id} onClose={() => setShowModeration(false)} /> : null}{activeSpace && showGamification ? <GamificationDialog spaceId={activeSpace.id} isOwner={activeSpace.ownerId === user?.id} onClose={() => setShowGamification(false)} /> : null}</>
   );
 }
 
