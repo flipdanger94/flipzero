@@ -16,6 +16,7 @@ import { PersistentChat } from "@/components/persistent-chat";
 import { ChannelBoard } from "@/components/channel-board";
 import { ForumChannel } from "@/components/forum-channel";
 import { VoiceRoom } from "@/components/voice-room";
+import { DiscoveryDialog } from "@/components/discovery-dialog";
 
 type ApiChannel = { id: string; parentId: string | null; name: string; topic: string | null; kind: string; position?: number };
 type ApiCategory = { id: string; spaceId: string; name: string; position: number };
@@ -62,6 +63,7 @@ export default function Home() {
   const [activeSpaceId, setActiveSpaceId] = useState<string | null>(null);
   const [spacesLoading, setSpacesLoading] = useState(true);
   const [showCreateSpace, setShowCreateSpace] = useState(false);
+  const [showDiscovery, setShowDiscovery] = useState(false);
   const [createChannelTarget, setCreateChannelTarget] = useState<{ kind: "text" | "voice"; parentId: string | null } | null>(null);
   const [showCreateCategory, setShowCreateCategory] = useState(false);
   const [showSpaceSettings, setShowSpaceSettings] = useState(false);
@@ -178,6 +180,21 @@ export default function Home() {
     setShowSpaceSettings(false);
   }
 
+  async function openJoinedSpace(spaceId: string) {
+    const response = await fetch("/api/v1/spaces");
+    const data = await response.json();
+    if (!response.ok) return;
+    const loadedSpaces = (data.spaces ?? []) as ApiSpace[];
+    const selected = loadedSpaces.find((space) => space.id === spaceId);
+    setUserSpaces(loadedSpaces);
+    setActiveSpaceId(spaceId);
+    if (selected) {
+      const first = selected.channels.find((channel) => channel.kind === "text");
+      if (first) selectChannel(first.name);
+    }
+    setShowDiscovery(false);
+  }
+
   return (
     <><main className={`app-shell ${showMembers ? "" : "members-hidden"}`}>
       <nav className="space-rail" aria-label="Сообщества">
@@ -185,7 +202,7 @@ export default function Home() {
         <span className="rail-separator" />
         {spacesLoading ? <LoaderCircle className="rail-loader spin" size={20} /> : userSpaces.map((space) => <button key={space.id} className={`space-button ${space.id === activeSpaceId ? "active" : ""}`} style={{ background: `linear-gradient(145deg, ${space.accentColor}, #7136ad)` }} aria-label={`Сообщество ${space.name}`} title={space.name} onClick={() => { setActiveSpaceId(space.id); const first = space.channels.find((channel) => channel.kind === "text"); if (first) selectChannel(first.name); }}>{space.name.slice(0, 2).toLocaleUpperCase("ru")}</button>)}
         <button className="rail-action add-space" aria-label="Добавить сообщество" onClick={() => setShowCreateSpace(true)}><Plus size={22} /></button>
-        <button className="rail-action discover" aria-label="Обзор сообществ"><Compass size={21} /></button>
+        <button className="rail-action discover" aria-label="Обзор сообществ" onClick={() => setShowDiscovery(true)}><Compass size={21} /></button>
         <div className="rail-bottom"><button className="rail-action" aria-label="Помощь"><HelpCircle size={20} /></button></div>
       </nav>
 
@@ -226,7 +243,7 @@ export default function Home() {
         <div className="member-section"><h2>В СЕТИ — 4</h2>{members.map((member) => <button className="member" key={member.name}><span className={`mini-avatar ${member.accent}`}>{member.initials}<i /></span><span><strong>{member.name}</strong><small>{member.status}</small></span><b>{member.level}</b></button>)}</div>
         <div className="achievement"><div className="achievement-icon">✦</div><div><small>ПОЧТИ ПОЛУЧЕНО</small><strong>Ранний участник</strong><span>92% выполнено</span></div></div>
       </aside>
-    </main>{levelUp ? <div className="level-up-toast"><Sparkles size={22} /><div><small>НОВЫЙ УРОВЕНЬ</small><strong>Вы достигли уровня {levelUp}!</strong></div></div> : null}{showCreateSpace ? <CreateSpaceDialog onClose={() => setShowCreateSpace(false)} onCreated={(space) => { setUserSpaces((current) => [...current, space]); setActiveSpaceId(space.id); const first = space.channels.find((channel) => channel.kind === "text"); if (first) selectChannel(first.name); setShowCreateSpace(false); }} /> : null}{activeSpace && createChannelTarget ? <CreateChannelDialog spaceId={activeSpace.id} categories={activeSpace.categories} initialKind={createChannelTarget.kind} initialParentId={createChannelTarget.parentId} onClose={() => setCreateChannelTarget(null)} onCreated={addChannel} /> : null}{activeSpace && showCreateCategory ? <CreateCategoryDialog spaceId={activeSpace.id} onClose={() => setShowCreateCategory(false)} onCreated={addCategory} /> : null}{activeSpace && showSpaceSettings ? <SpaceSettingsDialog space={activeSpace} onClose={() => setShowSpaceSettings(false)} onSaved={saveSpaceSettings} /> : null}{activeSpace && showRoleManager ? <RoleManagerDialog spaceId={activeSpace.id} onClose={() => setShowRoleManager(false)} /> : null}{activeSpace && showInviteManager ? <InviteManagerDialog spaceId={activeSpace.id} onClose={() => setShowInviteManager(false)} /> : null}{activeSpace && showMemberManager ? <MemberManagerDialog spaceId={activeSpace.id} onClose={() => setShowMemberManager(false)} /> : null}{activeSpace && permissionsChannel ? <ChannelPermissionsDialog spaceId={activeSpace.id} channel={permissionsChannel} onClose={() => setPermissionsChannel(null)} /> : null}{activeSpace && showModeration ? <ModerationDialog spaceId={activeSpace.id} onClose={() => setShowModeration(false)} /> : null}{activeSpace && showGamification ? <GamificationDialog spaceId={activeSpace.id} isOwner={activeSpace.ownerId === user?.id} onClose={() => setShowGamification(false)} /> : null}</>
+    </main>{showDiscovery ? <DiscoveryDialog onClose={() => setShowDiscovery(false)} onJoined={openJoinedSpace} /> : null}{levelUp ? <div className="level-up-toast"><Sparkles size={22} /><div><small>НОВЫЙ УРОВЕНЬ</small><strong>Вы достигли уровня {levelUp}!</strong></div></div> : null}{showCreateSpace ? <CreateSpaceDialog onClose={() => setShowCreateSpace(false)} onCreated={(space) => { setUserSpaces((current) => [...current, space]); setActiveSpaceId(space.id); const first = space.channels.find((channel) => channel.kind === "text"); if (first) selectChannel(first.name); setShowCreateSpace(false); }} /> : null}{activeSpace && createChannelTarget ? <CreateChannelDialog spaceId={activeSpace.id} categories={activeSpace.categories} initialKind={createChannelTarget.kind} initialParentId={createChannelTarget.parentId} onClose={() => setCreateChannelTarget(null)} onCreated={addChannel} /> : null}{activeSpace && showCreateCategory ? <CreateCategoryDialog spaceId={activeSpace.id} onClose={() => setShowCreateCategory(false)} onCreated={addCategory} /> : null}{activeSpace && showSpaceSettings ? <SpaceSettingsDialog space={activeSpace} onClose={() => setShowSpaceSettings(false)} onSaved={saveSpaceSettings} /> : null}{activeSpace && showRoleManager ? <RoleManagerDialog spaceId={activeSpace.id} onClose={() => setShowRoleManager(false)} /> : null}{activeSpace && showInviteManager ? <InviteManagerDialog spaceId={activeSpace.id} onClose={() => setShowInviteManager(false)} /> : null}{activeSpace && showMemberManager ? <MemberManagerDialog spaceId={activeSpace.id} onClose={() => setShowMemberManager(false)} /> : null}{activeSpace && permissionsChannel ? <ChannelPermissionsDialog spaceId={activeSpace.id} channel={permissionsChannel} onClose={() => setPermissionsChannel(null)} /> : null}{activeSpace && showModeration ? <ModerationDialog spaceId={activeSpace.id} onClose={() => setShowModeration(false)} /> : null}{activeSpace && showGamification ? <GamificationDialog spaceId={activeSpace.id} isOwner={activeSpace.ownerId === user?.id} onClose={() => setShowGamification(false)} /> : null}</>
   );
 }
 
