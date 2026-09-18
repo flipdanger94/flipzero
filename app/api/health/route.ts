@@ -1,6 +1,7 @@
 import { sql } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { getDatabase } from "@/db/client";
+import { getDatabaseTopology } from "@/db/topology";
 import { logEvent, requestId } from "@/lib/observability";
 
 export const runtime = "nodejs";
@@ -23,12 +24,13 @@ export async function GET(request: Request) {
 
   const durationMs = Math.round(performance.now() - startedAt);
   const healthy = databaseStatus === "ok";
+  const topology = getDatabaseTopology();
   logEvent(healthy ? "info" : "warn", "health_check_completed", { requestId: id, status: healthy ? "ok" : "degraded", durationMs, databaseLatencyMs });
 
   return NextResponse.json({
     service: "flipzero-web",
     status: healthy ? "ok" : "degraded",
-    version: "0.5.0",
+    version: "0.6.0",
     timestamp: new Date().toISOString(),
     durationMs,
     deployment: {
@@ -40,6 +42,7 @@ export async function GET(request: Request) {
       api: { status: "ok", latencyMs: durationMs },
       database: { status: databaseStatus, latencyMs: databaseLatencyMs },
     },
+    topology,
     slo: {
       availabilityTarget: 99.9,
       apiP95TargetMs: 500,
