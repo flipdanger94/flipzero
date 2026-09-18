@@ -5,8 +5,8 @@ import { PwaClient } from "./pwa-client";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "FlipZero — пространство для своих",
-  description: "Сообщества, живое общение и профиль, который растёт вместе с вами.",
+  title: "FlipZero — чаты, голос и сообщества",
+  description: "Общайтесь в текстовых и голосовых каналах, проводите события и развивайте своё сообщество в FlipZero.",
   icons: {
     icon: "/favicon.svg",
     shortcut: "/favicon.svg",

@@ -18,7 +18,7 @@ export default function RegisterPage() {
     const response = await fetch("/api/v1/auth/register", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email: data.get("email"), username: data.get("username"), displayName: data.get("displayName"), password: data.get("password") }) });
     const result = await response.json();
     if (!response.ok) { setError(result.message ?? "Не удалось создать аккаунт."); setLoading(false); return; }
-    router.push("/");
+    router.push("/app");
     router.refresh();
   }
 

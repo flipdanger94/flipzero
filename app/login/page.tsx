@@ -17,7 +17,7 @@ export default function LoginPage() {
     const result = await response.json();
     if (!response.ok) { setError(result.message ?? "Не удалось войти."); setLoading(false); return; }
     const next = new URLSearchParams(window.location.search).get("next");
-    router.push(next?.startsWith("/") && !next.startsWith("//") ? next : "/");
+    router.push(next?.startsWith("/") && !next.startsWith("//") ? next : "/app");
     router.refresh();
   }
 
