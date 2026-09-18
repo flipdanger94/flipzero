@@ -1,0 +1,46 @@
+import { randomUUID } from "node:crypto";
+import { and, count, eq, max } from "drizzle-orm";
+import { NextResponse } from "next/server";
+import { getDatabase } from "@/db/client";
+import { channels, spaces } from "@/db/schema";
+import { getCurrentUser } from "@/lib/auth";
+import { createChannelSchema } from "@/lib/space-validation";
+
+export async function POST(request: Request, { params }: { params: Promise<{ spaceId: string }> }) {
+  const [user, { spaceId }] = await Promise.all([getCurrentUser(), params]);
+  if (!user) return NextResponse.json({ code: "UNAUTHENTICATED", message: "Требуется вход." }, { status: 401 });
+  const parsed = createChannelSchema.safeParse(await request.json().catch(() => null));
+  if (!parsed.success) return NextResponse.json({ code: "INVALID_INPUT", message: "Проверьте данные канала.", issues: parsed.error.flatten() }, { status: 400 });
+
+  const database = getDatabase();
+  const [space] = await database.select({ ownerId: spaces.ownerId }).from(spaces).where(eq(spaces.id, spaceId)).limit(1);
+  if (!space) return NextResponse.json({ code: "NOT_FOUND", message: "Пространство не найдено." }, { status: 404 });
+  if (space.ownerId !== user.id) return NextResponse.json({ code: "FORBIDDEN", message: "Создавать каналы может только владелец." }, { status: 403 });
+
+  const [duplicate] = await database.select({ id: channels.id }).from(channels).where(and(eq(channels.spaceId, spaceId), eq(channels.name, parsed.data.name))).limit(1);
+  if (duplicate) return NextResponse.json({ code: "CHANNEL_EXISTS", message: "Канал с таким названием уже существует." }, { status: 409 });
+  const [positionResult] = await database.select({ value: max(channels.position) }).from(channels).where(eq(channels.spaceId, spaceId));
+  const channel = { id: randomUUID(), spaceId, name: parsed.data.name, topic: parsed.data.topic || null, kind: parsed.data.kind, position: (positionResult?.value ?? -1) + 1 };
+  await database.insert(channels).values(channel);
+  return NextResponse.json({ channel }, { status: 201 });
+}
+
+export async function DELETE(request: Request, { params }: { params: Promise<{ spaceId: string }> }) {
+  const [user, { spaceId }] = await Promise.all([getCurrentUser(), params]);
+  if (!user) return NextResponse.json({ code: "UNAUTHENTICATED", message: "Требуется вход." }, { status: 401 });
+  const channelId = new URL(request.url).searchParams.get("channelId");
+  if (!channelId) return NextResponse.json({ code: "INVALID_INPUT", message: "Не указан канал." }, { status: 400 });
+
+  const database = getDatabase();
+  const [space] = await database.select({ ownerId: spaces.ownerId }).from(spaces).where(eq(spaces.id, spaceId)).limit(1);
+  if (!space) return NextResponse.json({ code: "NOT_FOUND", message: "Пространство не найдено." }, { status: 404 });
+  if (space.ownerId !== user.id) return NextResponse.json({ code: "FORBIDDEN", message: "Удалять каналы может только владелец." }, { status: 403 });
+  const [channel] = await database.select({ id: channels.id, kind: channels.kind }).from(channels).where(and(eq(channels.id, channelId), eq(channels.spaceId, spaceId))).limit(1);
+  if (!channel) return NextResponse.json({ code: "NOT_FOUND", message: "Канал не найден." }, { status: 404 });
+  if (channel.kind === "text") {
+    const [textCount] = await database.select({ value: count() }).from(channels).where(and(eq(channels.spaceId, spaceId), eq(channels.kind, "text")));
+    if (textCount.value <= 1) return NextResponse.json({ code: "LAST_TEXT_CHANNEL", message: "Нельзя удалить последний текстовый канал." }, { status: 409 });
+  }
+  await database.delete(channels).where(eq(channels.id, channelId));
+  return NextResponse.json({ success: true });
+}
