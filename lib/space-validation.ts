@@ -7,6 +7,8 @@ export const createSpaceSchema = z.object({
   accentColor: z.string().regex(/^#[0-9a-fA-F]{6}$/).default("#ff5c70"),
 });
 
+export const updateSpaceSchema = createSpaceSchema.pick({ name: true, description: true, visibility: true, accentColor: true });
+
 export const createChannelSchema = z.object({
   name: z.string().trim().min(2).max(48).transform((value) => value.replace(/\s+/g, "-")),
   topic: z.string().trim().max(240).optional().default(""),

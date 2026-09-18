@@ -5,6 +5,7 @@ import { Bell, BookOpen, ChevronDown, CirclePlus, Compass, Gift, Hash, Headphone
 import { CreateSpaceDialog } from "@/components/create-space-dialog";
 import { CreateChannelDialog, type CreatedChannel } from "@/components/create-channel-dialog";
 import { CreateCategoryDialog, type CreatedCategory } from "@/components/create-category-dialog";
+import { SpaceSettingsDialog, type EditableSpace } from "@/components/space-settings-dialog";
 
 type ApiChannel = { id: string; parentId: string | null; name: string; topic: string | null; kind: string; position?: number };
 type ApiCategory = { id: string; spaceId: string; name: string; position: number };
@@ -53,6 +54,7 @@ export default function Home() {
   const [showCreateSpace, setShowCreateSpace] = useState(false);
   const [createChannelTarget, setCreateChannelTarget] = useState<{ kind: "text" | "voice"; parentId: string | null } | null>(null);
   const [showCreateCategory, setShowCreateCategory] = useState(false);
+  const [showSpaceSettings, setShowSpaceSettings] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -140,6 +142,11 @@ export default function Home() {
     setUserSpaces((current) => current.map((space) => space.id === activeSpace.id ? { ...space, categories: space.categories.filter((item) => item.id !== category.id), channels: space.channels.map((channel) => channel.parentId === category.id ? { ...channel, parentId: null } : channel) } : space));
   }
 
+  function saveSpaceSettings(updated: EditableSpace) {
+    setUserSpaces((current) => current.map((space) => space.id === updated.id ? { ...space, ...updated } : space));
+    setShowSpaceSettings(false);
+  }
+
   return (
     <><main className={`app-shell ${showMembers ? "" : "members-hidden"}`}>
       <nav className="space-rail" aria-label="Сообщества">
@@ -152,12 +159,12 @@ export default function Home() {
       </nav>
 
       <aside className="channel-panel">
-        <button className="space-heading"><span className="brand-mark" style={activeSpace ? { background: `linear-gradient(135deg, ${activeSpace.accentColor}, #b33bd4)` } : undefined}>{activeSpace ? activeSpace.name.slice(0, 2).toLocaleUpperCase("ru") : "FZ"}</span><span><strong>{activeSpace?.name ?? "FlipZero"}</strong><small>{activeSpace?.description ?? (userSpaces.length ? "Пространство команды" : "Создайте пространство")}</small></span><ChevronDown size={17} /></button>
+        <button className="space-heading" aria-label={activeSpace?.ownerId === user?.id ? "Открыть настройки пространства" : "Информация о пространстве"} onClick={() => { if (activeSpace?.ownerId === user?.id) setShowSpaceSettings(true); }}><span className="brand-mark" style={activeSpace ? { background: `linear-gradient(135deg, ${activeSpace.accentColor}, #b33bd4)` } : undefined}>{activeSpace ? activeSpace.name.slice(0, 2).toLocaleUpperCase("ru") : "FZ"}</span><span><strong>{activeSpace?.name ?? "FlipZero"}</strong><small>{activeSpace?.description ?? (userSpaces.length ? "Пространство команды" : "Создайте пространство")}</small></span><ChevronDown size={17} /></button>
         <div className="channel-scroll">
           <button className="boost-card"><span className="boost-icon"><Sparkles size={17} /></span><span><strong>Уровень пространства</strong><small>2 из 5 усилений</small></span><span className="boost-level">2</span></button>
           {activeSpace ? <>{activeSpace.categories.map((category) => <ChannelGroup key={category.id} title={category.name.toLocaleUpperCase("ru")} onAdd={activeSpace.ownerId === user?.id ? () => setCreateChannelTarget({ kind: "text", parentId: category.id }) : undefined} onDelete={activeSpace.ownerId === user?.id ? () => deleteCategory(category) : undefined}>{activeSpace.channels.filter((channel) => channel.parentId === category.id).map((channel) => <Channel key={channel.id} active={activeChannel === channel.name} icon={channel.kind === "voice" ? <Volume2 size={17} /> : channel.name === "добро-пожаловать" ? <BookOpen size={17} /> : <Hash size={17} />} label={channel.name} voice={channel.kind === "voice"} onSelect={channel.kind === "text" ? selectChannel : undefined} onDelete={activeSpace.ownerId === user?.id ? () => deleteChannel(channel) : undefined} />)}</ChannelGroup>)}{activeSpace.channels.some((channel) => !channel.parentId) ? <ChannelGroup title="БЕЗ КАТЕГОРИИ" onAdd={activeSpace.ownerId === user?.id ? () => setCreateChannelTarget({ kind: "text", parentId: null }) : undefined}>{activeSpace.channels.filter((channel) => !channel.parentId).map((channel) => <Channel key={channel.id} active={activeChannel === channel.name} icon={channel.kind === "voice" ? <Volume2 size={17} /> : <Hash size={17} />} label={channel.name} voice={channel.kind === "voice"} onSelect={channel.kind === "text" ? selectChannel : undefined} onDelete={activeSpace.ownerId === user?.id ? () => deleteChannel(channel) : undefined} />)}</ChannelGroup> : null}{activeSpace.ownerId === user?.id ? <button className="category-add" onClick={() => setShowCreateCategory(true)}><Plus size={14} /> Новая категория</button> : null}</> : <div className="space-empty"><strong>Здесь пока пусто</strong><span>Создайте первое пространство, чтобы открыть каналы и роли.</span><button onClick={() => setShowCreateSpace(true)}>Создать пространство</button></div>}
         </div>
-        <div className="user-dock"><div className="avatar avatar-coral">{user?.displayName.split(/\s+/).map((part) => part[0]).join("").slice(0, 2).toLocaleUpperCase("ru") ?? "AP"}<span className="presence" /></div><div className="dock-copy"><strong>{user?.displayName ?? "Профиль"}</strong><small>Уровень {user?.globalLevel ?? 1}</small></div><button aria-label="Микрофон"><Mic size={17} /></button><button aria-label="Наушники"><Headphones size={17} /></button><button aria-label="Настройки"><Settings size={17} /></button></div>
+        <div className="user-dock"><div className="avatar avatar-coral">{user?.displayName.split(/\s+/).map((part) => part[0]).join("").slice(0, 2).toLocaleUpperCase("ru") ?? "AP"}<span className="presence" /></div><div className="dock-copy"><strong>{user?.displayName ?? "Профиль"}</strong><small>Уровень {user?.globalLevel ?? 1}</small></div><button aria-label="Микрофон"><Mic size={17} /></button><button aria-label="Наушники"><Headphones size={17} /></button><button aria-label="Настройки пространства" onClick={() => { if (activeSpace?.ownerId === user?.id) setShowSpaceSettings(true); }}><Settings size={17} /></button></div>
       </aside>
 
       <section className="chat-panel">
@@ -184,7 +191,7 @@ export default function Home() {
         <div className="member-section"><h2>В СЕТИ — 4</h2>{members.map((member) => <button className="member" key={member.name}><span className={`mini-avatar ${member.accent}`}>{member.initials}<i /></span><span><strong>{member.name}</strong><small>{member.status}</small></span><b>{member.level}</b></button>)}</div>
         <div className="achievement"><div className="achievement-icon">✦</div><div><small>ПОЧТИ ПОЛУЧЕНО</small><strong>Ранний участник</strong><span>92% выполнено</span></div></div>
       </aside>
-    </main>{showCreateSpace ? <CreateSpaceDialog onClose={() => setShowCreateSpace(false)} onCreated={(space) => { setUserSpaces((current) => [...current, space]); setActiveSpaceId(space.id); const first = space.channels.find((channel) => channel.kind === "text"); if (first) selectChannel(first.name); setShowCreateSpace(false); }} /> : null}{activeSpace && createChannelTarget ? <CreateChannelDialog spaceId={activeSpace.id} categories={activeSpace.categories} initialKind={createChannelTarget.kind} initialParentId={createChannelTarget.parentId} onClose={() => setCreateChannelTarget(null)} onCreated={addChannel} /> : null}{activeSpace && showCreateCategory ? <CreateCategoryDialog spaceId={activeSpace.id} onClose={() => setShowCreateCategory(false)} onCreated={addCategory} /> : null}</>
+    </main>{showCreateSpace ? <CreateSpaceDialog onClose={() => setShowCreateSpace(false)} onCreated={(space) => { setUserSpaces((current) => [...current, space]); setActiveSpaceId(space.id); const first = space.channels.find((channel) => channel.kind === "text"); if (first) selectChannel(first.name); setShowCreateSpace(false); }} /> : null}{activeSpace && createChannelTarget ? <CreateChannelDialog spaceId={activeSpace.id} categories={activeSpace.categories} initialKind={createChannelTarget.kind} initialParentId={createChannelTarget.parentId} onClose={() => setCreateChannelTarget(null)} onCreated={addChannel} /> : null}{activeSpace && showCreateCategory ? <CreateCategoryDialog spaceId={activeSpace.id} onClose={() => setShowCreateCategory(false)} onCreated={addCategory} /> : null}{activeSpace && showSpaceSettings ? <SpaceSettingsDialog space={activeSpace} onClose={() => setShowSpaceSettings(false)} onSaved={saveSpaceSettings} /> : null}</>
   );
 }
 
