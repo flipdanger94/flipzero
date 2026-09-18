@@ -1,0 +1,31 @@
+import { and, eq, gt, isNull, or, sql } from "drizzle-orm";
+import { NextResponse } from "next/server";
+import { getDatabase } from "@/db/client";
+import { invites, memberRoles, members, roles, spaces } from "@/db/schema";
+import { getCurrentUser } from "@/lib/auth";
+
+export async function GET(_: Request, { params }: { params: Promise<{ code: string }> }) {
+  const { code } = await params;
+  const database = getDatabase();
+  const [invite] = await database.select({ code: invites.code, spaceId: spaces.id, spaceName: spaces.name, description: spaces.description, accentColor: spaces.accentColor, uses: invites.uses, maxUses: invites.maxUses, expiresAt: invites.expiresAt }).from(invites).innerJoin(spaces, eq(invites.spaceId, spaces.id)).where(eq(invites.code, code)).limit(1);
+  if (!invite) return NextResponse.json({ code: "NOT_FOUND", message: "Приглашение не найдено." }, { status: 404 });
+  const unavailable = (invite.expiresAt && invite.expiresAt <= new Date()) || (invite.maxUses !== null && invite.uses >= invite.maxUses);
+  return NextResponse.json({ invite: { ...invite, unavailable } });
+}
+
+export async function POST(_: Request, { params }: { params: Promise<{ code: string }> }) {
+  const [user, { code }] = await Promise.all([getCurrentUser(), params]);
+  if (!user) return NextResponse.json({ code: "UNAUTHENTICATED", message: "Войдите, чтобы принять приглашение." }, { status: 401 });
+  const database = getDatabase();
+  const [invite] = await database.select().from(invites).where(and(eq(invites.code, code), or(isNull(invites.expiresAt), gt(invites.expiresAt, new Date())))).limit(1);
+  if (!invite || (invite.maxUses !== null && invite.uses >= invite.maxUses)) return NextResponse.json({ code: "INVITE_UNAVAILABLE", message: "Приглашение истекло или уже использовано максимальное число раз." }, { status: 410 });
+  const [existing] = await database.select({ userId: members.userId }).from(members).where(and(eq(members.userId, user.id), eq(members.spaceId, invite.spaceId))).limit(1);
+  if (existing) return NextResponse.json({ spaceId: invite.spaceId, joined: false });
+  const [memberRole] = await database.select({ id: roles.id }).from(roles).where(and(eq(roles.spaceId, invite.spaceId), eq(roles.name, "Участник"))).limit(1);
+  await database.transaction(async (tx) => {
+    await tx.insert(members).values({ userId: user.id, spaceId: invite.spaceId });
+    if (memberRole) await tx.insert(memberRoles).values({ userId: user.id, spaceId: invite.spaceId, roleId: memberRole.id });
+    await tx.update(invites).set({ uses: sql`${invites.uses} + 1` }).where(eq(invites.code, code));
+  });
+  return NextResponse.json({ spaceId: invite.spaceId, joined: true });
+}

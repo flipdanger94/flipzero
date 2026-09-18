@@ -16,7 +16,8 @@ export default function LoginPage() {
     const response = await fetch("/api/v1/auth/login", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email: data.get("email"), password: data.get("password") }) });
     const result = await response.json();
     if (!response.ok) { setError(result.message ?? "Не удалось войти."); setLoading(false); return; }
-    router.push("/");
+    const next = new URLSearchParams(window.location.search).get("next");
+    router.push(next?.startsWith("/") && !next.startsWith("//") ? next : "/");
     router.refresh();
   }
 
