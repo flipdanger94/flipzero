@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { asc, eq, inArray } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { getDatabase } from "@/db/client";
-import { channelCategories, channels, memberRoles, members, roles, spaces } from "@/db/schema";
+import { channelCategories, channels, memberRoles, members, roles, spacePlacements, spaces } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
 import { DEFAULT_MEMBER_PERMISSIONS, Permission } from "@/lib/permissions";
 import { createSpaceSchema } from "@/lib/space-validation";
@@ -65,6 +65,7 @@ export async function POST(request: Request) {
 
   await database.transaction(async (tx) => {
     await tx.insert(spaces).values({ id: spaceId, ownerId: user.id, name: parsed.data.name, slug, description: parsed.data.description || null, visibility: parsed.data.visibility, accentColor: parsed.data.accentColor });
+    await tx.insert(spacePlacements).values({ spaceId, shardId: "primary", homeRegion: process.env.VERCEL_REGION ?? "global" });
     await tx.insert(roles).values([
       { id: ownerRoleId, spaceId, name: "Владелец", color: parsed.data.accentColor, position: 100, permissions: Permission.Administrator, isManaged: true },
       { id: memberRoleId, spaceId, name: "Участник", color: "#918d9d", position: 0, permissions: DEFAULT_MEMBER_PERMISSIONS, isManaged: true },

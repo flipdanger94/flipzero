@@ -52,6 +52,15 @@ export const spaces = pgTable("spaces", {
   ...timestamps,
 }, (table) => [uniqueIndex("spaces_slug_unique").on(table.slug), index("spaces_owner_idx").on(table.ownerId)]);
 
+export const spacePlacements = pgTable("space_placements", {
+  spaceId: text("space_id").primaryKey().references(() => spaces.id, { onDelete: "cascade" }),
+  shardId: text("shard_id").default("primary").notNull(),
+  homeRegion: text("home_region").default("global").notNull(),
+  state: text("state").default("active").notNull(),
+  version: integer("version").default(1).notNull(),
+  ...timestamps,
+}, (table) => [index("space_placements_shard_state_idx").on(table.shardId, table.state)]);
+
 export const roles = pgTable("roles", {
   id: text("id").primaryKey(),
   spaceId: text("space_id").notNull().references(() => spaces.id, { onDelete: "cascade" }),
