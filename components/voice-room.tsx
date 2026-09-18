@@ -12,6 +12,7 @@ import {
   PhoneOff,
   Radio,
   Settings2,
+  ShieldCheck,
   Signal,
   Users,
   Video,
@@ -48,12 +49,21 @@ export function VoiceRoom({
   const [settings, setSettings] = useState(false);
   const [breakout, setBreakout] = useState("main");
   const [soundboard, setSoundboard] = useState(false);
+  const [consentPanel, setConsentPanel] = useState(false);
+  const [incomingConsent, setIncomingConsent] = useState<{
+    id: string;
+    requester: string;
+  } | null>(null);
+  const [consents, setConsents] = useState<
+    Record<string, "pending" | "accepted" | "declined">
+  >({});
   const [error, setError] = useState("");
   const roomRef = useRef<Room | null>(null);
   const audioRef = useRef<HTMLDivElement | null>(null);
   const remoteVideoRef = useRef<HTMLDivElement | null>(null);
   const localCameraRef = useRef<HTMLDivElement | null>(null);
   const localScreenRef = useRef<HTMLDivElement | null>(null);
+  const consentRequestRef = useRef("");
 
   useEffect(
     () => () => {
@@ -97,6 +107,32 @@ export function VoiceRoom({
       );
       room.on(RoomEvent.ConnectionQualityChanged, (next, participant) => {
         if (participant.isLocal) setQuality(next);
+      });
+      room.on(RoomEvent.DataReceived, (payload, participant, _kind, topic) => {
+        if (topic !== "recording-consent") return;
+        try {
+          const message = JSON.parse(new TextDecoder().decode(payload));
+          if (message.action === "request")
+            setIncomingConsent({
+              id: String(message.requestId),
+              requester: String(
+                message.requester || participant?.name || "Участник",
+              ),
+            });
+          if (
+            message.action === "response" &&
+            message.requestId === consentRequestRef.current &&
+            participant
+          )
+            setConsents((current) => ({
+              ...current,
+              [participant.identity]: message.accepted
+                ? "accepted"
+                : "declined",
+            }));
+        } catch {
+          return;
+        }
       });
       room.on(RoomEvent.Reconnecting, () => setStatus("reconnecting"));
       room.on(RoomEvent.Reconnected, () => setStatus("connected"));
@@ -177,6 +213,45 @@ export function VoiceRoom({
       setError("Не удалось воспроизвести звук в комнате.");
     }
   }
+  async function requestRecordingConsent() {
+    const room = roomRef.current;
+    if (!room) return;
+    const requestId = crypto.randomUUID();
+    const statuses: Record<string, "pending" | "accepted"> = {
+      [room.localParticipant.identity]: "accepted",
+    };
+    room.remoteParticipants.forEach((participant) => {
+      statuses[participant.identity] = "pending";
+    });
+    consentRequestRef.current = requestId;
+    setConsents(statuses);
+    setConsentPanel(true);
+    await room.localParticipant.publishData(
+      new TextEncoder().encode(
+        JSON.stringify({
+          action: "request",
+          requestId,
+          requester: room.localParticipant.name || "Организатор",
+        }),
+      ),
+      { reliable: true, topic: "recording-consent" },
+    );
+  }
+  async function respondToConsent(accepted: boolean) {
+    const room = roomRef.current;
+    if (!room || !incomingConsent) return;
+    await room.localParticipant.publishData(
+      new TextEncoder().encode(
+        JSON.stringify({
+          action: "response",
+          requestId: incomingConsent.id,
+          accepted,
+        }),
+      ),
+      { reliable: true, topic: "recording-consent" },
+    );
+    setIncomingConsent(null);
+  }
   async function toggleMute() {
     const room = roomRef.current;
     if (!room) return;
@@ -229,6 +304,9 @@ export function VoiceRoom({
     setRemoteVideo(false);
     setSettings(false);
     setSoundboard(false);
+    setConsentPanel(false);
+    setIncomingConsent(null);
+    setConsents({});
   }
 
   const showingVideo = camera || sharing || remoteVideo;
@@ -330,6 +408,10 @@ export function VoiceRoom({
                 <Music2 size={20} />
                 <span>Soundboard</span>
               </button>
+              <button onClick={requestRecordingConsent}>
+                <ShieldCheck size={20} />
+                <span>Согласие</span>
+              </button>
               <button className="voice-leave" onClick={leave}>
                 <PhoneOff size={20} />
                 <span>Выйти</span>
@@ -358,8 +440,57 @@ export function VoiceRoom({
                 <button onClick={() => playSound(760)}>🔔 Сигнал</button>
               </div>
             ) : null}
+            {consentPanel ? (
+              <div className="consent-panel">
+                <strong>Согласие на запись</strong>
+                <span>
+                  {
+                    Object.values(consents).filter(
+                      (value) => value === "accepted",
+                    ).length
+                  }{" "}
+                  из {Object.keys(consents).length} подтвердили
+                </span>
+                <div>
+                  {Object.entries(consents).map(([identity, value]) => (
+                    <small key={identity} className={`consent-${value}`}>
+                      {identity.slice(0, 8)} ·{" "}
+                      {value === "accepted"
+                        ? "согласен"
+                        : value === "declined"
+                          ? "отказался"
+                          : "ожидаем"}
+                    </small>
+                  ))}
+                </div>
+                {Object.values(consents).some(
+                  (value) => value === "declined",
+                ) ? (
+                  <b>Запись заблокирована: получен отказ.</b>
+                ) : Object.values(consents).every(
+                    (value) => value === "accepted",
+                  ) ? (
+                  <b className="consent-ready">
+                    Все согласны. Можно запускать запись.
+                  </b>
+                ) : null}
+              </div>
+            ) : null}
           </>
         )}
+        {incomingConsent ? (
+          <div className="consent-request">
+            <ShieldCheck size={20} />
+            <div>
+              <strong>{incomingConsent.requester} запрашивает запись</strong>
+              <span>
+                Подтвердите согласие на запись и транскрипцию комнаты.
+              </span>
+            </div>
+            <button onClick={() => respondToConsent(true)}>Согласен</button>
+            <button onClick={() => respondToConsent(false)}>Отказаться</button>
+          </div>
+        ) : null}
       </section>
     </div>
   );

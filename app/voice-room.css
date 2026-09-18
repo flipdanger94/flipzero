@@ -148,6 +148,103 @@
 .soundboard button:hover {
   background: rgba(169, 121, 255, 0.13);
 }
+.consent-request,
+.consent-panel {
+  margin: 14px auto 0;
+  max-width: 460px;
+  border: 1px solid rgba(183, 243, 90, 0.15);
+  border-radius: 12px;
+  background: rgba(183, 243, 90, 0.05);
+  padding: 12px;
+  text-align: left;
+}
+.consent-request {
+  display: grid;
+  grid-template-columns: 24px 1fr auto auto;
+  align-items: center;
+  gap: 9px;
+  color: #b7f35a;
+}
+.consent-request strong,
+.consent-request span {
+  display: block;
+}
+.consent-request strong {
+  font-size: 0.62rem;
+  color: #fff;
+}
+.consent-request span {
+  margin-top: 3px;
+  color: #817b88;
+  font-size: 0.5rem;
+}
+.consent-request button {
+  border: 0;
+  border-radius: 7px;
+  background: #b7f35a;
+  color: #12140f;
+  padding: 7px;
+  font-size: 0.5rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.consent-request button:last-child {
+  background: #34262b;
+  color: #ff8998;
+}
+.consent-panel > strong,
+.consent-panel > span {
+  display: block;
+}
+.consent-panel > strong {
+  font-size: 0.65rem;
+}
+.consent-panel > span {
+  margin: 4px 0 9px;
+  color: #817b88;
+  font-size: 0.53rem;
+}
+.consent-panel > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+.consent-panel small {
+  border-radius: 7px;
+  background: #28252d;
+  color: #aaa3b1;
+  padding: 5px 7px;
+  font-size: 0.48rem;
+}
+.consent-panel .consent-accepted {
+  color: #b7f35a;
+}
+.consent-panel .consent-declined {
+  color: #ff8998;
+}
+.consent-panel > b {
+  display: block;
+  margin-top: 9px;
+  color: #ff8998;
+  font-size: 0.53rem;
+}
+.consent-panel > b.consent-ready {
+  color: #b7f35a;
+}
+@media (max-width: 650px) {
+  .consent-request {
+    grid-template-columns: 22px 1fr;
+  }
+  .consent-request button {
+    grid-row: 2;
+  }
+  .consent-request button:nth-last-child(2) {
+    grid-column: 1/2;
+  }
+  .consent-request button:last-child {
+    grid-column: 2/3;
+  }
+}
 .voice-controls button {
   min-width: 105px;
   border: 1px solid var(--border);
