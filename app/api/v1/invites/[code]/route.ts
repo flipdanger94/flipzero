@@ -1,7 +1,7 @@
-import { and, eq, gt, isNull, or, sql } from "drizzle-orm";
+import { and, desc, eq, gt, isNull, or, sql } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { getDatabase } from "@/db/client";
-import { invites, memberRoles, members, roles, spaces } from "@/db/schema";
+import { invites, memberRoles, members, moderationCases, roles, spaces } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
 
 export async function GET(_: Request, { params }: { params: Promise<{ code: string }> }) {
@@ -19,6 +19,8 @@ export async function POST(_: Request, { params }: { params: Promise<{ code: str
   const database = getDatabase();
   const [invite] = await database.select().from(invites).where(and(eq(invites.code, code), or(isNull(invites.expiresAt), gt(invites.expiresAt, new Date())))).limit(1);
   if (!invite || (invite.maxUses !== null && invite.uses >= invite.maxUses)) return NextResponse.json({ code: "INVITE_UNAVAILABLE", message: "Приглашение истекло или уже использовано максимальное число раз." }, { status: 410 });
+  const [latestBanAction] = await database.select({ action: moderationCases.action }).from(moderationCases).where(and(eq(moderationCases.spaceId, invite.spaceId), eq(moderationCases.targetUserId, user.id), or(eq(moderationCases.action, "ban"), eq(moderationCases.action, "unban")))).orderBy(desc(moderationCases.createdAt)).limit(1);
+  if (latestBanAction?.action === "ban") return NextResponse.json({ code: "BANNED", message: "Вы заблокированы в этом пространстве." }, { status: 403 });
   const [existing] = await database.select({ userId: members.userId }).from(members).where(and(eq(members.userId, user.id), eq(members.spaceId, invite.spaceId))).limit(1);
   if (existing) return NextResponse.json({ spaceId: invite.spaceId, joined: false });
   const [memberRole] = await database.select({ id: roles.id }).from(roles).where(and(eq(roles.spaceId, invite.spaceId), eq(roles.name, "Участник"))).limit(1);
