@@ -186,6 +186,28 @@ export const wikiRevisions = pgTable("wiki_revisions", {
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 }, (table) => [uniqueIndex("wiki_revisions_page_revision_unique").on(table.pageId, table.revision), index("wiki_revisions_page_idx").on(table.pageId)]);
 
+export const developerApps = pgTable("developer_apps", {
+  id: text("id").primaryKey(),
+  ownerId: text("owner_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  description: text("description"),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [index("developer_apps_owner_idx").on(table.ownerId)]);
+
+export const apiTokens = pgTable("api_tokens", {
+  id: text("id").primaryKey(),
+  appId: text("app_id").notNull().references(() => developerApps.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  tokenHash: text("token_hash").notNull(),
+  prefix: text("prefix").notNull(),
+  scopes: jsonb("scopes").default(["profile:read", "spaces:read"]).notNull(),
+  lastUsedAt: timestamp("last_used_at", { withTimezone: true }),
+  expiresAt: timestamp("expires_at", { withTimezone: true }),
+  revokedAt: timestamp("revoked_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [uniqueIndex("api_tokens_hash_unique").on(table.tokenHash), index("api_tokens_app_idx").on(table.appId)]);
+
 export const reactions = pgTable("reactions", {
   messageId: text("message_id").notNull().references(() => messages.id, { onDelete: "cascade" }),
   userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
