@@ -39,6 +39,7 @@ export function VoiceRoom({
   const [status, setStatus] = useState<VoiceStatus>("idle");
   const [voiceAvailable, setVoiceAvailable] = useState<boolean | null>(null);
   const [voiceMessage, setVoiceMessage] = useState("");
+  const [voiceChecked, setVoiceChecked] = useState(false);
   const [voiceCheckNonce, setVoiceCheckNonce] = useState(0);
   const [muted, setMuted] = useState(false);
   const [deafened, setDeafened] = useState(false);
@@ -92,11 +93,12 @@ export function VoiceRoom({
       .then((data) => {
         if (controller.signal.aborted) return;
         setVoiceAvailable(Boolean(data.available) && data.connection === "ok");
+        setVoiceChecked(data.connection === "ok");
         setVoiceMessage(data.connection === "invalid_url" ? "Адрес голосового сервера указан неверно. Проверьте LIVEKIT_URL в Vercel."
           : data.connection === "unreachable" ? "Сервер голосовой связи не отвечает или ключи неверны. Проверьте настройки LiveKit в Vercel."
           : "Голосовые комнаты пока недоступны. Попробуйте позже.");
       })
-      .catch(() => { if (!controller.signal.aborted) setVoiceAvailable(true); });
+      .catch(() => { if (!controller.signal.aborted) { setVoiceAvailable(true); setVoiceChecked(false); } });
     return () => controller.abort();
   }, [voiceCheckNonce]);
   function clearMedia(container: HTMLDivElement | null) {
@@ -460,6 +462,7 @@ export function VoiceRoom({
             <i /> Сейчас говорит: <b>{activeSpeaker}</b>
           </div>
         ) : null}
+        {status === "idle" && voiceChecked ? <span className="voice-server-ready" role="status">Сервер голосовой связи доступен</span> : null}
         {connected && audioBlocked ? <button className="voice-enable-audio" onClick={enableAudio}><Headphones size={18} /> Включить звук</button> : null}
         {error ? <div className="voice-error">{error}</div> : null}
         {status === "idle" ? (
