@@ -95,6 +95,21 @@
   color: #00d4ff;
 }
 
+.app-shell .mobile-share-icon {
+  display: none;
+}
+
+.discovery-copy h3 a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.discovery-copy h3 a:hover,
+.discovery-copy h3 a:focus-visible {
+  color: #00d4ff;
+  text-decoration: underline;
+}
+
 .app-shell .channel-group h2 {
   color: rgba(255, 255, 255, 0.38);
   font-size: 0.67rem;
@@ -482,6 +497,29 @@
 }
 
 @media (max-width: 760px) {
+  .app-shell .header-actions > button.channel-share-action {
+    display: grid;
+    place-items: center;
+    width: 38px;
+    height: 38px;
+    padding: 0;
+    border-radius: 11px;
+    background: #191b22;
+    color: #b9dce6;
+  }
+
+  .app-shell .header-actions > button.channel-share-action:disabled {
+    opacity: 0.4;
+  }
+
+  .app-shell .mobile-share-icon {
+    display: block;
+  }
+
+  .app-shell .desktop-copy-icon {
+    display: none;
+  }
+
   .app-shell.app-shell {
     background:
       radial-gradient(circle at 80% -10%, rgba(111, 92, 255, 0.16), transparent 34%),

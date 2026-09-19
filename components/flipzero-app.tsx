@@ -1,7 +1,7 @@
 "use client";
 
 import { type FormEvent, useEffect, useState } from "react";
-import { Bell, BookOpen, CalendarDays, Check, ChevronDown, CirclePlus, Code2, Compass, Copy, Gavel, Gift, Hash, Headphones, HelpCircle, Home as HomeIcon, Image as ImageIcon, Link2, LoaderCircle, Menu, Mic, Plus, Search, SendHorizontal, Settings, Settings2, ShieldCheck, Smile, Sparkles, Trash2, Trophy, UserRound, Users, Volume2, X } from "lucide-react";
+import { Bell, BookOpen, CalendarDays, Check, ChevronDown, CirclePlus, Code2, Compass, Copy, Gavel, Gift, Hash, Headphones, HelpCircle, Home as HomeIcon, Image as ImageIcon, Link2, LoaderCircle, Menu, Mic, Plus, Search, SendHorizontal, Settings, Settings2, Share2, ShieldCheck, Smile, Sparkles, Trash2, Trophy, UserRound, Users, Volume2, X } from "lucide-react";
 import { CreateSpaceDialog } from "@/components/create-space-dialog";
 import { CreateChannelDialog, type CreatedChannel } from "@/components/create-channel-dialog";
 import { CreateCategoryDialog, type CreatedCategory } from "@/components/create-category-dialog";
@@ -150,9 +150,17 @@ export default function Home({ initialSpaceId, initialChannelId }: { initialSpac
     return !query || message.text.toLocaleLowerCase("ru").includes(query) || message.name.toLocaleLowerCase("ru").includes(query);
   });
 
-  async function copyChannelLink() {
+  async function shareChannelLink() {
     if (!activeSpace || !activeRouteChannel) return;
     const url = `${window.location.origin}/channels/${encodeURIComponent(activeSpace.id)}/${encodeURIComponent(activeRouteChannel.id)}`;
+    if (window.matchMedia("(max-width: 760px)").matches && typeof navigator.share === "function") {
+      try {
+        await navigator.share({ title: `#${activeRouteChannel.name} · ${activeSpace.name}`, url });
+        return;
+      } catch (error) {
+        if (error instanceof Error && error.name === "AbortError") return;
+      }
+    }
     try {
       await navigator.clipboard.writeText(url);
       setChannelLinkCopied(true);
@@ -279,7 +287,7 @@ export default function Home({ initialSpaceId, initialChannelId }: { initialSpac
       </aside>
 
       <section className="chat-panel">
-        <header className="chat-header"><button className="mobile-menu-button" aria-label="Открыть сообщества и каналы" onClick={() => setMobileChannelsOpen(true)}><Menu size={20} /></button><div className="channel-title"><Hash size={21} /><strong>{activeChannel}</strong><span>Разговоры обо всём</span></div><div className="header-actions"><button className={channelLinkCopied ? "is-active link-copied" : ""} aria-label={channelLinkCopied ? "Ссылка на канал скопирована" : "Скопировать ссылку на канал"} title={channelLinkCopied ? "Скопировано" : "Скопировать ссылку на канал"} onClick={copyChannelLink}>{channelLinkCopied ? <Check size={18} /> : <Copy size={18} />}</button><button className={notifications ? "is-active" : ""} aria-label={notifications ? "Выключить уведомления" : "Включить уведомления"} aria-pressed={notifications} onClick={() => setNotifications((value) => !value)}><Bell size={19} /></button><button className={showMembers ? "is-active" : ""} aria-label={showMembers ? "Скрыть участников" : "Показать участников"} aria-pressed={showMembers} onClick={() => setShowMembers((value) => !value)}><Users size={19} /></button><label className="search-box"><Search size={16} /><input aria-label="Поиск" placeholder="Поиск" value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} /></label></div></header>
+        <header className="chat-header"><button className="mobile-menu-button" aria-label="Открыть сообщества и каналы" onClick={() => setMobileChannelsOpen(true)}><Menu size={20} /></button><div className="channel-title"><Hash size={21} /><strong>{activeChannel}</strong><span>Разговоры обо всём</span></div><div className="header-actions"><button className={`channel-share-action ${channelLinkCopied ? "is-active link-copied" : ""}`} aria-label={channelLinkCopied ? "Ссылка на канал скопирована" : "Поделиться ссылкой на канал"} title={channelLinkCopied ? "Скопировано" : "Поделиться ссылкой на канал"} onClick={shareChannelLink} disabled={!activeRouteChannel}>{channelLinkCopied ? <Check size={18} /> : <><Copy className="desktop-copy-icon" size={18} /><Share2 className="mobile-share-icon" size={18} /></>}</button><button className={notifications ? "is-active" : ""} aria-label={notifications ? "Выключить уведомления" : "Включить уведомления"} aria-pressed={notifications} onClick={() => setNotifications((value) => !value)}><Bell size={19} /></button><button className={showMembers ? "is-active" : ""} aria-label={showMembers ? "Скрыть участников" : "Показать участников"} aria-pressed={showMembers} onClick={() => setShowMembers((value) => !value)}><Users size={19} /></button><label className="search-box"><Search size={16} /><input aria-label="Поиск" placeholder="Поиск" value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} /></label></div></header>
         {activeBoardChannel ? <ChannelBoard channelId={activeBoardChannel.id} channelName={activeBoardChannel.name} /> : activeForumChannel ? <ForumChannel channelId={activeForumChannel.id} channelName={activeForumChannel.name} /> : activeVoiceChannel ? <VoiceRoom channelId={activeVoiceChannel.id} channelName={activeVoiceChannel.name} /> : activeApiChannel && user ? <PersistentChat channelId={activeApiChannel.id} channelName={activeApiChannel.name} spaceId={activeSpace!.id} currentUserId={user.id} ownerId={activeSpace?.ownerId} searchQuery={searchQuery} /> : <><div className="message-list">
           <div className="channel-intro"><div className="intro-icon"><Hash size={31} /></div><h1>{activeDetails.title}</h1><p>Это начало канала <strong>#{activeChannel}</strong>. {activeDetails.description}</p></div>
           <div className="day-divider"><span>17 сентября 2026</span></div>

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowRight, Check, Copy, LoaderCircle } from "lucide-react";
+import { ArrowRight, Check, LoaderCircle, Share2 } from "lucide-react";
 
 export function CommunityActions({ spaceId, slug, channelId, isMember, isAuthenticated, requestedChannelId }: { spaceId: string; slug: string; channelId: string | null; isMember: boolean; isAuthenticated: boolean; requestedChannelId: string | null }) {
   const router = useRouter();
@@ -34,8 +34,17 @@ export function CommunityActions({ spaceId, slug, channelId, isMember, isAuthent
   }
 
   async function copy() {
+    const url = `${window.location.origin}${canonicalCommunityPath}`;
+    if (typeof navigator.share === "function") {
+      try {
+        await navigator.share({ url });
+        return;
+      } catch (reason) {
+        if (reason instanceof Error && reason.name === "AbortError") return;
+      }
+    }
     try {
-      await navigator.clipboard.writeText(`${window.location.origin}${canonicalCommunityPath}`);
+      await navigator.clipboard.writeText(url);
       setCopied(true);
       window.setTimeout(() => setCopied(false), 1800);
     } catch {
@@ -45,7 +54,7 @@ export function CommunityActions({ spaceId, slug, channelId, isMember, isAuthent
 
   return <div className="community-actions">
     {isMember ? <Link className="community-primary" href={channelPath}>Открыть сообщество <ArrowRight size={18} /></Link> : isAuthenticated ? <button className="community-primary" onClick={join} disabled={joining}>{joining ? <><LoaderCircle className="spin" size={18} /> Вступаем...</> : <>Вступить в сообщество <ArrowRight size={18} /></>}</button> : <Link className="community-primary" href={`/login?next=${encodeURIComponent(communityPath)}`}>Войти и вступить <ArrowRight size={18} /></Link>}
-    <button className="community-copy" onClick={copy}>{copied ? <Check size={17} /> : <Copy size={17} />}{copied ? "Ссылка скопирована" : "Скопировать ссылку"}</button>
+    <button className="community-copy" onClick={copy}>{copied ? <Check size={17} /> : <Share2 size={17} />}{copied ? "Ссылка скопирована" : "Поделиться ссылкой"}</button>
     {error ? <p className="community-action-error" role="alert">{error}</p> : null}
   </div>;
 }
