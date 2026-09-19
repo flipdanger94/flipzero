@@ -84,6 +84,7 @@ export default function Home({ initialSpaceId, initialChannelId }: { initialSpac
   const [levelUp, setLevelUp] = useState<number | null>(null);
   const [mobileChannelsOpen, setMobileChannelsOpen] = useState(false);
   const [channelLinkCopied, setChannelLinkCopied] = useState(false);
+  const [spaceLinkCopied, setSpaceLinkCopied] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -158,6 +159,17 @@ export default function Home({ initialSpaceId, initialChannelId }: { initialSpac
       window.setTimeout(() => setChannelLinkCopied(false), 1800);
     } catch {
       setChannelLinkCopied(false);
+    }
+  }
+
+  async function copyCommunityLink() {
+    if (!activeSpace) return;
+    try {
+      await navigator.clipboard.writeText(`${window.location.origin}/communities/${encodeURIComponent(activeSpace.slug)}`);
+      setSpaceLinkCopied(true);
+      window.setTimeout(() => setSpaceLinkCopied(false), 1800);
+    } catch {
+      setSpaceLinkCopied(false);
     }
   }
 
@@ -257,6 +269,7 @@ export default function Home({ initialSpaceId, initialChannelId }: { initialSpac
           {activeSpace ? <button className="category-add wiki-button" onClick={() => setShowWiki(true)}><BookOpen size={14} /> База знаний</button> : null}
           {activeSpace?.ownerId === user?.id ? <button className="category-add role-manage-button" onClick={() => setShowRoleManager(true)}><ShieldCheck size={14} /> Роли и права</button> : null}
           {activeSpace?.ownerId === user?.id ? <button className="category-add invite-manage-button" onClick={() => setShowInviteManager(true)}><Link2 size={14} /> Пригласить участников</button> : null}
+          {activeSpace ? <button className="category-add community-link-button" onClick={copyCommunityLink}>{spaceLinkCopied ? <Check size={14} /> : <Copy size={14} />} {spaceLinkCopied ? "Ссылка скопирована" : "Ссылка сообщества"}</button> : null}
           {activeSpace?.ownerId === user?.id ? <button className="category-add member-manage-button" onClick={() => setShowMemberManager(true)}><Users size={14} /> Управление участниками</button> : null}
           {activeSpace?.ownerId === user?.id ? <button className="category-add moderation-manage-button" onClick={() => setShowModeration(true)}><Gavel size={14} /> Модерация и журнал</button> : null}
           <button className="category-add system-status-button" onClick={() => setShowSystemStatus(true)}><HelpCircle size={14} /> Состояние системы</button>
