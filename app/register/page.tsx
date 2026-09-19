@@ -1,14 +1,16 @@
 "use client";
-import { type FormEvent, useState } from "react";
-import { useRouter } from "next/navigation";
+import { type FormEvent, Suspense, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { AtSign, Eye, EyeOff, LoaderCircle, LockKeyhole, Mail, UserRound } from "lucide-react";
 import { AuthShell } from "@/components/auth-shell";
 
-export default function RegisterPage() {
+function RegisterForm() {
   const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const next = useSearchParams().get("next");
+  const safeNext = next?.startsWith("/") && !next.startsWith("//") && !next.startsWith("/\\") ? next : null;
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault(); setError("");
@@ -18,11 +20,11 @@ export default function RegisterPage() {
     const response = await fetch("/api/v1/auth/register", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email: data.get("email"), username: data.get("username"), displayName: data.get("displayName"), password: data.get("password") }) });
     const result = await response.json();
     if (!response.ok) { setError(result.message ?? "Не удалось создать аккаунт."); setLoading(false); return; }
-    router.push("/app");
+    router.push(safeNext ?? "/app");
     router.refresh();
   }
 
-  return <AuthShell title="Создайте аккаунт" description="Ваше новое пространство начинается здесь." alternateText="Уже есть аккаунт?" alternateHref="/login" alternateLabel="Войти">
+  return <AuthShell title="Создайте аккаунт" description="Ваше новое пространство начинается здесь." alternateText="Уже есть аккаунт?" alternateHref={safeNext ? `/login?next=${encodeURIComponent(safeNext)}` : "/login"} alternateLabel="Войти">
     <form className="auth-form" onSubmit={submit}>
       {error && <div className="auth-error" role="alert">{error}</div>}
       <div className="auth-row"><label><span>Имя</span><div className="auth-input"><UserRound size={17} /><input name="displayName" autoComplete="name" placeholder="Александр" minLength={2} maxLength={40} required /></div></label><label><span>Никнейм</span><div className="auth-input"><AtSign size={17} /><input name="username" autoComplete="username" placeholder="alex_push" pattern="[A-Za-z0-9_]+" minLength={3} maxLength={24} required /></div></label></div>
@@ -32,4 +34,8 @@ export default function RegisterPage() {
       <button className="auth-submit" disabled={loading}>{loading ? <><LoaderCircle className="spin" size={18} /> Создаём...</> : "Создать аккаунт"}</button>
     </form>
   </AuthShell>;
+}
+
+export default function RegisterPage() {
+  return <Suspense fallback={<AuthShell title="Создайте аккаунт" description="Ваше новое пространство начинается здесь." alternateText="Уже есть аккаунт?" alternateHref="/login" alternateLabel="Войти"><div className="auth-form"><LoaderCircle className="spin" size={22} /></div></AuthShell>}><RegisterForm /></Suspense>;
 }

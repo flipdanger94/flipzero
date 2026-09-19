@@ -16,15 +16,20 @@ export function CommunityActions({ spaceId, slug, channelId, isMember, isAuthent
   async function join() {
     setJoining(true);
     setError("");
-    const response = await fetch("/api/v1/discovery", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ spaceId }) });
-    const result = await response.json().catch(() => null);
-    if (!response.ok) {
-      setError(result?.message ?? "Не удалось вступить в сообщество.");
+    try {
+      const response = await fetch("/api/v1/discovery", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ spaceId }) });
+      const result = await response.json().catch(() => null);
+      if (!response.ok) {
+        setError(result?.message ?? "Не удалось вступить в сообщество.");
+        return;
+      }
+      router.push(channelPath);
+      router.refresh();
+    } catch {
+      setError("Нет соединения. Попробуйте ещё раз.");
+    } finally {
       setJoining(false);
-      return;
     }
-    router.push(channelPath);
-    router.refresh();
   }
 
   async function copy() {
