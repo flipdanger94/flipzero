@@ -62,3 +62,37 @@ export async function POST(request: Request) {
   });
   return NextResponse.json(updated);
 }
+
+export async function DELETE(request: Request) {
+  const user = await getCurrentUser();
+  if (!user) return NextResponse.json({ message: "Требуется вход." }, { status: 401 });
+  const body = await request.json().catch(() => null);
+  const kind = body?.kind;
+  if (!kinds.includes(kind)) return NextResponse.json({ message: "Изображение не найдено." }, { status: 400 });
+  const imageKind = kind as ImageKind;
+  const spaceId = body?.spaceId;
+  const database = getDatabase();
+
+  if (imageKind.startsWith("space")) {
+    if (typeof spaceId !== "string") return NextResponse.json({ message: "Сообщество не найдено." }, { status: 400 });
+    const [space] = await database.select({ ownerId: spaces.ownerId }).from(spaces).where(eq(spaces.id, spaceId)).limit(1);
+    if (!space) return NextResponse.json({ message: "Сообщество не найдено." }, { status: 404 });
+    if (space.ownerId !== user.id) return NextResponse.json({ message: "Изменять оформление может только владелец." }, { status: 403 });
+  }
+
+  const result = await database.transaction(async (tx) => {
+    if (imageKind === "avatar" || imageKind === "accountBanner") {
+      const column = imageKind === "avatar" ? "avatarUrl" : "bannerUrl";
+      const [previous] = await tx.select({ url: users[column] }).from(users).where(eq(users.id, user.id)).limit(1);
+      await tx.update(users).set({ [column]: null, updatedAt: new Date() }).where(eq(users.id, user.id));
+      if (previous?.url?.startsWith("/api/v1/media/")) await tx.delete(mediaAssets).where(eq(mediaAssets.id, previous.url.slice("/api/v1/media/".length)));
+      return { user: { ...user, [column]: null } };
+    }
+    const column = imageKind === "spaceIcon" ? "iconUrl" : "bannerUrl";
+    const [previous] = await tx.select({ url: spaces[column] }).from(spaces).where(eq(spaces.id, spaceId)).limit(1);
+    await tx.update(spaces).set({ [column]: null, updatedAt: new Date() }).where(eq(spaces.id, spaceId));
+    if (previous?.url?.startsWith("/api/v1/media/")) await tx.delete(mediaAssets).where(eq(mediaAssets.id, previous.url.slice("/api/v1/media/".length)));
+    return { space: { id: spaceId, [column]: null } };
+  });
+  return NextResponse.json(result);
+}

@@ -80,3 +80,7 @@
 .space-media-icon img { width: 100%; height: 100%; object-fit: cover; }
 .space-media-controls { margin: 0 0 18px; }
 .space-dialog:has(.space-media-preview) { max-height: min(90dvh, 820px); overflow-y: auto; scrollbar-width: thin; }
+.image-upload { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 5px; }
+.image-remove-button { display: grid; place-items: center; width: 37px; height: 37px; border: 1px solid rgba(255,255,255,.15); border-radius: 9px; background: #20232c; color: #ffaab5; cursor: pointer; }
+.image-remove-button:hover { border-color: #ffaab5; background: #30202a; }
+.image-remove-button:disabled { opacity: .5; cursor: wait; }
