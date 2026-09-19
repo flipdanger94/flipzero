@@ -54,6 +54,8 @@ export function VoiceRoom({
   const [settings, setSettings] = useState(false);
   const [breakout, setBreakout] = useState("main");
   const [soundboard, setSoundboard] = useState(false);
+  const [soundPlaying, setSoundPlaying] = useState(false);
+  const screenSupported = typeof navigator === "undefined" || Boolean(navigator.mediaDevices?.getDisplayMedia);
   const [consentPanel, setConsentPanel] = useState(false);
   const [incomingConsent, setIncomingConsent] = useState<{
     id: string;
@@ -71,6 +73,7 @@ export function VoiceRoom({
   const consentRequestRef = useRef("");
   const deafenedRef = useRef(false);
   const joinAttemptRef = useRef(0);
+  const soundPlayingRef = useRef(false);
 
   useEffect(
     () => () => {
@@ -104,11 +107,13 @@ export function VoiceRoom({
     setStatus("connecting");
     setError("");
     let room: Room | null = null;
+    let connectTimeout: number | undefined;
     try {
       const response = await fetch(`/api/v1/channels/${channelId}/voice-token`, {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ breakout }),
+        signal: AbortSignal.timeout(15000),
       });
       const data = await response.json();
       if (attempt !== joinAttemptRef.current) return;
@@ -161,15 +166,35 @@ export function VoiceRoom({
           audioRef.current?.appendChild(element);
         }
         if (track.kind === Track.Kind.Video) {
+          const element = track.attach();
+          element.dataset.source = track.source;
+          remoteVideoRef.current?.appendChild(element);
           setRemoteVideo(true);
-          window.requestAnimationFrame(() =>
-            remoteVideoRef.current?.appendChild(track.attach()),
-          );
         }
       });
       room.on(RoomEvent.TrackUnsubscribed, (track) => {
         track.detach().forEach((element) => element.remove());
         setRemoteVideo(Boolean(remoteVideoRef.current?.childElementCount));
+      });
+      room.on(RoomEvent.LocalTrackPublished, (publication) => {
+        if (publication.source === Track.Source.Camera) {
+          setCamera(true);
+          attachLocal(Track.Source.Camera, localCameraRef.current);
+        }
+        if (publication.source === Track.Source.ScreenShare) {
+          setSharing(true);
+          attachLocal(Track.Source.ScreenShare, localScreenRef.current);
+        }
+      });
+      room.on(RoomEvent.LocalTrackUnpublished, (publication) => {
+        if (publication.source === Track.Source.Camera) {
+          setCamera(false);
+          clearMedia(localCameraRef.current);
+        }
+        if (publication.source === Track.Source.ScreenShare) {
+          setSharing(false);
+          clearMedia(localScreenRef.current);
+        }
       });
       room.on(RoomEvent.Disconnected, () => {
         if (roomRef.current !== connectedRoom) return;
@@ -182,7 +207,13 @@ export function VoiceRoom({
         setActiveSpeaker("");
       });
       room.on(RoomEvent.AudioPlaybackStatusChanged, () => setAudioBlocked(!connectedRoom.canPlaybackAudio));
-      await room.connect(data.url, data.token);
+      await Promise.race([
+        room.connect(data.url, data.token, { websocketTimeout: 10000, peerConnectionTimeout: 10000, maxRetries: 1 }),
+        new Promise<never>((_, reject) => {
+          connectTimeout = window.setTimeout(() => reject(new Error("VOICE_CONNECTION_TIMEOUT")), 20000);
+        }),
+      ]);
+      window.clearTimeout(connectTimeout);
       if (attempt !== joinAttemptRef.current) { void room.disconnect(); return; }
       try { await room.localParticipant.setMicrophoneEnabled(true); setMuted(false); }
       catch { setMuted(true); setError("Микрофон недоступен. Разрешите доступ в настройках браузера и нажмите «Включить»."); }
@@ -196,12 +227,16 @@ export function VoiceRoom({
       setOutputDeviceId(room.getActiveDevice("audiooutput") ?? speakers[0]?.deviceId ?? "");
       refresh();
       setStatus("connected");
-    } catch {
+    } catch (cause) {
       if (room) void room.disconnect();
       if (roomRef.current === room) roomRef.current = null;
       if (attempt !== joinAttemptRef.current) return;
       setStatus("idle");
-      setError("Не удалось установить голосовое соединение.");
+      setError(cause instanceof Error && cause.message === "VOICE_CONNECTION_TIMEOUT"
+        ? "Сервер голосовой связи не ответил вовремя. Проверьте настройки LiveKit или попробуйте ещё раз."
+        : "Не удалось установить голосовое соединение. Проверьте сеть и настройки LiveKit.");
+    } finally {
+      window.clearTimeout(connectTimeout);
     }
   }
 
@@ -229,34 +264,48 @@ export function VoiceRoom({
   }
   async function playSound(frequency: number) {
     const room = roomRef.current;
-    if (!room) return;
+    if (!room || soundPlayingRef.current) return;
+    soundPlayingRef.current = true;
+    setSoundPlaying(true);
+    let context: AudioContext | null = null;
+    let mediaTrack: MediaStreamTrack | null = null;
     try {
-      const context = new AudioContext();
+      context = new AudioContext();
+      await context.resume();
       const output = context.createMediaStreamDestination();
       const gain = context.createGain();
       gain.gain.setValueAtTime(0.18, context.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, context.currentTime + 0.7);
+      gain.gain.exponentialRampToValueAtTime(0.001, context.currentTime + 1.2);
       const oscillator = context.createOscillator();
       oscillator.type = frequency > 600 ? "triangle" : "sine";
       oscillator.frequency.setValueAtTime(frequency, context.currentTime);
       oscillator.frequency.exponentialRampToValueAtTime(
         frequency * 1.35,
-        context.currentTime + 0.25,
+        context.currentTime + 0.5,
       );
       oscillator.connect(gain).connect(output);
-      const mediaTrack = output.stream.getAudioTracks()[0];
+      gain.connect(context.destination);
+      mediaTrack = output.stream.getAudioTracks()[0];
       await room.localParticipant.publishTrack(mediaTrack, {
         name: "soundboard",
         source: Track.Source.Unknown,
       });
       oscillator.start();
-      oscillator.stop(context.currentTime + 0.7);
-      window.setTimeout(() => {
-        void room.localParticipant.unpublishTrack(mediaTrack, true);
-        void context.close();
-      }, 900);
+      oscillator.stop(context.currentTime + 1.2);
+      await new Promise<void>((resolve) => {
+        const timeout = window.setTimeout(resolve, 1800);
+        oscillator.onended = () => { window.clearTimeout(timeout); resolve(); };
+      });
     } catch {
       setError("Не удалось воспроизвести звук в комнате.");
+    } finally {
+      if (mediaTrack) {
+        await room.localParticipant.unpublishTrack(mediaTrack, true).catch(() => {});
+        mediaTrack.stop();
+      }
+      if (context) await context.close().catch(() => {});
+      soundPlayingRef.current = false;
+      setSoundPlaying(false);
     }
   }
   async function requestRecordingConsent() {
@@ -312,27 +361,24 @@ export function VoiceRoom({
     try {
       await room.localParticipant.setCameraEnabled(next);
       setCamera(next);
-      if (next)
-        window.requestAnimationFrame(() =>
-          attachLocal(Track.Source.Camera, localCameraRef.current),
-        );
+      if (next) attachLocal(Track.Source.Camera, localCameraRef.current);
       else clearMedia(localCameraRef.current);
+      setError("");
     } catch {
-      setError("Не удалось включить камеру.");
+      setError("Не удалось включить камеру. Проверьте разрешение браузера и доступ к устройству.");
     }
   }
   async function toggleScreen() {
     const room = roomRef.current;
     if (!room) return;
+    if (!screenSupported) { setError("Демонстрация экрана недоступна в этом браузере. Откройте FlipZero на компьютере."); return; }
     const next = !sharing;
     try {
       await room.localParticipant.setScreenShareEnabled(next);
       setSharing(next);
-      if (next)
-        window.requestAnimationFrame(() =>
-          attachLocal(Track.Source.ScreenShare, localScreenRef.current),
-        );
+      if (next) attachLocal(Track.Source.ScreenShare, localScreenRef.current);
       else clearMedia(localScreenRef.current);
+      setError("");
     } catch {
       setError("Демонстрация экрана отменена или недоступна.");
     }
@@ -367,8 +413,7 @@ export function VoiceRoom({
   return (
     <div className={`voice-room ${showingVideo ? "has-video" : ""}`}>
       <div ref={audioRef} className="remote-audio" />
-      {showingVideo ? (
-        <div className="video-grid">
+      <div className={`video-grid ${camera && !sharing && !remoteVideo ? "camera-only" : ""}`} hidden={!showingVideo}>
           <div ref={remoteVideoRef} className="remote-video" />
           <div
             ref={localScreenRef}
@@ -379,7 +424,6 @@ export function VoiceRoom({
             className={`local-camera ${camera ? "visible" : ""}`}
           />
         </div>
-      ) : null}
       <section className="voice-hero">
         <div className={`voice-orb ${connected ? "is-live" : ""}`}>
           <Radio size={38} />
@@ -455,9 +499,11 @@ export function VoiceRoom({
               <button
                 className={sharing ? "is-active" : ""}
                 onClick={toggleScreen}
+                disabled={!screenSupported}
+                title={!screenSupported ? "Демонстрация экрана доступна на компьютере" : undefined}
               >
                 <MonitorUp size={20} />
-                <span>{sharing ? "Остановить" : "Экран"}</span>
+                <span>{sharing ? "Остановить" : screenSupported ? "Экран" : "Экран недоступен"}</span>
               </button>
               <button onClick={() => setSettings((value) => !value)}>
                 <Settings2 size={20} />
@@ -486,10 +532,10 @@ export function VoiceRoom({
             </div> : null}
             {soundboard ? (
               <div className="soundboard">
-                <button onClick={() => playSound(330)}>✨ Магия</button>
-                <button onClick={() => playSound(520)}>🎉 Победа</button>
-                <button onClick={() => playSound(180)}>🥁 Удар</button>
-                <button onClick={() => playSound(760)}>🔔 Сигнал</button>
+                <button disabled={soundPlaying} onClick={() => playSound(330)}>✨ Магия</button>
+                <button disabled={soundPlaying} onClick={() => playSound(520)}>🎉 Победа</button>
+                <button disabled={soundPlaying} onClick={() => playSound(180)}>🥁 Удар</button>
+                <button disabled={soundPlaying} onClick={() => playSound(760)}>🔔 Сигнал</button>
               </div>
             ) : null}
             {consentPanel ? (

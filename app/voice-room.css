@@ -148,6 +148,7 @@
 .soundboard button:hover {
   background: rgba(169, 121, 255, 0.13);
 }
+.soundboard button:disabled { opacity: .5; cursor: wait; }
 .consent-request,
 .consent-panel {
   margin: 14px auto 0;
@@ -310,6 +311,7 @@
   gap: 8px;
   padding: 8px;
 }
+.video-grid[hidden] { display: none; }
 .video-grid video {
   width: 100%;
   height: 100%;
@@ -318,6 +320,7 @@
   border-radius: 13px;
   background: #17151b;
 }
+.video-grid video[data-source="screen_share"] { object-fit: contain; }
 .remote-video {
   display: contents;
 }
@@ -343,12 +346,16 @@
 }
 .local-camera.visible video {
   min-height: 0;
+  transform: scaleX(-1);
 }
+.video-grid.camera-only .local-camera.visible { position: static; width: 100%; height: 100%; grid-column: 1/-1; }
+.video-grid.camera-only .local-camera.visible video { min-height: 330px; }
 .voice-controls button.is-active {
   border-color: rgba(169, 121, 255, 0.28);
   background: rgba(169, 121, 255, 0.12);
   color: #c8b9ff;
 }
+.voice-controls button:disabled { opacity: .45; cursor: not-allowed; }
 @media (max-width: 1050px) {
   .voice-room.has-video {
     grid-template-columns: 1fr;
