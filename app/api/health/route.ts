@@ -36,7 +36,7 @@ export async function GET(request: Request) {
   return NextResponse.json({
     service: "flipzero-web",
     status: healthy ? "ok" : "degraded",
-    version: "0.8.8",
+    version: "0.8.9",
     timestamp: new Date().toISOString(),
     durationMs,
     deployment: {
@@ -47,6 +47,7 @@ export async function GET(request: Request) {
     checks: {
       api: { status: "ok", latencyMs: durationMs },
       database: { status: databaseStatus, latencyMs: databaseLatencyMs },
+      voice: { status: process.env.LIVEKIT_URL && process.env.LIVEKIT_API_KEY && process.env.LIVEKIT_API_SECRET ? "configured" : "not_configured" },
     },
     topology: { ...topology, placementCount, migratingPlacementCount },
     slo: {

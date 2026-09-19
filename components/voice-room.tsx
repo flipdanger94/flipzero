@@ -38,6 +38,8 @@ export function VoiceRoom({
 }) {
   const [status, setStatus] = useState<VoiceStatus>("idle");
   const [muted, setMuted] = useState(false);
+  const [deafened, setDeafened] = useState(false);
+  const [audioBlocked, setAudioBlocked] = useState(false);
   const [camera, setCamera] = useState(false);
   const [sharing, setSharing] = useState(false);
   const [remoteVideo, setRemoteVideo] = useState(false);
@@ -46,6 +48,8 @@ export function VoiceRoom({
   const [activeSpeaker, setActiveSpeaker] = useState("");
   const [devices, setDevices] = useState<MediaDeviceInfo[]>([]);
   const [deviceId, setDeviceId] = useState("");
+  const [outputDevices, setOutputDevices] = useState<MediaDeviceInfo[]>([]);
+  const [outputDeviceId, setOutputDeviceId] = useState("");
   const [settings, setSettings] = useState(false);
   const [breakout, setBreakout] = useState("main");
   const [soundboard, setSoundboard] = useState(false);
@@ -64,9 +68,12 @@ export function VoiceRoom({
   const localCameraRef = useRef<HTMLDivElement | null>(null);
   const localScreenRef = useRef<HTMLDivElement | null>(null);
   const consentRequestRef = useRef("");
+  const deafenedRef = useRef(false);
+  const joinAttemptRef = useRef(0);
 
   useEffect(
     () => () => {
+      joinAttemptRef.current++;
       roomRef.current?.disconnect();
       roomRef.current = null;
     },
@@ -83,23 +90,25 @@ export function VoiceRoom({
   }
 
   async function join() {
+    if (status !== "idle") return;
+    const attempt = ++joinAttemptRef.current;
     setStatus("connecting");
     setError("");
-    const response = await fetch(`/api/v1/channels/${channelId}/voice-token`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ breakout }),
-    });
-    const data = await response.json();
-    if (!response.ok) {
-      setStatus("idle");
-      setError(data.message ?? "Не удалось подключиться.");
-      return;
-    }
+    let room: Room | null = null;
     try {
-      const room = new Room({ adaptiveStream: true, dynacast: true });
+      const response = await fetch(`/api/v1/channels/${channelId}/voice-token`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ breakout }),
+      });
+      const data = await response.json();
+      if (attempt !== joinAttemptRef.current) return;
+      if (!response.ok) { setError(data.message ?? "Не удалось подключиться."); setStatus("idle"); return; }
+      room = new Room({ adaptiveStream: true, dynacast: true });
+      const connectedRoom = room;
+      roomRef.current = room;
       const refresh = () =>
-        setParticipantCount(room.remoteParticipants.size + 1);
+        setParticipantCount(connectedRoom.remoteParticipants.size + 1);
       room.on(RoomEvent.ParticipantConnected, refresh);
       room.on(RoomEvent.ParticipantDisconnected, refresh);
       room.on(RoomEvent.ActiveSpeakersChanged, (speakers) =>
@@ -137,8 +146,11 @@ export function VoiceRoom({
       room.on(RoomEvent.Reconnecting, () => setStatus("reconnecting"));
       room.on(RoomEvent.Reconnected, () => setStatus("connected"));
       room.on(RoomEvent.TrackSubscribed, (track) => {
-        if (track.kind === Track.Kind.Audio)
-          audioRef.current?.appendChild(track.attach());
+        if (track.kind === Track.Kind.Audio) {
+          const element = track.attach();
+          if (element instanceof HTMLAudioElement) element.muted = deafenedRef.current;
+          audioRef.current?.appendChild(element);
+        }
         if (track.kind === Track.Kind.Video) {
           setRemoteVideo(true);
           window.requestAnimationFrame(() =>
@@ -151,6 +163,8 @@ export function VoiceRoom({
         setRemoteVideo(Boolean(remoteVideoRef.current?.childElementCount));
       });
       room.on(RoomEvent.Disconnected, () => {
+        if (roomRef.current !== connectedRoom) return;
+        roomRef.current = null;
         setStatus("idle");
         setParticipantCount(0);
         setCamera(false);
@@ -158,19 +172,25 @@ export function VoiceRoom({
         setRemoteVideo(false);
         setActiveSpeaker("");
       });
+      room.on(RoomEvent.AudioPlaybackStatusChanged, () => setAudioBlocked(!connectedRoom.canPlaybackAudio));
       await room.connect(data.url, data.token);
-      await room.localParticipant.setMicrophoneEnabled(true);
-      await room.startAudio();
-      roomRef.current = room;
-      const microphones = await Room.getLocalDevices("audioinput");
+      if (attempt !== joinAttemptRef.current) { void room.disconnect(); return; }
+      try { await room.localParticipant.setMicrophoneEnabled(true); setMuted(false); }
+      catch { setMuted(true); setError("Микрофон недоступен. Разрешите доступ в настройках браузера и нажмите «Включить»."); }
+      try { await room.startAudio(); } catch { setAudioBlocked(true); }
+      setAudioBlocked(!room.canPlaybackAudio);
+      const [microphones, speakers] = await Promise.all([Room.getLocalDevices("audioinput").catch(() => []), Room.getLocalDevices("audiooutput").catch(() => [])]);
+      if (attempt !== joinAttemptRef.current) { void room.disconnect(); return; }
       setDevices(microphones);
-      setDeviceId(microphones[0]?.deviceId ?? "");
+      setDeviceId(room.getActiveDevice("audioinput") ?? microphones[0]?.deviceId ?? "");
+      setOutputDevices(speakers);
+      setOutputDeviceId(room.getActiveDevice("audiooutput") ?? speakers[0]?.deviceId ?? "");
       refresh();
-      setMuted(false);
       setStatus("connected");
     } catch {
-      roomRef.current?.disconnect();
-      roomRef.current = null;
+      if (room) void room.disconnect();
+      if (roomRef.current === room) roomRef.current = null;
+      if (attempt !== joinAttemptRef.current) return;
       setStatus("idle");
       setError("Не удалось установить голосовое соединение.");
     }
@@ -178,8 +198,25 @@ export function VoiceRoom({
 
   async function chooseDevice(next: string) {
     if (!roomRef.current) return;
-    await roomRef.current.switchActiveDevice("audioinput", next);
-    setDeviceId(next);
+    try { await roomRef.current.switchActiveDevice("audioinput", next); setDeviceId(next); setError(""); }
+    catch { setError("Не удалось переключить микрофон."); }
+  }
+  async function chooseOutput(next: string) {
+    if (!roomRef.current) return;
+    try { await roomRef.current.switchActiveDevice("audiooutput", next); setOutputDeviceId(next); setError(""); }
+    catch { setError("Не удалось переключить динамик. Выберите устройство в настройках телефона или браузера."); }
+  }
+  function toggleDeafen() {
+    const next = !deafenedRef.current;
+    deafenedRef.current = next;
+    audioRef.current?.querySelectorAll("audio").forEach((audio) => { audio.muted = next; });
+    setDeafened(next);
+  }
+  async function enableAudio() {
+    const room = roomRef.current;
+    if (!room) return;
+    try { await room.startAudio(); setAudioBlocked(!room.canPlaybackAudio); }
+    catch { setError("Браузер не разрешил воспроизведение. Нажмите ещё раз или проверьте звук устройства."); }
   }
   async function playSound(frequency: number) {
     const room = roomRef.current;
@@ -256,8 +293,8 @@ export function VoiceRoom({
     const room = roomRef.current;
     if (!room) return;
     const next = !muted;
-    await room.localParticipant.setMicrophoneEnabled(!next);
-    setMuted(next);
+    try { await room.localParticipant.setMicrophoneEnabled(!next); setMuted(next); setError(""); }
+    catch { setError("Не удалось включить микрофон. Разрешите доступ в настройках браузера."); }
   }
   async function toggleCamera() {
     const room = roomRef.current;
@@ -292,6 +329,7 @@ export function VoiceRoom({
     }
   }
   function leave() {
+    joinAttemptRef.current++;
     roomRef.current?.disconnect();
     roomRef.current = null;
     [audioRef, remoteVideoRef, localCameraRef, localScreenRef].forEach((ref) =>
@@ -302,6 +340,12 @@ export function VoiceRoom({
     setCamera(false);
     setSharing(false);
     setRemoteVideo(false);
+    setMuted(false);
+    setAudioBlocked(false);
+    setDeafened(false);
+    deafenedRef.current = false;
+    setActiveSpeaker("");
+    setQuality(ConnectionQuality.Unknown);
     setSettings(false);
     setSoundboard(false);
     setConsentPanel(false);
@@ -355,6 +399,7 @@ export function VoiceRoom({
             <i /> Сейчас говорит: <b>{activeSpeaker}</b>
           </div>
         ) : null}
+        {connected && audioBlocked ? <button className="voice-enable-audio" onClick={enableAudio}><Headphones size={18} /> Включить звук</button> : null}
         {error ? <div className="voice-error">{error}</div> : null}
         {status === "idle" ? (
           <label className="breakout-picker">
@@ -385,6 +430,10 @@ export function VoiceRoom({
               <button className={muted ? "is-muted" : ""} onClick={toggleMute}>
                 {muted ? <MicOff size={20} /> : <Mic size={20} />}
                 <span>{muted ? "Включить" : "Микрофон"}</span>
+              </button>
+              <button className={deafened ? "is-muted" : ""} onClick={toggleDeafen} aria-pressed={deafened}>
+                <Headphones size={20} />
+                <span>{deafened ? "Включить звук" : "Выключить звук"}</span>
               </button>
               <button
                 className={camera ? "is-active" : ""}
@@ -417,21 +466,14 @@ export function VoiceRoom({
                 <span>Выйти</span>
               </button>
             </div>
-            {settings ? (
-              <label className="device-picker">
-                <span>Микрофон</span>
-                <select
-                  value={deviceId}
-                  onChange={(event) => chooseDevice(event.target.value)}
-                >
-                  {devices.map((device, index) => (
-                    <option key={device.deviceId} value={device.deviceId}>
-                      {device.label || `Микрофон ${index + 1}`}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            ) : null}
+            {settings ? <div className="voice-device-settings">
+              <label className="device-picker"><span>Микрофон</span><select value={deviceId} onChange={(event) => void chooseDevice(event.target.value)} disabled={!devices.length}>
+                {!devices.length ? <option value="">Микрофон недоступен</option> : devices.map((device, index) => <option key={device.deviceId} value={device.deviceId}>{device.label || `Микрофон ${index + 1}`}</option>)}
+              </select></label>
+              <label className="device-picker"><span>Динамики / наушники</span><select value={outputDeviceId} onChange={(event) => void chooseOutput(event.target.value)} disabled={!outputDevices.length}>
+                {!outputDevices.length ? <option value="">Выбор устройства недоступен в этом браузере</option> : outputDevices.map((device, index) => <option key={device.deviceId} value={device.deviceId}>{device.label || `Устройство ${index + 1}`}</option>)}
+              </select></label>
+            </div> : null}
             {soundboard ? (
               <div className="soundboard">
                 <button onClick={() => playSound(330)}>✨ Магия</button>

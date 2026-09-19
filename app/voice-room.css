@@ -424,3 +424,26 @@
 .voice-controls {
   flex-wrap: wrap;
 }
+
+.voice-room { background: radial-gradient(circle at 50% 10%, rgba(111,92,255,.14), transparent 46%), #101116; }
+.voice-hero { background: linear-gradient(150deg, #191c25, #101116 72%); }
+.voice-orb.is-live { color: #00d4ff; box-shadow: 0 0 0 9px rgba(0,212,255,.06), 0 0 55px rgba(0,212,255,.19); }
+.voice-hero > small, .voice-online, .quality-excellent, .quality-good { color: #59e2ff; }
+.voice-hero p { color: #adb8c4; font-size: .88rem; }
+.voice-error { font-size: .78rem; line-height: 1.45; }
+.voice-join, .voice-enable-audio { min-height: 45px; font-size: .87rem; background: linear-gradient(135deg,#00d4ff,#6f5cff); color: #05070a; font-weight: 800; }
+.voice-enable-audio { display: flex; align-items: center; justify-content: center; gap: 8px; margin: 16px auto 0; border: 0; border-radius: 10px; padding: 9px 15px; cursor: pointer; }
+.voice-controls button { min-height: 64px; font-size: .72rem; }
+.voice-online, .quality { font-size: .75rem; }
+.breakout-picker span, .device-picker span { font-size: .75rem; color: #b3bfca; }
+.breakout-picker select, .device-picker select { font-size: .86rem; min-height: 42px; background: #191c24; }
+.voice-device-settings { display: grid; gap: 4px; margin-top: 12px; }
+.voice-device-settings .device-picker { width: min(100%, 380px); margin-top: 8px; }
+
+@media (max-width: 760px) {
+  .voice-room { align-content: start; padding: 12px 12px 90px; }
+  .voice-hero { padding: 23px 15px; }
+  .voice-controls { gap: 8px; }
+  .voice-controls button { min-height: 56px; }
+  .breakout-picker select, .device-picker select { font-size: 16px; }
+}
