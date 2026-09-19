@@ -517,6 +517,45 @@
 }
 
 @media (max-width: 760px) {
+  .auth-page .auth-input input,
+  .app-shell.app-shell .composer textarea,
+  .app-shell .search-box input,
+  .space-dialog input:not(.color-input),
+  .space-dialog textarea,
+  .space-dialog select {
+    font-size: 16px;
+  }
+
+  .app-shell.app-shell {
+    padding-bottom: calc(66px + env(safe-area-inset-bottom));
+  }
+
+  .app-shell .chat-panel {
+    height: calc(100dvh - 66px - env(safe-area-inset-bottom));
+  }
+
+  .app-shell .channel-panel,
+  .app-shell .mobile-drawer-backdrop {
+    bottom: calc(66px + env(safe-area-inset-bottom));
+  }
+
+  .app-shell .mobile-tab-bar {
+    height: calc(66px + env(safe-area-inset-bottom));
+    padding-bottom: max(5px, env(safe-area-inset-bottom));
+  }
+
+  .app-shell:has(.composer textarea:focus) .mobile-tab-bar {
+    display: none;
+  }
+
+  .app-shell.app-shell:has(.composer textarea:focus) {
+    padding-bottom: 0;
+  }
+
+  .app-shell:has(.composer textarea:focus) .chat-panel {
+    height: 100dvh;
+  }
+
   .app-shell .header-actions > button.channel-share-action {
     display: grid;
     place-items: center;
