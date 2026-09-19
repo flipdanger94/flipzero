@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Download, Share, WifiOff, X } from "lucide-react";
+import { BrandMark } from "@/components/brand-mark";
 
 interface BeforeInstallPromptEvent extends Event {
   prompt(): Promise<void>;
@@ -48,5 +49,5 @@ export function PwaClient() {
     setShowIosHelp(false);
   }
 
-  return <>{!online ? <div className="offline-toast" role="status"><WifiOff size={15} /> Нет соединения. Ждём восстановления сети…</div> : null}{showInstall ? <aside className="install-app-card" aria-label="Установить FlipZero"><button className="install-close" onClick={dismiss} aria-label="Закрыть"><X size={15} /></button><span className="install-mark">FZ</span><div><strong>Установить FlipZero</strong><small>{showIosHelp ? <>Откройте в Safari, нажмите <Share size={14} aria-label="Поделиться" /> «Поделиться» → «На экран Домой».</> : "Откройте чаты как отдельное приложение."}</small></div><button className="install-action" onClick={showIosHelp ? dismiss : install}>{showIosHelp ? null : <Download size={15} />} {showIosHelp ? "Понятно" : "Установить"}</button></aside> : null}</>;
+  return <>{!online ? <div className="offline-toast" role="status"><WifiOff size={15} /> Нет соединения. Ждём восстановления сети…</div> : null}{showInstall ? <aside className="install-app-card" aria-label="Установить FlipZero"><button className="install-close" onClick={dismiss} aria-label="Закрыть"><X size={15} /></button><span className="install-mark brand-symbol-wrap"><BrandMark /></span><div><strong>Установить FlipZero</strong><small>{showIosHelp ? <>Откройте в Safari, нажмите <Share size={14} aria-label="Поделиться" /> «Поделиться» → «На экран Домой».</> : "Откройте чаты как отдельное приложение."}</small></div><button className="install-action" onClick={showIosHelp ? dismiss : install}>{showIosHelp ? null : <Download size={15} />} {showIosHelp ? "Понятно" : "Установить"}</button></aside> : null}</>;
 }

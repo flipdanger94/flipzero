@@ -22,6 +22,7 @@ import { WikiDialog } from "@/components/wiki-dialog";
 import { DeveloperDialog } from "@/components/developer-dialog";
 import { SystemStatusDialog } from "@/components/system-status-dialog";
 import { AccountSettingsDialog, type AccountProfile } from "@/components/account-settings-dialog";
+import { BrandMark } from "@/components/brand-mark";
 
 type ApiChannel = { id: string; parentId: string | null; name: string; topic: string | null; kind: string; position?: number };
 type ApiCategory = { id: string; spaceId: string; name: string; position: number };
@@ -261,7 +262,7 @@ export default function Home({ initialSpaceId, initialChannelId }: { initialSpac
   return (
     <><main className={`app-shell ${showMembers ? "" : "members-hidden"} ${mobileChannelsOpen ? "mobile-channels-open" : ""}`}>
       <nav className="space-rail" aria-label="Сообщества">
-        <button className="rail-action home-action" aria-label="Главная"><Sparkles size={21} /></button>
+        <button className="rail-action home-action brand-symbol-wrap" aria-label="Главная"><BrandMark size={45} /></button>
         <span className="rail-separator" />
         {spacesLoading ? <LoaderCircle className="rail-loader spin" size={20} /> : userSpaces.map((space) => <button key={space.id} className={`space-button ${space.id === activeSpaceId ? "active" : ""}`} style={{ background: `linear-gradient(145deg, ${space.accentColor}, #7136ad)` }} aria-label={`Сообщество ${space.name}`} title={space.name} onClick={() => { setActiveSpaceId(space.id); const first = space.channels.find((channel) => channel.kind === "text") ?? space.channels[0]; if (first) selectChannel(first.name, first.id, space.id); }}>{space.name.slice(0, 2).toLocaleUpperCase("ru")}</button>)}
         <button className="rail-action add-space" aria-label="Добавить сообщество" onClick={() => setShowCreateSpace(true)}><Plus size={22} /></button>
@@ -272,7 +273,7 @@ export default function Home({ initialSpaceId, initialChannelId }: { initialSpac
       <aside className="channel-panel">
         <button className="mobile-drawer-close" aria-label="Закрыть список каналов" onClick={() => setMobileChannelsOpen(false)}><X size={19} /></button>
         <div className="mobile-space-switcher">{userSpaces.map((space) => <button key={space.id} className={space.id === activeSpaceId ? "active" : ""} style={{ background: `linear-gradient(145deg, ${space.accentColor}, #7136ad)` }} onClick={() => { setActiveSpaceId(space.id); const first = space.channels.find((channel) => channel.kind === "text") ?? space.channels[0]; if (first) selectChannel(first.name, first.id, space.id); }}>{space.name.slice(0, 2).toLocaleUpperCase("ru")}</button>)}<button className="mobile-add-space" onClick={() => setShowCreateSpace(true)}><Plus size={18} /></button></div>
-        <button className="space-heading" aria-label={activeSpace?.ownerId === user?.id ? "Открыть настройки пространства" : "Информация о пространстве"} onClick={() => { if (activeSpace?.ownerId === user?.id) setShowSpaceSettings(true); }}><span className="brand-mark" style={activeSpace ? { background: `linear-gradient(135deg, ${activeSpace.accentColor}, #b33bd4)` } : undefined}>{activeSpace ? activeSpace.name.slice(0, 2).toLocaleUpperCase("ru") : "FZ"}</span><span><strong>{activeSpace?.name ?? "FlipZero"}</strong><small>{activeSpace?.description ?? (userSpaces.length ? "Пространство команды" : "Создайте пространство")}</small></span><ChevronDown size={17} /></button>
+        <button className="space-heading" aria-label={activeSpace?.ownerId === user?.id ? "Открыть настройки пространства" : "Информация о пространстве"} onClick={() => { if (activeSpace?.ownerId === user?.id) setShowSpaceSettings(true); }}><span className={`brand-mark ${activeSpace ? "" : "brand-symbol-wrap"}`} style={activeSpace ? { background: `linear-gradient(135deg, ${activeSpace.accentColor}, #b33bd4)` } : undefined}>{activeSpace ? activeSpace.name.slice(0, 2).toLocaleUpperCase("ru") : <BrandMark size={34} />}</span><span><strong>{activeSpace?.name ?? "FlipZero"}</strong><small>{activeSpace?.description ?? (userSpaces.length ? "Пространство команды" : "Создайте пространство")}</small></span><ChevronDown size={17} /></button>
         <div className="channel-scroll">
           <button className="boost-card" onClick={() => setShowGamification(true)}><span className="boost-icon"><Trophy size={17} /></span><span><strong>Прогресс и награды</strong><small>Уровни, пути и рейтинг</small></span><span className="boost-level">{user?.globalLevel ?? 1}</span></button>
           {activeSpace ? <button className="category-add events-button" onClick={() => setShowEvents(true)}><CalendarDays size={14} /> События сообщества</button> : null}

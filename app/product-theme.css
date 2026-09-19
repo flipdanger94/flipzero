@@ -664,3 +664,19 @@
     animation-iteration-count: 1 !important;
   }
 }
+
+/* One mark for the navigation, app, dialogs and install surfaces. */
+.brand-symbol-wrap {
+  padding: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  overflow: hidden;
+}
+.brand-symbol-wrap .brand-symbol {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.home-action.brand-symbol-wrap:hover { transform: translateY(-1px); }

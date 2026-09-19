@@ -3,6 +3,7 @@ import { and, asc, eq, sql } from "drizzle-orm";
 import { Hash, ShieldCheck, Sparkles, Users } from "lucide-react";
 import { notFound } from "next/navigation";
 import { CommunityActions } from "@/components/community-actions";
+import { BrandMark } from "@/components/brand-mark";
 import { getDatabase } from "@/db/client";
 import { channels, members, spaces } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
@@ -28,7 +29,7 @@ export default async function CommunityPage({ params, searchParams }: { params: 
   const selectedChannel = requestedChannelRows[0] ?? channelRows[0] ?? null;
 
   return <main className="community-page">
-    <nav className="community-nav"><Link href="/" className="community-logo"><span>FZ</span><strong>FlipZero</strong></Link><Link href="/app">Открыть приложение</Link></nav>
+    <nav className="community-nav"><Link href="/" className="community-logo"><span className="brand-symbol-wrap"><BrandMark /></span><strong>FlipZero</strong></Link><Link href="/app">Открыть приложение</Link></nav>
     <section className="community-hero" style={{ "--community-accent": space.accentColor } as React.CSSProperties}>
       <div className="community-glow" />
       <div className="community-banner" style={space.bannerUrl ? { backgroundImage: `linear-gradient(180deg, transparent, rgba(8, 9, 13, .88)), url(${space.bannerUrl})` } : undefined}>

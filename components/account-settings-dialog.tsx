@@ -3,6 +3,7 @@
 import { type FormEvent, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AtSign, Check, KeyRound, LoaderCircle, LogOut, ShieldCheck, UserRound, X } from "lucide-react";
+import { BrandMark } from "./brand-mark";
 
 export type AccountProfile = {
   id: string;
@@ -78,7 +79,7 @@ export function AccountSettingsDialog({ user, onClose, onSaved }: { user: Accoun
   return <div className="dialog-backdrop account-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
     <section className="account-settings" role="dialog" aria-modal="true" aria-labelledby="account-settings-title">
       <aside className="account-settings-nav">
-        <div className="account-settings-brand"><span>FZ</span><strong>FlipZero</strong></div>
+        <div className="account-settings-brand"><span className="brand-symbol-wrap"><BrandMark /></span><strong>FlipZero</strong></div>
         <small className="account-nav-label">НАСТРОЙКИ ПОЛЬЗОВАТЕЛЯ</small>
         <button type="button" className={section === "profile" ? "active" : ""} onClick={() => openSection("profile")}><UserRound size={18} /> Мой профиль</button>
         <button type="button" className={section === "security" ? "active" : ""} onClick={() => openSection("security")}><ShieldCheck size={18} /> Аккаунт и безопасность</button>
