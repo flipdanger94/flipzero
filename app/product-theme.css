@@ -90,6 +90,7 @@
 .app-shell .boost-level,
 .app-shell .level-row span,
 .app-shell .header-actions > button.is-active,
+.app-shell .header-actions > button.link-copied,
 .app-shell .board-view > header small {
   color: #00d4ff;
 }

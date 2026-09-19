@@ -1,7 +1,7 @@
 "use client";
 
 import { type FormEvent, useEffect, useState } from "react";
-import { Bell, BookOpen, CalendarDays, ChevronDown, CirclePlus, Code2, Compass, Gavel, Gift, Hash, Headphones, HelpCircle, Home as HomeIcon, Image as ImageIcon, Link2, LoaderCircle, Menu, Mic, Plus, Search, SendHorizontal, Settings, Settings2, ShieldCheck, Smile, Sparkles, Trash2, Trophy, UserRound, Users, Volume2, X } from "lucide-react";
+import { Bell, BookOpen, CalendarDays, Check, ChevronDown, CirclePlus, Code2, Compass, Copy, Gavel, Gift, Hash, Headphones, HelpCircle, Home as HomeIcon, Image as ImageIcon, Link2, LoaderCircle, Menu, Mic, Plus, Search, SendHorizontal, Settings, Settings2, ShieldCheck, Smile, Sparkles, Trash2, Trophy, UserRound, Users, Volume2, X } from "lucide-react";
 import { CreateSpaceDialog } from "@/components/create-space-dialog";
 import { CreateChannelDialog, type CreatedChannel } from "@/components/create-channel-dialog";
 import { CreateCategoryDialog, type CreatedCategory } from "@/components/create-category-dialog";
@@ -83,6 +83,7 @@ export default function Home({ initialSpaceId, initialChannelId }: { initialSpac
   const [showGamification, setShowGamification] = useState(false);
   const [levelUp, setLevelUp] = useState<number | null>(null);
   const [mobileChannelsOpen, setMobileChannelsOpen] = useState(false);
+  const [channelLinkCopied, setChannelLinkCopied] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -137,6 +138,7 @@ export default function Home({ initialSpaceId, initialChannelId }: { initialSpac
 
   const activeMessages = channelMessages[activeChannel] ?? [];
   const activeSpace = userSpaces.find((space) => space.id === activeSpaceId) ?? null;
+  const activeRouteChannel = activeSpace?.channels.find((channel) => channel.name === activeChannel) ?? null;
   const activeApiChannel = activeSpace?.channels.find((channel) => channel.name === activeChannel && ["text", "forum", "announcement"].includes(channel.kind)) ?? null;
   const activeBoardChannel = activeSpace?.channels.find((channel) => channel.name === activeChannel && channel.kind === "board") ?? null;
   const activeForumChannel = activeSpace?.channels.find((channel) => channel.name === activeChannel && channel.kind === "forum") ?? null;
@@ -146,6 +148,18 @@ export default function Home({ initialSpaceId, initialChannelId }: { initialSpac
     const query = searchQuery.trim().toLocaleLowerCase("ru");
     return !query || message.text.toLocaleLowerCase("ru").includes(query) || message.name.toLocaleLowerCase("ru").includes(query);
   });
+
+  async function copyChannelLink() {
+    if (!activeSpace || !activeRouteChannel) return;
+    const url = `${window.location.origin}/channels/${encodeURIComponent(activeSpace.id)}/${encodeURIComponent(activeRouteChannel.id)}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      setChannelLinkCopied(true);
+      window.setTimeout(() => setChannelLinkCopied(false), 1800);
+    } catch {
+      setChannelLinkCopied(false);
+    }
+  }
 
   async function sendMessage(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -252,7 +266,7 @@ export default function Home({ initialSpaceId, initialChannelId }: { initialSpac
       </aside>
 
       <section className="chat-panel">
-        <header className="chat-header"><button className="mobile-menu-button" aria-label="Открыть сообщества и каналы" onClick={() => setMobileChannelsOpen(true)}><Menu size={20} /></button><div className="channel-title"><Hash size={21} /><strong>{activeChannel}</strong><span>Разговоры обо всём</span></div><div className="header-actions"><button className={notifications ? "is-active" : ""} aria-label={notifications ? "Выключить уведомления" : "Включить уведомления"} aria-pressed={notifications} onClick={() => setNotifications((value) => !value)}><Bell size={19} /></button><button className={showMembers ? "is-active" : ""} aria-label={showMembers ? "Скрыть участников" : "Показать участников"} aria-pressed={showMembers} onClick={() => setShowMembers((value) => !value)}><Users size={19} /></button><label className="search-box"><Search size={16} /><input aria-label="Поиск" placeholder="Поиск" value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} /></label></div></header>
+        <header className="chat-header"><button className="mobile-menu-button" aria-label="Открыть сообщества и каналы" onClick={() => setMobileChannelsOpen(true)}><Menu size={20} /></button><div className="channel-title"><Hash size={21} /><strong>{activeChannel}</strong><span>Разговоры обо всём</span></div><div className="header-actions"><button className={channelLinkCopied ? "is-active link-copied" : ""} aria-label={channelLinkCopied ? "Ссылка на канал скопирована" : "Скопировать ссылку на канал"} title={channelLinkCopied ? "Скопировано" : "Скопировать ссылку на канал"} onClick={copyChannelLink}>{channelLinkCopied ? <Check size={18} /> : <Copy size={18} />}</button><button className={notifications ? "is-active" : ""} aria-label={notifications ? "Выключить уведомления" : "Включить уведомления"} aria-pressed={notifications} onClick={() => setNotifications((value) => !value)}><Bell size={19} /></button><button className={showMembers ? "is-active" : ""} aria-label={showMembers ? "Скрыть участников" : "Показать участников"} aria-pressed={showMembers} onClick={() => setShowMembers((value) => !value)}><Users size={19} /></button><label className="search-box"><Search size={16} /><input aria-label="Поиск" placeholder="Поиск" value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} /></label></div></header>
         {activeBoardChannel ? <ChannelBoard channelId={activeBoardChannel.id} channelName={activeBoardChannel.name} /> : activeForumChannel ? <ForumChannel channelId={activeForumChannel.id} channelName={activeForumChannel.name} /> : activeVoiceChannel ? <VoiceRoom channelId={activeVoiceChannel.id} channelName={activeVoiceChannel.name} /> : activeApiChannel && user ? <PersistentChat channelId={activeApiChannel.id} channelName={activeApiChannel.name} spaceId={activeSpace!.id} currentUserId={user.id} ownerId={activeSpace?.ownerId} searchQuery={searchQuery} /> : <><div className="message-list">
           <div className="channel-intro"><div className="intro-icon"><Hash size={31} /></div><h1>{activeDetails.title}</h1><p>Это начало канала <strong>#{activeChannel}</strong>. {activeDetails.description}</p></div>
           <div className="day-divider"><span>17 сентября 2026</span></div>
