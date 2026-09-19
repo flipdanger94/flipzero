@@ -36,7 +36,7 @@ export async function GET(request: Request) {
   return NextResponse.json({
     service: "flipzero-web",
     status: healthy ? "ok" : "degraded",
-    version: "0.8.7",
+    version: "0.8.8",
     timestamp: new Date().toISOString(),
     durationMs,
     deployment: {

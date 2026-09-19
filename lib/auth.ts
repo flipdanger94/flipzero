@@ -26,6 +26,6 @@ export async function deleteSession() {
 export async function getCurrentUser() {
   const token = (await cookies()).get(SESSION_COOKIE)?.value;
   if (!token) return null;
-  const [result] = await getDatabase().select({ id: users.id, email: users.email, username: users.username, displayName: users.displayName, avatarUrl: users.avatarUrl, globalLevel: users.globalLevel, globalXp: users.globalXp }).from(sessions).innerJoin(users, eq(sessions.userId, users.id)).where(and(eq(sessions.tokenHash, hashValue(token)), gt(sessions.expiresAt, new Date()))).limit(1);
+  const [result] = await getDatabase().select({ id: users.id, email: users.email, username: users.username, displayName: users.displayName, bio: users.bio, avatarUrl: users.avatarUrl, accentColor: users.accentColor, globalLevel: users.globalLevel, globalXp: users.globalXp }).from(sessions).innerJoin(users, eq(sessions.userId, users.id)).where(and(eq(sessions.tokenHash, hashValue(token)), gt(sessions.expiresAt, new Date()))).limit(1);
   return result ?? null;
 }
