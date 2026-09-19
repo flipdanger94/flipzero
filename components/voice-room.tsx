@@ -38,6 +38,8 @@ export function VoiceRoom({
 }) {
   const [status, setStatus] = useState<VoiceStatus>("idle");
   const [voiceAvailable, setVoiceAvailable] = useState<boolean | null>(null);
+  const [voiceMessage, setVoiceMessage] = useState("");
+  const [voiceCheckNonce, setVoiceCheckNonce] = useState(0);
   const [muted, setMuted] = useState(false);
   const [deafened, setDeafened] = useState(false);
   const [audioBlocked, setAudioBlocked] = useState(false);
@@ -85,12 +87,18 @@ export function VoiceRoom({
   );
   useEffect(() => {
     const controller = new AbortController();
-    void fetch("/api/v1/voice/status", { signal: controller.signal })
+    void fetch("/api/v1/voice/status?check=1", { signal: controller.signal })
       .then((response) => { if (!response.ok) throw new Error("Voice status failed"); return response.json(); })
-      .then((data) => { if (!controller.signal.aborted) setVoiceAvailable(Boolean(data.available)); })
+      .then((data) => {
+        if (controller.signal.aborted) return;
+        setVoiceAvailable(Boolean(data.available) && data.connection === "ok");
+        setVoiceMessage(data.connection === "invalid_url" ? "Адрес голосового сервера указан неверно. Проверьте LIVEKIT_URL в Vercel."
+          : data.connection === "unreachable" ? "Сервер голосовой связи не отвечает или ключи неверны. Проверьте настройки LiveKit в Vercel."
+          : "Голосовые комнаты пока недоступны. Попробуйте позже.");
+      })
       .catch(() => { if (!controller.signal.aborted) setVoiceAvailable(true); });
     return () => controller.abort();
-  }, []);
+  }, [voiceCheckNonce]);
   function clearMedia(container: HTMLDivElement | null) {
     container?.replaceChildren();
   }
@@ -470,7 +478,7 @@ export function VoiceRoom({
           </label>
         ) : null}
         {status === "idle" ? (
-          voiceAvailable === false ? <div className="voice-unavailable" role="status">Голосовые комнаты пока недоступны. Попробуйте позже.</div> :
+          voiceAvailable === false ? <div className="voice-unavailable" role="status">{voiceMessage}<button type="button" onClick={() => { setVoiceAvailable(null); setVoiceCheckNonce((value) => value + 1); }}>Проверить ещё раз</button></div> :
           <button className="voice-join" onClick={join} disabled={voiceAvailable === null}>
             {voiceAvailable === null ? <><LoaderCircle className="spin" size={19} /> Проверяем голос…</> : <><Headphones size={19} /> Подключиться</>}
           </button>

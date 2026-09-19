@@ -441,6 +441,7 @@
 .voice-join, .voice-enable-audio { min-height: 45px; font-size: .87rem; background: linear-gradient(135deg,#00d4ff,#6f5cff); color: #05070a; font-weight: 800; }
 .voice-enable-audio { display: flex; align-items: center; justify-content: center; gap: 8px; margin: 16px auto 0; border: 0; border-radius: 10px; padding: 9px 15px; cursor: pointer; }
 .voice-unavailable { margin: 22px auto 0; border: 1px solid rgba(255,255,255,.12); border-radius: 11px; padding: 12px 14px; color: #c2ccd5; background: #1b1d25; font-size: .82rem; line-height: 1.5; }
+.voice-unavailable button { display: block; margin: 12px auto 0; padding: 8px 12px; border: 1px solid #59e2ff; border-radius: 8px; color: #59e2ff; background: transparent; cursor: pointer; }
 .voice-controls button { min-height: 64px; font-size: .72rem; }
 .voice-online, .quality { font-size: .75rem; }
 .breakout-picker span, .device-picker span { font-size: .75rem; color: #b3bfca; }
