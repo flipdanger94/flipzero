@@ -5,12 +5,13 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowRight, Check, Copy, LoaderCircle } from "lucide-react";
 
-export function CommunityActions({ spaceId, slug, channelId, isMember, isAuthenticated }: { spaceId: string; slug: string; channelId: string | null; isMember: boolean; isAuthenticated: boolean }) {
+export function CommunityActions({ spaceId, slug, channelId, isMember, isAuthenticated, requestedChannelId }: { spaceId: string; slug: string; channelId: string | null; isMember: boolean; isAuthenticated: boolean; requestedChannelId: string | null }) {
   const router = useRouter();
   const [joining, setJoining] = useState(false);
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState("");
-  const communityPath = `/communities/${encodeURIComponent(slug)}`;
+  const canonicalCommunityPath = `/communities/${encodeURIComponent(slug)}`;
+  const communityPath = requestedChannelId ? `${canonicalCommunityPath}?channel=${encodeURIComponent(requestedChannelId)}` : canonicalCommunityPath;
   const channelPath = channelId ? `/channels/${encodeURIComponent(spaceId)}/${encodeURIComponent(channelId)}` : "/app";
 
   async function join() {
@@ -34,7 +35,7 @@ export function CommunityActions({ spaceId, slug, channelId, isMember, isAuthent
 
   async function copy() {
     try {
-      await navigator.clipboard.writeText(`${window.location.origin}${communityPath}`);
+      await navigator.clipboard.writeText(`${window.location.origin}${canonicalCommunityPath}`);
       setCopied(true);
       window.setTimeout(() => setCopied(false), 1800);
     } catch {
