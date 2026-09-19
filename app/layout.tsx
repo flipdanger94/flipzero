@@ -12,7 +12,7 @@ export const metadata: Metadata = {
   icons: {
     icon: "/favicon.svg",
     shortcut: "/favicon.svg",
-    apple: "/pwa-icon-192.svg",
+    apple: "/apple-touch-icon.png",
   },
   applicationName: "FlipZero",
   appleWebApp: { capable: true, statusBarStyle: "black-translucent", title: "FlipZero" },

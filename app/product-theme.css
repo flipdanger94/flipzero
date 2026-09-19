@@ -461,6 +461,26 @@
   background: rgba(12, 13, 17, 0.94);
 }
 
+.install-mark,
+.install-action {
+  color: #05070a;
+  background: linear-gradient(135deg, #00d4ff, #6f5cff);
+}
+
+.install-app-card strong {
+  font-size: 0.88rem;
+}
+
+.install-app-card small {
+  color: #b9c3cd;
+  font-size: 0.72rem;
+}
+
+.install-action {
+  min-height: 38px;
+  font-size: 0.72rem;
+}
+
 .offline-page {
   background:
     radial-gradient(circle at 50% 0, rgba(111, 92, 255, 0.17), transparent 42%),
