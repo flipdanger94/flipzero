@@ -64,3 +64,19 @@
   .account-settings-form input, .account-settings-form textarea { font-size: 16px; }
   .account-signout-mobile { width: 100%; display: flex; justify-content: center; align-items: center; gap: 8px; margin: 28px 0 0; border: 1px solid rgba(255,110,125,.3); border-radius: 10px; padding: 12px; color: #ffc2c9; background: rgba(255,110,125,.08); font-size: .88rem; font-weight: 700; }
 }
+.account-profile-banner { background-position: center; background-size: cover; }
+.account-profile-avatar, .account-nav-user > span { overflow: hidden; }
+.account-profile-avatar img, .account-nav-user > span img { width: 100%; height: 100%; object-fit: cover; }
+.account-media-controls, .space-media-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 9px; margin: -8px 0 24px; }
+.account-media-controls > small, .space-media-controls > small { width: 100%; color: #939da9; font-size: .7rem; }
+.image-upload-button { display: inline-flex; align-items: center; gap: 7px; padding: 10px 12px; border: 1px solid rgba(255,255,255,.15); border-radius: 9px; background: #20232c; color: #eef4fa; font-size: .77rem; font-weight: 700; cursor: pointer; }
+.image-upload-button:hover { border-color: #00d4ff; }
+.image-upload-button input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+.image-upload-button:focus-within { outline: 2px solid #00d4ff; outline-offset: 2px; }
+.image-upload-error { display: block; margin: 5px 0; color: #ffabb5; }
+.space-media-preview { position: relative; margin: -6px 0 35px; border-radius: 12px; background: #171a22; }
+.space-media-banner { height: 85px; border-radius: 12px; background: linear-gradient(110deg,#6842bc,#fe6780); background-position: center; background-size: cover; }
+.space-media-icon { position: absolute; bottom: -20px; left: 13px; width: 51px; height: 51px; display: grid; place-items: center; overflow: hidden; border: 4px solid #171a22; border-radius: 16px; background: #934bb2; color: white; font-weight: 800; }
+.space-media-icon img { width: 100%; height: 100%; object-fit: cover; }
+.space-media-controls { margin: 0 0 18px; }
+.space-dialog:has(.space-media-preview) { max-height: min(90dvh, 820px); overflow-y: auto; scrollbar-width: thin; }

@@ -1,4 +1,4 @@
-import { bigint, boolean, index, integer, jsonb, pgEnum, pgTable, primaryKey, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
+import { bigint, boolean, customType, index, integer, jsonb, pgEnum, pgTable, primaryKey, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
 
 export const presenceStatus = pgEnum("presence_status", ["online", "idle", "dnd", "offline"]);
 export const spaceVisibility = pgEnum("space_visibility", ["private", "application", "public", "invite_only"]);
@@ -28,6 +28,14 @@ export const users = pgTable("users", {
   globalLevel: integer("global_level").default(1).notNull(),
   ...timestamps,
 }, (table) => [uniqueIndex("users_email_unique").on(table.email), uniqueIndex("users_username_unique").on(table.username)]);
+
+const imageBytes = customType<{ data: Buffer; driverData: Buffer }>({ dataType: () => "bytea" });
+export const mediaAssets = pgTable("media_assets", {
+  id: text("id").primaryKey(),
+  contentType: text("content_type").notNull(),
+  bytes: imageBytes("bytes").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+});
 
 export const sessions = pgTable("sessions", {
   id: text("id").primaryKey(),

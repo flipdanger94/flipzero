@@ -23,6 +23,7 @@ export async function GET() {
     slug: spaces.slug,
     description: spaces.description,
     iconUrl: spaces.iconUrl,
+    bannerUrl: spaces.bannerUrl,
     visibility: spaces.visibility,
     accentColor: spaces.accentColor,
     ownerId: spaces.ownerId,
@@ -76,5 +77,5 @@ export async function POST(request: Request) {
     await tx.insert(channels).values(defaultChannels);
   });
 
-  return NextResponse.json({ space: { id: spaceId, ownerId: user.id, name: parsed.data.name, slug, description: parsed.data.description || null, visibility: parsed.data.visibility, accentColor: parsed.data.accentColor, iconUrl: null, categories: defaultCategories, channels: defaultChannels } }, { status: 201 });
+  return NextResponse.json({ space: { id: spaceId, ownerId: user.id, name: parsed.data.name, slug, description: parsed.data.description || null, visibility: parsed.data.visibility, accentColor: parsed.data.accentColor, iconUrl: null, bannerUrl: null, categories: defaultCategories, channels: defaultChannels } }, { status: 201 });
 }

@@ -13,7 +13,7 @@ export default async function CommunityPage({ params, searchParams }: { params: 
   const requestedChannelId = typeof query.channel === "string" ? query.channel : null;
   const database = getDatabase();
   const [spaceRows, user] = await Promise.all([
-    database.select({ id: spaces.id, name: spaces.name, slug: spaces.slug, description: spaces.description, bannerUrl: spaces.bannerUrl, visibility: spaces.visibility, accentColor: spaces.accentColor, memberCount: sql<number>`count(${members.userId})::int` }).from(spaces).leftJoin(members, eq(members.spaceId, spaces.id)).where(eq(spaces.slug, slug)).groupBy(spaces.id).limit(1),
+    database.select({ id: spaces.id, name: spaces.name, slug: spaces.slug, description: spaces.description, iconUrl: spaces.iconUrl, bannerUrl: spaces.bannerUrl, visibility: spaces.visibility, accentColor: spaces.accentColor, memberCount: sql<number>`count(${members.userId})::int` }).from(spaces).leftJoin(members, eq(members.spaceId, spaces.id)).where(eq(spaces.slug, slug)).groupBy(spaces.id).limit(1),
     getCurrentUser(),
   ]);
   const space = spaceRows[0];
@@ -33,7 +33,7 @@ export default async function CommunityPage({ params, searchParams }: { params: 
     <section className="community-hero" style={{ "--community-accent": space.accentColor } as React.CSSProperties}>
       <div className="community-glow" />
       <div className="community-banner" style={space.bannerUrl ? { backgroundImage: `linear-gradient(180deg, transparent, rgba(8, 9, 13, .88)), url(${space.bannerUrl})` } : undefined}>
-        <div className="community-avatar">{space.name.slice(0, 2).toLocaleUpperCase("ru")}</div>
+        <div className="community-avatar">{space.iconUrl ? <img className="uploaded-image" src={space.iconUrl} alt="" /> : space.name.slice(0, 2).toLocaleUpperCase("ru")}</div>
       </div>
       <div className="community-content">
         <span className="community-kicker"><Sparkles size={15} /> Сообщество FlipZero</span>

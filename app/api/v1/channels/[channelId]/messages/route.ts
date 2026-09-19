@@ -44,7 +44,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ cha
     if (assessment.flagged) await tx.insert(moderationFlags).values({ id: randomUUID(), spaceId: access.channel.spaceId, channelId, messageId: id, authorId: access.user.id, category: assessment.category!, severity: assessment.severity, confidence: assessment.confidence, summary: assessment.summary, evidence: assessment.signals, autoHidden: assessment.autoHide });
   });
   if (assessment.autoHide) return NextResponse.json({ code: "MODERATION_HELD", message: "Сообщение временно скрыто автоматической защитой и отправлено на проверку модератору." }, { status: 422 });
-  return NextResponse.json({ message: { id, channelId, authorId: access.user.id, displayName: access.user.displayName, username: access.user.username, content, attachments, replyToId: body?.replyToId || null, threadRootId: body?.threadRootId || null, reactions: [], createdAt: new Date().toISOString() }, moderation: assessment.flagged ? { status: "pending", severity: assessment.severity } : null }, { status: 201 });
+  return NextResponse.json({ message: { id, channelId, authorId: access.user.id, displayName: access.user.displayName, username: access.user.username, avatarUrl: access.user.avatarUrl, content, attachments, replyToId: body?.replyToId || null, threadRootId: body?.threadRootId || null, reactions: [], createdAt: new Date().toISOString() }, moderation: assessment.flagged ? { status: "pending", severity: assessment.severity } : null }, { status: 201 });
 }
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ channelId: string }> }) {
