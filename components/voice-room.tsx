@@ -37,6 +37,7 @@ export function VoiceRoom({
   channelName: string;
 }) {
   const [status, setStatus] = useState<VoiceStatus>("idle");
+  const [voiceAvailable, setVoiceAvailable] = useState<boolean | null>(null);
   const [muted, setMuted] = useState(false);
   const [deafened, setDeafened] = useState(false);
   const [audioBlocked, setAudioBlocked] = useState(false);
@@ -79,6 +80,14 @@ export function VoiceRoom({
     },
     [channelId],
   );
+  useEffect(() => {
+    const controller = new AbortController();
+    void fetch("/api/v1/voice/status", { signal: controller.signal })
+      .then((response) => { if (!response.ok) throw new Error("Voice status failed"); return response.json(); })
+      .then((data) => { if (!controller.signal.aborted) setVoiceAvailable(Boolean(data.available)); })
+      .catch(() => { if (!controller.signal.aborted) setVoiceAvailable(true); });
+    return () => controller.abort();
+  }, []);
   function clearMedia(container: HTMLDivElement | null) {
     container?.replaceChildren();
   }
@@ -417,8 +426,9 @@ export function VoiceRoom({
           </label>
         ) : null}
         {status === "idle" ? (
-          <button className="voice-join" onClick={join}>
-            <Headphones size={19} /> Подключиться
+          voiceAvailable === false ? <div className="voice-unavailable" role="status">Голосовые комнаты пока недоступны. Попробуйте позже.</div> :
+          <button className="voice-join" onClick={join} disabled={voiceAvailable === null}>
+            {voiceAvailable === null ? <><LoaderCircle className="spin" size={19} /> Проверяем голос…</> : <><Headphones size={19} /> Подключиться</>}
           </button>
         ) : status === "connecting" ? (
           <button className="voice-join" disabled>
