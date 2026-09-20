@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Bell, ChevronRight, FolderPlus, Hash, Image as ImageIcon, Link2, LogOut, Settings2, ShieldCheck, Trash2 } from "lucide-react";
+import { Activity, Bell, BookOpen, CalendarDays, ChevronRight, Copy, FolderPlus, Gavel, Hash, Image as ImageIcon, Link2, LogOut, Settings2, ShieldCheck, Trash2, Trophy, Users } from "lucide-react";
 
-type Props = { name: string; canManage: boolean; isOwner: boolean; onClose: () => void; onSettings: () => void; onRoles: () => void; onInvite: () => void; onCreateChannel: () => void; onCreateCategory: () => void; onAppearance: () => void; onLeave: () => void; onDelete: () => void };
+type Props = { name: string; canManage: boolean; isOwner: boolean; onClose: () => void; onSettings: () => void; onRoles: () => void; onInvite: () => void; onCommunityLink: () => void; onProgress: () => void; onEvents: () => void; onWiki: () => void; onMembers: () => void; onModeration: () => void; onSystem: () => void; onCreateChannel: () => void; onCreateCategory: () => void; onAppearance: () => void; onLeave: () => void; onDelete: () => void };
 
 export function ServerContextMenu(props: Props) {
   const menuRef = useRef<HTMLDivElement>(null);
@@ -24,6 +24,13 @@ export function ServerContextMenu(props: Props) {
     {props.canManage ? item("Настройки сервера", <Settings2 size={17} />, props.onSettings) : null}
     {props.canManage ? item("Роли и права", <ShieldCheck size={17} />, props.onRoles) : null}
     {item("Пригласить участников", <Link2 size={17} />, props.onInvite)}
+    {item("Ссылка сообщества", <Copy size={17} />, props.onCommunityLink)}
+    {item("Прогресс и награды", <Trophy size={17} />, props.onProgress)}
+    {item("События сообщества", <CalendarDays size={17} />, props.onEvents)}
+    {item("База знаний", <BookOpen size={17} />, props.onWiki)}
+    {props.canManage ? item("Управление участниками", <Users size={17} />, props.onMembers) : null}
+    {props.canManage ? item("Модерация и журнал", <Gavel size={17} />, props.onModeration) : null}
+    {item("Состояние системы", <Activity size={17} />, props.onSystem)}
     <button role="menuitem" aria-expanded={notificationsOpen} onClick={() => setNotificationsOpen((value) => !value)}><Bell size={17} /><span>Уведомления сервера</span><ChevronRight className={notificationsOpen ? "rotated" : ""} size={15} /></button>
     {notificationsOpen ? <div className="server-notification-submenu" role="group" aria-label="Режим уведомлений">{[["all", "Все"], ["mentions", "Только упоминания"], ["off", "Отключить"]].map(([value, label]) => <button role="menuitem" className={notificationMode === value ? "selected" : ""} key={value} onClick={() => setNotificationMode(value)}>{label}</button>)}</div> : null}
     {props.canManage ? item("Создать канал", <Hash size={17} />, props.onCreateChannel) : null}
