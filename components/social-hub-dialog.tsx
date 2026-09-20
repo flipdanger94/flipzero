@@ -2,6 +2,7 @@
 
 import { type FormEvent, useCallback, useEffect, useState } from "react";
 import { Crown, LoaderCircle, MessageCircle, Search, SendHorizontal, ShieldCheck, UserPlus, Users, X } from "lucide-react";
+import { MediaImage } from "./media-image";
 
 type Person = { id: string; username: string; displayName: string; avatarUrl?: string | null; presence?: string };
 type FriendRequest = { id: string; from: Person };
@@ -34,4 +35,4 @@ export function SocialHubDialog({ currentUserId, initialTab = "messages", onClos
   return embedded ? content : <div className="dialog-backdrop" onMouseDown={(e) => e.target === e.currentTarget && onClose?.()}>{content}</div>;
 }
 
-function Avatar({ person }: { person: Person }) { return <i className="social-avatar">{person.avatarUrl ? <img src={person.avatarUrl} alt="" /> : person.displayName.slice(0, 2).toUpperCase()}</i>; }
+function Avatar({ person }: { person: Person }) { return <i className="social-avatar">{person.avatarUrl ? <MediaImage src={person.avatarUrl} /> : person.displayName.slice(0, 2).toUpperCase()}</i>; }
