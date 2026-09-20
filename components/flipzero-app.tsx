@@ -25,6 +25,7 @@ import { AccountSettingsDialog, type AccountProfile } from "@/components/account
 import { BrandMark } from "@/components/brand-mark";
 import { SocialHubDialog } from "@/components/social-hub-dialog";
 import { AdminDialog } from "@/components/admin-dialog";
+import { ServerContextMenu } from "@/components/server-context-menu";
 
 type ApiChannel = { id: string; parentId: string | null; name: string; topic: string | null; kind: string; position?: number };
 type ApiCategory = { id: string; spaceId: string; name: string; position: number };
@@ -91,6 +92,7 @@ export default function Home({ initialSpaceId, initialChannelId }: { initialSpac
   const [mobileChannelsOpen, setMobileChannelsOpen] = useState(false);
   const [channelLinkCopied, setChannelLinkCopied] = useState(false);
   const [spaceLinkCopied, setSpaceLinkCopied] = useState(false);
+  const [serverMenuOpen, setServerMenuOpen] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -262,6 +264,20 @@ export default function Home({ initialSpaceId, initialChannelId }: { initialSpac
     setShowDiscovery(false);
   }
 
+  async function leaveActiveSpace() {
+    if (!activeSpace || !window.confirm(`Выйти из сообщества «${activeSpace.name}»?`)) return;
+    const response = await fetch(`/api/v1/spaces/${activeSpace.id}`, { method: "DELETE", headers: { "content-type": "application/json" }, body: JSON.stringify({ action: "leave" }) });
+    const result = await response.json().catch(() => null); if (!response.ok) return window.alert(result?.message ?? "Не удалось выйти.");
+    const next = userSpaces.filter((space) => space.id !== activeSpace.id); setUserSpaces(next); setActiveSpaceId(next[0]?.id ?? null);
+  }
+
+  async function deleteActiveSpace() {
+    if (!activeSpace) return; const name = window.prompt(`Для удаления введите название сервера: ${activeSpace.name}`); if (name !== activeSpace.name) return;
+    const response = await fetch(`/api/v1/spaces/${activeSpace.id}`, { method: "DELETE", headers: { "content-type": "application/json" }, body: JSON.stringify({ action: "delete", name }) });
+    const result = await response.json().catch(() => null); if (!response.ok) return window.alert(result?.message ?? "Не удалось удалить сервер.");
+    const next = userSpaces.filter((space) => space.id !== activeSpace.id); setUserSpaces(next); setActiveSpaceId(next[0]?.id ?? null);
+  }
+
   return (
     <><main className={`app-shell ${showMembers ? "" : "members-hidden"} ${mobileChannelsOpen ? "mobile-channels-open" : ""} ${platformView ? "platform-view-active" : ""}`}>
       <nav className="space-rail" aria-label="Сообщества">
@@ -279,17 +295,19 @@ export default function Home({ initialSpaceId, initialChannelId }: { initialSpac
       <aside className="channel-panel">
         <button className="mobile-drawer-close" aria-label="Закрыть список каналов" onClick={() => setMobileChannelsOpen(false)}><X size={19} /></button>
         <div className="mobile-space-switcher">{userSpaces.map((space) => <button key={space.id} className={space.id === activeSpaceId ? "active" : ""} style={{ background: `linear-gradient(145deg, ${space.accentColor}, #7136ad)` }} onClick={() => { setActiveSpaceId(space.id); const first = space.channels.find((channel) => channel.kind === "text") ?? space.channels[0]; if (first) selectChannel(first.name, first.id, space.id); }}>{space.name.slice(0, 2).toLocaleUpperCase("ru")}</button>)}<button className="mobile-add-space" onClick={() => setShowCreateSpace(true)}><Plus size={18} /></button></div>
-        <button className="space-heading" aria-label={activeSpace?.ownerId === user?.id ? "Открыть настройки пространства" : "Информация о пространстве"} onClick={() => { if (activeSpace?.ownerId === user?.id) setShowSpaceSettings(true); }}><span className={`brand-mark ${activeSpace ? "" : "brand-symbol-wrap"}`} style={activeSpace ? { background: `linear-gradient(135deg, ${activeSpace.accentColor}, #b33bd4)` } : undefined}>{activeSpace ? activeSpace.iconUrl ? <img className="uploaded-image" src={activeSpace.iconUrl} alt="" /> : activeSpace.name.slice(0, 2).toLocaleUpperCase("ru") : <BrandMark size={34} />}</span><span><strong>{activeSpace?.name ?? "FlipZero"}</strong><small>{activeSpace?.description ?? (userSpaces.length ? "Пространство команды" : "Создайте пространство")}</small></span><ChevronDown size={17} /></button>
+        <div className="space-heading-wrap"><button className={`space-heading ${serverMenuOpen ? "menu-open" : ""}`} aria-haspopup="menu" aria-expanded={serverMenuOpen} aria-label="Открыть меню сервера" onClick={() => activeSpace && setServerMenuOpen((value) => !value)}><span className={`brand-mark ${activeSpace ? "" : "brand-symbol-wrap"}`} style={activeSpace ? { background: `linear-gradient(135deg, ${activeSpace.accentColor}, #b33bd4)` } : undefined}>{activeSpace ? activeSpace.iconUrl ? <img className="uploaded-image" src={activeSpace.iconUrl} alt="" /> : activeSpace.name.slice(0, 2).toLocaleUpperCase("ru") : <BrandMark size={34} />}</span><span><strong>{activeSpace?.name ?? "FlipZero"}</strong><small>{activeSpace?.description ?? (userSpaces.length ? "Пространство команды" : "Создайте пространство")}</small></span><ChevronDown size={17} /></button>{activeSpace && serverMenuOpen ? <ServerContextMenu name={activeSpace.name} canManage={activeSpace.ownerId === user?.id || user?.platformRole === "admin"} isOwner={activeSpace.ownerId === user?.id} onClose={() => setServerMenuOpen(false)} onSettings={() => setShowSpaceSettings(true)} onRoles={() => setShowRoleManager(true)} onInvite={() => setShowInviteManager(true)} onCreateChannel={() => setCreateChannelTarget({ kind: "text", parentId: null })} onCreateCategory={() => setShowCreateCategory(true)} onAppearance={() => setShowSpaceSettings(true)} onLeave={() => void leaveActiveSpace()} onDelete={() => void deleteActiveSpace()} /> : null}</div>
         <div className="channel-scroll">
+          <h2 className="sidebar-section-label">СООБЩЕСТВО</h2>
           <button className="boost-card" onClick={() => setShowGamification(true)}><span className="boost-icon"><Trophy size={17} /></span><span><strong>Прогресс и награды</strong><small>Уровни, пути и рейтинг</small></span><span className="boost-level">{user?.globalLevel ?? 1}</span></button>
           {activeSpace ? <button className="category-add events-button" onClick={() => setShowEvents(true)}><CalendarDays size={14} /> События сообщества</button> : null}
           {activeSpace ? <button className="category-add wiki-button" onClick={() => setShowWiki(true)}><BookOpen size={14} /> База знаний</button> : null}
+          {activeSpace?.ownerId === user?.id ? <h2 className="sidebar-section-label">УПРАВЛЕНИЕ</h2> : null}
           {activeSpace?.ownerId === user?.id ? <button className="category-add role-manage-button" onClick={() => setShowRoleManager(true)}><ShieldCheck size={14} /> Роли и права</button> : null}
           {activeSpace?.ownerId === user?.id ? <button className="category-add invite-manage-button" onClick={() => setShowInviteManager(true)}><Link2 size={14} /> Пригласить участников</button> : null}
           {activeSpace ? <button className="category-add community-link-button" onClick={copyCommunityLink}>{spaceLinkCopied ? <Check size={14} /> : <Copy size={14} />} {spaceLinkCopied ? "Ссылка скопирована" : "Ссылка сообщества"}</button> : null}
           {activeSpace?.ownerId === user?.id ? <button className="category-add member-manage-button" onClick={() => setShowMemberManager(true)}><Users size={14} /> Управление участниками</button> : null}
           {activeSpace?.ownerId === user?.id ? <button className="category-add moderation-manage-button" onClick={() => setShowModeration(true)}><Gavel size={14} /> Модерация и журнал</button> : null}
-          <button className="category-add system-status-button" onClick={() => setShowSystemStatus(true)}><HelpCircle size={14} /> Состояние системы</button>
+          <h2 className="sidebar-section-label">СИСТЕМА</h2><button className="category-add system-status-button" onClick={() => setShowSystemStatus(true)}><HelpCircle size={14} /> Состояние системы</button>
           {activeSpace ? <>{activeSpace.categories.map((category) => <ChannelGroup key={category.id} title={category.name.toLocaleUpperCase("ru")} onAdd={activeSpace.ownerId === user?.id ? () => setCreateChannelTarget({ kind: "text", parentId: category.id }) : undefined} onDelete={activeSpace.ownerId === user?.id ? () => deleteCategory(category) : undefined}>{activeSpace.channels.filter((channel) => channel.parentId === category.id).map((channel) => <Channel key={channel.id} active={activeChannel === channel.name} icon={channel.kind === "voice" ? <Volume2 size={17} /> : channel.name === "добро-пожаловать" ? <BookOpen size={17} /> : <Hash size={17} />} label={channel.name} voice={channel.kind === "voice"} onSelect={() => selectChannel(channel.name, channel.id, activeSpace.id)} onManage={activeSpace.ownerId === user?.id ? () => setPermissionsChannel(channel) : undefined} onDelete={activeSpace.ownerId === user?.id ? () => deleteChannel(channel) : undefined} />)}</ChannelGroup>)}{activeSpace.channels.some((channel) => !channel.parentId) ? <ChannelGroup title="БЕЗ КАТЕГОРИИ" onAdd={activeSpace.ownerId === user?.id ? () => setCreateChannelTarget({ kind: "text", parentId: null }) : undefined}>{activeSpace.channels.filter((channel) => !channel.parentId).map((channel) => <Channel key={channel.id} active={activeChannel === channel.name} icon={channel.kind === "voice" ? <Volume2 size={17} /> : <Hash size={17} />} label={channel.name} voice={channel.kind === "voice"} onSelect={() => selectChannel(channel.name, channel.id, activeSpace.id)} onManage={activeSpace.ownerId === user?.id ? () => setPermissionsChannel(channel) : undefined} onDelete={activeSpace.ownerId === user?.id ? () => deleteChannel(channel) : undefined} />)}</ChannelGroup> : null}{activeSpace.ownerId === user?.id ? <button className="category-add" onClick={() => setShowCreateCategory(true)}><Plus size={14} /> Новая категория</button> : null}</> : <div className="space-empty"><strong>Здесь пока пусто</strong><span>Создайте первое пространство, чтобы открыть каналы и роли.</span><button onClick={() => setShowCreateSpace(true)}>Создать пространство</button></div>}
         </div>
         <div className="user-dock"><button className="dock-profile" onClick={() => { setMobileChannelsOpen(false); setShowAccountSettings(true); }}><span className="avatar avatar-coral">{user?.avatarUrl ? <img className="uploaded-image" src={user.avatarUrl} alt="" /> : user?.displayName.split(/\s+/).map((part) => part[0]).join("").slice(0, 2).toLocaleUpperCase("ru") ?? "AP"}<span className="presence" /></span><span className="dock-copy"><strong>{user?.displayName ?? "Профиль"}</strong><small>Уровень {user?.globalLevel ?? 1}</small></span></button><button aria-label="Микрофон"><Mic size={17} /></button><button aria-label="Наушники"><Headphones size={17} /></button><button aria-label="Настройки аккаунта" onClick={() => { setMobileChannelsOpen(false); setShowAccountSettings(true); }}><Settings size={17} /></button></div>
