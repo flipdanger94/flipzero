@@ -1,5 +1,4 @@
 import { createHash, randomBytes } from "node:crypto";
-import { compare } from "bcryptjs";
 import QRCode from "qrcode";
 import { and, desc, eq } from "drizzle-orm";
 import { cookies } from "next/headers";
@@ -8,6 +7,7 @@ import { getDatabase } from "@/db/client";
 import { loginHistory, sessions, users } from "@/db/schema";
 import { getCurrentUser, SESSION_COOKIE } from "@/lib/auth";
 import { createTotpSecret, decryptTotpSecret, encryptTotpSecret, hashBackupCode, verifyTotp } from "@/lib/totp";
+import { isCurrentSessionToken, verifyCurrentPassword } from "@/lib/security-controls";
 
 const hashToken = (value: string) => createHash("sha256").update(value).digest("hex");
 export async function GET() {
@@ -34,7 +34,7 @@ export async function POST(request: Request) {
   }
   if (action === "disable_2fa") {
     const [account] = await database.select({ passwordHash: users.passwordHash }).from(users).where(eq(users.id, user.id)).limit(1);
-    if (typeof body?.password !== "string" || !account?.passwordHash || !(await compare(body.password, account.passwordHash))) return NextResponse.json({ code: "INVALID_CREDENTIALS", message: "Текущий пароль указан неверно." }, { status: 401 });
+    if (!(await verifyCurrentPassword(body?.password, account?.passwordHash))) return NextResponse.json({ code: "INVALID_CREDENTIALS", message: "Текущий пароль указан неверно." }, { status: 401 });
     await database.update(users).set({ totpEnabled: false, totpSecretEncrypted: null, backupCodeHashes: [] }).where(eq(users.id, user.id));
     return NextResponse.json({ enabled: false });
   }
@@ -42,7 +42,7 @@ export async function POST(request: Request) {
     const token = (await cookies()).get(SESSION_COOKIE)?.value;
     const [target] = await database.select({ tokenHash: sessions.tokenHash }).from(sessions).where(and(eq(sessions.id, body.sessionId), eq(sessions.userId, user.id))).limit(1);
     if (!target) return NextResponse.json({ code: "SESSION_NOT_FOUND", message: "Сессия не найдена." }, { status: 404 });
-    if (token && target.tokenHash === hashToken(token)) return NextResponse.json({ code: "CURRENT_SESSION", message: "Текущую сессию можно завершить только через выход из аккаунта." }, { status: 409 });
+    if (isCurrentSessionToken(target.tokenHash, token)) return NextResponse.json({ code: "CURRENT_SESSION", message: "Текущую сессию можно завершить только через выход из аккаунта." }, { status: 409 });
     await database.delete(sessions).where(and(eq(sessions.id, body.sessionId), eq(sessions.userId, user.id)));
     return NextResponse.json({ ok: true });
   }
