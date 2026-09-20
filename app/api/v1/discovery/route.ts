@@ -12,7 +12,7 @@ export async function GET(request: Request) {
   const conditions = [eq(spaces.visibility, "public")];
   if (query) conditions.push(or(ilike(spaces.name, `%${query}%`), ilike(spaces.description, `%${query}%`))!);
   const [catalog, joinedRows] = await Promise.all([
-    database.select({ id: spaces.id, name: spaces.name, slug: spaces.slug, description: spaces.description, iconUrl: spaces.iconUrl, accentColor: spaces.accentColor, memberCount: sql<number>`count(${members.userId})::int`, createdAt: spaces.createdAt }).from(spaces).leftJoin(members, eq(members.spaceId, spaces.id)).where(and(...conditions)).groupBy(spaces.id).orderBy(desc(sql`count(${members.userId})`), desc(spaces.createdAt)).limit(60),
+    database.select({ id: spaces.id, name: spaces.name, slug: spaces.slug, description: spaces.description, iconUrl: spaces.iconUrl, bannerUrl: spaces.bannerUrl, accentColor: spaces.accentColor, memberCount: sql<number>`count(${members.userId})::int`, createdAt: spaces.createdAt }).from(spaces).leftJoin(members, eq(members.spaceId, spaces.id)).where(and(...conditions)).groupBy(spaces.id).orderBy(desc(sql`lower(${spaces.name}) = 'flipzero hq'`), desc(sql`count(${members.userId})`), desc(spaces.createdAt)).limit(60),
     database.select({ spaceId: members.spaceId }).from(members).where(eq(members.userId, user.id)),
   ]);
   const joinedIds = new Set(joinedRows.map((row) => row.spaceId));
