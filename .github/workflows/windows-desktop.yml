@@ -1,22 +1,38 @@
 name: Windows desktop release
 on:
+  workflow_dispatch:
   push:
-    tags: ["desktop-v*"]
+    branches: [main]
+    paths:
+      - ".github/workflows/windows-desktop.yml"
+      - "src-tauri/**"
+      - "package.json"
+      - "pnpm-lock.yaml"
 permissions:
   contents: write
+concurrency:
+  group: windows-desktop-release
+  cancel-in-progress: false
 jobs:
   build:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
-        with: { version: 10 }
+        with: { version: 11 }
       - uses: actions/setup-node@v4
         with: { node-version: 22, cache: pnpm }
       - uses: dtolnay/rust-toolchain@stable
       - run: pnpm install --frozen-lockfile
       - run: pnpm exec tauri icon public/pwa-icon-512.png
-      - run: pnpm desktop:build
-      - uses: softprops/action-gh-release@v2
+      - uses: tauri-apps/tauri-action@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          files: src-tauri/target/release/bundle/nsis/*-setup.exe
+          tagName: desktop-v__VERSION__
+          releaseName: FlipZero для Windows v__VERSION__
+          releaseBody: Установщик FlipZero для Windows 10/11 (64-bit). Требуется WebView2.
+          releaseDraft: false
+          prerelease: false
+          releaseAssetNamePattern: FlipZero_[version]_x64[setup][ext]
+          retryAttempts: 2
