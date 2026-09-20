@@ -6,6 +6,7 @@ import { AtSign, Check, KeyRound, LoaderCircle, LogOut, ShieldCheck, UserRound, 
 import { BrandMark } from "./brand-mark";
 import { ImageUpload } from "./image-upload";
 import { SecurityCenter } from "./security-center";
+import { MediaImage } from "./media-image";
 
 export type AccountProfile = {
   id: string;
@@ -96,14 +97,14 @@ export function AccountSettingsDialog({ user, onClose, onSaved }: { user: Accoun
         <button type="button" className={section === "security" ? "active" : ""} onClick={() => openSection("security")}><ShieldCheck size={18} /> Аккаунт и безопасность</button>
         <div className="account-nav-spacer" />
         <button type="button" className="account-logout" onClick={signOut} disabled={busy}><LogOut size={18} /> Выйти из аккаунта</button>
-        <div className="account-nav-user"><span>{media.avatarUrl ? <img src={media.avatarUrl} alt="" /> : initials}</span><div><strong>{user.displayName}</strong><small>@{user.username}</small></div></div>
+        <div className="account-nav-user"><span>{media.avatarUrl ? <MediaImage src={media.avatarUrl} /> : initials}</span><div><strong>{user.displayName}</strong><small>@{user.username}</small></div></div>
       </aside>
 
       <div className="account-settings-content">
         <button ref={closeRef} className="account-settings-close" onClick={onClose} aria-label="Закрыть настройки"><X size={20} /></button>
         {section === "profile" ? <>
           <div className="account-settings-heading"><span>ПРОФИЛЬ</span><h2 id="account-settings-title">Мой профиль</h2><p>Так вас видят другие участники FlipZero.</p></div>
-          <div className="account-profile-preview"><div className="account-profile-banner" style={media.bannerUrl ? { backgroundImage: `url(${media.bannerUrl})` } : undefined} /><div className="account-profile-details"><span className="account-profile-avatar">{media.avatarUrl ? <img src={media.avatarUrl} alt="" /> : initials}</span><strong>{user.displayName}</strong><small>@{user.username} · уровень {user.globalLevel}</small><p>{user.bio || "Расскажите немного о себе."}</p></div></div>
+          <div className="account-profile-preview"><div className="account-profile-banner" style={media.bannerUrl ? { backgroundImage: `url(${media.bannerUrl})` } : undefined} /><div className="account-profile-details"><span className="account-profile-avatar">{media.avatarUrl ? <MediaImage src={media.avatarUrl} sizes="88px" /> : initials}</span><strong>{user.displayName}</strong><small>@{user.username} · уровень {user.globalLevel}</small><p>{user.bio || "Расскажите немного о себе."}</p></div></div>
           <div className="account-media-controls"><ImageUpload kind="avatar" label="Загрузить аватарку" currentUrl={media.avatarUrl} onUploaded={(result) => { const next = result.user as AccountProfile; setMedia({ avatarUrl: next.avatarUrl, bannerUrl: next.bannerUrl }); onSaved(next); }} /><ImageUpload kind="accountBanner" label="Загрузить баннер" currentUrl={media.bannerUrl} onUploaded={(result) => { const next = result.user as AccountProfile; setMedia({ avatarUrl: next.avatarUrl, bannerUrl: next.bannerUrl }); onSaved(next); }} /><small>Лимиты SuperFlip: аватар до 8 МБ, баннер до 16 МБ · GIF и расширенные лимиты доступны после активации.</small></div>
           <form className="account-settings-form" onSubmit={saveProfile}>
             <label><span>Отображаемое имя</span><input name="displayName" defaultValue={user.displayName} minLength={2} maxLength={40} required autoComplete="nickname" /></label>
