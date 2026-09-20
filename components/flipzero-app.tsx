@@ -1,7 +1,7 @@
 "use client";
 
 import { type FormEvent, useEffect, useState } from "react";
-import { Bell, BookOpen, CalendarDays, Check, ChevronDown, CirclePlus, Code2, Compass, Copy, Gavel, Gift, Hash, Headphones, HelpCircle, Home as HomeIcon, Image as ImageIcon, Link2, LoaderCircle, Menu, Mic, Plus, Search, SendHorizontal, Settings, Settings2, Share2, ShieldCheck, Smile, Sparkles, Trash2, Trophy, UserRound, Users, Volume2, X } from "lucide-react";
+import { Bell, BookOpen, CalendarDays, Check, ChevronDown, CirclePlus, Code2, Compass, Copy, Crown, Gavel, Gift, Hash, Headphones, HelpCircle, Home as HomeIcon, Image as ImageIcon, Link2, LoaderCircle, Menu, MessageCircle, Mic, Plus, Search, SendHorizontal, Settings, Settings2, Share2, ShieldCheck, Smile, Sparkles, Trash2, Trophy, UserRound, Users, Volume2, X } from "lucide-react";
 import { CreateSpaceDialog } from "@/components/create-space-dialog";
 import { CreateChannelDialog, type CreatedChannel } from "@/components/create-channel-dialog";
 import { CreateCategoryDialog, type CreatedCategory } from "@/components/create-category-dialog";
@@ -23,6 +23,8 @@ import { DeveloperDialog } from "@/components/developer-dialog";
 import { SystemStatusDialog } from "@/components/system-status-dialog";
 import { AccountSettingsDialog, type AccountProfile } from "@/components/account-settings-dialog";
 import { BrandMark } from "@/components/brand-mark";
+import { SocialHubDialog } from "@/components/social-hub-dialog";
+import { AdminDialog } from "@/components/admin-dialog";
 
 type ApiChannel = { id: string; parentId: string | null; name: string; topic: string | null; kind: string; position?: number };
 type ApiCategory = { id: string; spaceId: string; name: string; position: number };
@@ -84,6 +86,8 @@ export default function Home({ initialSpaceId, initialChannelId }: { initialSpac
   const [showModeration, setShowModeration] = useState(false);
   const [showGamification, setShowGamification] = useState(false);
   const [showAccountSettings, setShowAccountSettings] = useState(false);
+  const [showSocialHub, setShowSocialHub] = useState(false);
+  const [showAdmin, setShowAdmin] = useState(false);
   const [levelUp, setLevelUp] = useState<number | null>(null);
   const [mobileChannelsOpen, setMobileChannelsOpen] = useState(false);
   const [channelLinkCopied, setChannelLinkCopied] = useState(false);
@@ -276,6 +280,9 @@ export default function Home({ initialSpaceId, initialChannelId }: { initialSpac
         <button className="space-heading" aria-label={activeSpace?.ownerId === user?.id ? "Открыть настройки пространства" : "Информация о пространстве"} onClick={() => { if (activeSpace?.ownerId === user?.id) setShowSpaceSettings(true); }}><span className={`brand-mark ${activeSpace ? "" : "brand-symbol-wrap"}`} style={activeSpace ? { background: `linear-gradient(135deg, ${activeSpace.accentColor}, #b33bd4)` } : undefined}>{activeSpace ? activeSpace.iconUrl ? <img className="uploaded-image" src={activeSpace.iconUrl} alt="" /> : activeSpace.name.slice(0, 2).toLocaleUpperCase("ru") : <BrandMark size={34} />}</span><span><strong>{activeSpace?.name ?? "FlipZero"}</strong><small>{activeSpace?.description ?? (userSpaces.length ? "Пространство команды" : "Создайте пространство")}</small></span><ChevronDown size={17} /></button>
         <div className="channel-scroll">
           <button className="boost-card" onClick={() => setShowGamification(true)}><span className="boost-icon"><Trophy size={17} /></span><span><strong>Прогресс и награды</strong><small>Уровни, пути и рейтинг</small></span><span className="boost-level">{user?.globalLevel ?? 1}</span></button>
+          <button className="category-add social-hub-button" onClick={() => setShowSocialHub(true)}><MessageCircle size={14} /> Сообщения и друзья</button>
+          <button className="category-add superflip-button" onClick={() => setShowSocialHub(true)}><Crown size={14} /> SuperFlip: скоро</button>
+          {user?.platformRole === "admin" ? <button className="category-add platform-admin-button" onClick={() => setShowAdmin(true)}><ShieldCheck size={14} /> Панель администратора</button> : null}
           {activeSpace ? <button className="category-add events-button" onClick={() => setShowEvents(true)}><CalendarDays size={14} /> События сообщества</button> : null}
           {activeSpace ? <button className="category-add wiki-button" onClick={() => setShowWiki(true)}><BookOpen size={14} /> База знаний</button> : null}
           {activeSpace?.ownerId === user?.id ? <button className="category-add role-manage-button" onClick={() => setShowRoleManager(true)}><ShieldCheck size={14} /> Роли и права</button> : null}
@@ -313,6 +320,8 @@ export default function Home({ initialSpaceId, initialChannelId }: { initialSpac
         <div className="member-section"><h2>В СЕТИ — 4</h2>{members.map((member) => <button className="member" key={member.name}><span className={`mini-avatar ${member.accent}`}>{member.initials}<i /></span><span><strong>{member.name}</strong><small>{member.status}</small></span><b>{member.level}</b></button>)}</div>
         <div className="achievement"><div className="achievement-icon">✦</div><div><small>ПОЧТИ ПОЛУЧЕНО</small><strong>Ранний участник</strong><span>92% выполнено</span></div></div>
       </aside>
+      {user && showSocialHub ? <SocialHubDialog currentUserId={user.id} onClose={() => setShowSocialHub(false)} /> : null}
+      {user?.platformRole === "admin" && showAdmin ? <AdminDialog onClose={() => setShowAdmin(false)} /> : null}
       <button className="mobile-drawer-backdrop" aria-label="Закрыть меню каналов" onClick={() => setMobileChannelsOpen(false)} />
       <nav className="mobile-tab-bar" aria-label="Основная навигация"><button className={mobileChannelsOpen ? "active" : ""} onClick={() => setMobileChannelsOpen(true)}><HomeIcon size={20} /><span>Главная</span></button><button onClick={() => setShowDiscovery(true)}><Compass size={20} /><span>Обзор</span></button><button onClick={() => activeSpace && setShowEvents(true)} disabled={!activeSpace}><CalendarDays size={20} /><span>События</span></button><button className={!mobileChannelsOpen ? "active" : ""} onClick={() => setMobileChannelsOpen(false)}><Hash size={20} /><span>Чат</span></button><button onClick={() => { setMobileChannelsOpen(false); setShowAccountSettings(true); }}><UserRound size={20} /><span>Профиль</span></button></nav>
     </main>{user && showAccountSettings ? <AccountSettingsDialog user={user} onClose={() => setShowAccountSettings(false)} onSaved={setUser} /> : null}{showSystemStatus ? <SystemStatusDialog onClose={() => setShowSystemStatus(false)} /> : null}{showDeveloper ? <DeveloperDialog onClose={() => setShowDeveloper(false)} /> : null}{activeSpace && showWiki ? <WikiDialog spaceId={activeSpace.id} onClose={() => setShowWiki(false)} /> : null}{activeSpace && showEvents ? <EventsDialog spaceId={activeSpace.id} onClose={() => setShowEvents(false)} /> : null}{showDiscovery ? <DiscoveryDialog onClose={() => setShowDiscovery(false)} onJoined={openJoinedSpace} /> : null}{levelUp ? <div className="level-up-toast"><Sparkles size={22} /><div><small>НОВЫЙ УРОВЕНЬ</small><strong>Вы достигли уровня {levelUp}!</strong></div></div> : null}{showCreateSpace ? <CreateSpaceDialog onClose={() => setShowCreateSpace(false)} onCreated={(space) => { setUserSpaces((current) => [...current, space]); setActiveSpaceId(space.id); const first = space.channels.find((channel) => channel.kind === "text"); if (first) selectChannel(first.name, first.id, space.id); setShowCreateSpace(false); }} /> : null}{activeSpace && createChannelTarget ? <CreateChannelDialog spaceId={activeSpace.id} categories={activeSpace.categories} initialKind={createChannelTarget.kind} initialParentId={createChannelTarget.parentId} onClose={() => setCreateChannelTarget(null)} onCreated={addChannel} /> : null}{activeSpace && showCreateCategory ? <CreateCategoryDialog spaceId={activeSpace.id} onClose={() => setShowCreateCategory(false)} onCreated={addCategory} /> : null}{activeSpace && showSpaceSettings ? <SpaceSettingsDialog space={activeSpace} onClose={() => setShowSpaceSettings(false)} onSaved={saveSpaceSettings} /> : null}{activeSpace && showRoleManager ? <RoleManagerDialog spaceId={activeSpace.id} onClose={() => setShowRoleManager(false)} /> : null}{activeSpace && showInviteManager ? <InviteManagerDialog spaceId={activeSpace.id} onClose={() => setShowInviteManager(false)} /> : null}{activeSpace && showMemberManager ? <MemberManagerDialog spaceId={activeSpace.id} onClose={() => setShowMemberManager(false)} /> : null}{activeSpace && permissionsChannel ? <ChannelPermissionsDialog spaceId={activeSpace.id} channel={permissionsChannel} onClose={() => setPermissionsChannel(null)} /> : null}{activeSpace && showModeration ? <ModerationDialog spaceId={activeSpace.id} onClose={() => setShowModeration(false)} /> : null}{activeSpace && showGamification ? <GamificationDialog spaceId={activeSpace.id} isOwner={activeSpace.ownerId === user?.id} onClose={() => setShowGamification(false)} /> : null}</>

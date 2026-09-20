@@ -16,6 +16,7 @@ export type AccountProfile = {
   bannerUrl?: string | null;
   globalLevel: number;
   globalXp: number;
+  platformRole?: "user" | "admin";
 };
 
 type Section = "profile" | "security";

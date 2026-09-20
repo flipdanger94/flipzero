@@ -1,0 +1,54 @@
+import { randomUUID } from "node:crypto";
+import { and, desc, eq, or } from "drizzle-orm";
+import { NextResponse } from "next/server";
+import { getDatabase } from "@/db/client";
+import { friendRequests, friends, users } from "@/db/schema";
+import { getCurrentUser } from "@/lib/auth";
+
+export async function GET() {
+  const user = await getCurrentUser(); if (!user) return NextResponse.json({ message: "Требуется вход." }, { status: 401 });
+  const database = getDatabase();
+  const links = await database.select().from(friends).where(eq(friends.userId, user.id));
+  const pending = await database.select().from(friendRequests).where(and(eq(friendRequests.toId, user.id), eq(friendRequests.status, "pending"))).orderBy(desc(friendRequests.createdAt));
+  const friendUsers = await Promise.all(links.map(async (link) => (await database.select({ id: users.id, username: users.username, displayName: users.displayName, avatarUrl: users.avatarUrl, presence: users.presence }).from(users).where(eq(users.id, link.friendId)).limit(1))[0]));
+  const requests = await Promise.all(pending.map(async (request) => ({ ...request, from: (await database.select({ id: users.id, username: users.username, displayName: users.displayName, avatarUrl: users.avatarUrl }).from(users).where(eq(users.id, request.fromId)).limit(1))[0] })));
+  return NextResponse.json({ friends: friendUsers.filter(Boolean), requests, unreadRequests: requests.length });
+}
+
+export async function POST(request: Request) {
+  const user = await getCurrentUser(); if (!user) return NextResponse.json({ message: "Требуется вход." }, { status: 401 });
+  const body = await request.json().catch(() => null); const toId = String(body?.toId ?? "");
+  if (!toId || toId === user.id) return NextResponse.json({ message: "Некорректный пользователь." }, { status: 400 });
+  const database = getDatabase();
+  const [target] = await database.select({ id: users.id }).from(users).where(eq(users.id, toId)).limit(1); if (!target) return NextResponse.json({ message: "Пользователь не найден." }, { status: 404 });
+  const [existingFriend] = await database.select().from(friends).where(and(eq(friends.userId, user.id), eq(friends.friendId, toId))).limit(1); if (existingFriend) return NextResponse.json({ message: "Пользователь уже в друзьях." }, { status: 409 });
+  const reverse = await database.select().from(friendRequests).where(and(eq(friendRequests.fromId, toId), eq(friendRequests.toId, user.id), eq(friendRequests.status, "pending"))).limit(1);
+  if (reverse[0]) return acceptRequest(database, reverse[0].id, user.id, toId);
+  await database.insert(friendRequests).values({ id: randomUUID(), fromId: user.id, toId }).onConflictDoUpdate({ target: [friendRequests.fromId, friendRequests.toId], set: { status: "pending", respondedAt: null, createdAt: new Date() } });
+  return NextResponse.json({ status: "pending" }, { status: 201 });
+}
+
+async function acceptRequest(database: ReturnType<typeof getDatabase>, requestId: string, currentUserId: string, friendId: string) {
+  await database.transaction(async (tx) => {
+    await tx.update(friendRequests).set({ status: "accepted", respondedAt: new Date() }).where(eq(friendRequests.id, requestId));
+    await tx.insert(friends).values([{ userId: currentUserId, friendId }, { userId: friendId, friendId: currentUserId }]).onConflictDoNothing();
+  });
+  return NextResponse.json({ status: "accepted" });
+}
+
+export async function PATCH(request: Request) {
+  const user = await getCurrentUser(); if (!user) return NextResponse.json({ message: "Требуется вход." }, { status: 401 });
+  const body = await request.json().catch(() => null); const requestId = String(body?.requestId ?? ""); const status = body?.status;
+  if (!requestId || !["accepted", "declined"].includes(status)) return NextResponse.json({ message: "Некорректное действие." }, { status: 400 });
+  const database = getDatabase(); const [item] = await database.select().from(friendRequests).where(and(eq(friendRequests.id, requestId), eq(friendRequests.toId, user.id), eq(friendRequests.status, "pending"))).limit(1);
+  if (!item) return NextResponse.json({ message: "Заявка не найдена." }, { status: 404 });
+  if (status === "accepted") return acceptRequest(database, requestId, user.id, item.fromId);
+  await database.update(friendRequests).set({ status: "declined", respondedAt: new Date() }).where(eq(friendRequests.id, requestId)); return NextResponse.json({ status });
+}
+
+export async function DELETE(request: Request) {
+  const user = await getCurrentUser(); if (!user) return NextResponse.json({ message: "Требуется вход." }, { status: 401 });
+  const friendId = new URL(request.url).searchParams.get("friendId") ?? ""; if (!friendId) return NextResponse.json({ message: "Укажите друга." }, { status: 400 });
+  await getDatabase().delete(friends).where(or(and(eq(friends.userId, user.id), eq(friends.friendId, friendId)), and(eq(friends.userId, friendId), eq(friends.friendId, user.id))));
+  return NextResponse.json({ ok: true });
+}

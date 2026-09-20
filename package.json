@@ -4,9 +4,13 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "node scripts/migrate-if-configured.mjs && next build",
+    "build": "next build",
     "start": "next start",
     "lint": "eslint ."
+    ,"test": "vitest run"
+    ,"desktop:dev": "tauri dev"
+    ,"desktop:build": "tauri build"
+    ,"db:seed-admin": "node scripts/seed-admin.mjs"
   },
   "dependencies": {
     "@vercel/analytics": "^2.0.1",
@@ -32,5 +36,7 @@
     "eslint-config-next": "16.3.4",
     "tailwindcss": "4.2.1",
     "typescript": "5.9.3"
+    ,"vitest": "^3.2.4"
+    ,"@tauri-apps/cli": "^2.8.5"
   }
 }
