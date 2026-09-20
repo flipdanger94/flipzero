@@ -1,0 +1,636 @@
+/* Final responsive layer. Kept last in the cascade so every product surface
+   follows the same mobile viewport, touch and safe-area rules. */
+
+html {
+  min-width: 320px;
+  min-height: 100%;
+  overflow-x: hidden;
+  text-size-adjust: 100%;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  min-width: 320px;
+  min-height: 100dvh;
+  overflow-x: hidden;
+  overscroll-behavior-y: none;
+}
+
+img,
+video,
+canvas,
+svg {
+  max-width: 100%;
+}
+
+button,
+a,
+input,
+textarea,
+select {
+  -webkit-tap-highlight-color: transparent;
+}
+
+button,
+a {
+  touch-action: manipulation;
+}
+
+@media (max-width: 760px) {
+  :root {
+    --mobile-bottom-nav: calc(66px + env(safe-area-inset-bottom));
+    --mobile-page-padding: clamp(14px, 4vw, 20px);
+  }
+
+  body {
+    min-height: 100dvh;
+    overflow-x: clip;
+  }
+
+  input,
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
+
+  button,
+  [role="button"],
+  [role="menuitem"] {
+    min-height: 44px;
+  }
+
+  .dialog-backdrop,
+  .account-backdrop,
+  .discovery-backdrop,
+  .crop-backdrop {
+    align-items: stretch;
+    padding: 0;
+  }
+
+  .space-dialog,
+  .social-hub,
+  .admin-dialog,
+  .events-dialog,
+  .wiki-dialog,
+  .developer-dialog,
+  .gamification-dialog,
+  .moderation-dialog,
+  .system-status-dialog,
+  .channel-permissions-dialog {
+    width: 100vw;
+    max-width: none;
+    height: 100dvh;
+    max-height: none;
+    min-height: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+    border: 0;
+    border-radius: 0;
+    padding: calc(18px + env(safe-area-inset-top)) var(--mobile-page-padding) calc(24px + env(safe-area-inset-bottom));
+  }
+
+  .dialog-close,
+  .account-settings-close,
+  .discovery-close {
+    width: 44px;
+    height: 44px;
+    min-height: 44px;
+  }
+
+  .space-dialog .dialog-close {
+    top: calc(10px + env(safe-area-inset-top));
+    right: 12px;
+  }
+
+  .space-dialog h2,
+  .space-dialog > p {
+    padding-right: 44px;
+  }
+
+  .dialog-row,
+  .channel-kind-picker,
+  .form-grid,
+  .event-create,
+  .achievement-create,
+  .cosmetic-form,
+  .board-create,
+  .forum-create {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .event-wide,
+  .cosmetic-form .auth-submit {
+    grid-column: 1;
+  }
+
+  .auth-page,
+  .auth-form-side {
+    min-height: 100dvh;
+  }
+
+  .auth-form-side {
+    align-items: start;
+    padding: calc(22px + env(safe-area-inset-top)) var(--mobile-page-padding) calc(26px + env(safe-area-inset-bottom));
+  }
+
+  .auth-card {
+    width: 100%;
+    max-width: 460px;
+    margin: auto;
+  }
+
+  .auth-mobile-brand {
+    margin-bottom: clamp(28px, 8vh, 52px);
+  }
+
+  .auth-input,
+  .auth-submit {
+    min-height: 50px;
+    height: auto;
+  }
+
+  .app-shell.app-shell {
+    width: 100%;
+    min-width: 0;
+    min-height: 100dvh;
+    height: 100dvh;
+    padding-bottom: var(--mobile-bottom-nav);
+  }
+
+  .app-shell .chat-panel {
+    min-width: 0;
+    height: calc(100dvh - var(--mobile-bottom-nav));
+  }
+
+  .app-shell .channel-panel,
+  .app-shell .mobile-drawer-backdrop {
+    bottom: var(--mobile-bottom-nav);
+  }
+
+  .app-shell .channel-panel {
+    width: min(88vw, 360px);
+    padding-top: env(safe-area-inset-top);
+  }
+
+  .app-shell .mobile-tab-bar {
+    height: var(--mobile-bottom-nav);
+    padding-bottom: max(5px, env(safe-area-inset-bottom));
+  }
+
+  .app-shell .mobile-tab-bar button {
+    min-width: 0;
+    min-height: 52px;
+    padding: 4px 2px;
+  }
+
+  .app-shell .mobile-tab-bar button span,
+  .app-shell .mobile-tab-bar button small {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .app-shell .chat-header {
+    min-width: 0;
+    padding-inline: 10px;
+  }
+
+  .app-shell .header-actions {
+    flex: 0 0 auto;
+  }
+
+  .app-shell .search-box {
+    display: none;
+  }
+
+  .app-shell .message-list {
+    overflow-x: hidden;
+    padding-inline: 10px;
+  }
+
+  .app-shell .message,
+  .app-shell .message-body,
+  .app-shell .message-body > p,
+  .app-shell .channel-intro {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .app-shell .composer-wrap {
+    padding: 0 8px max(8px, env(safe-area-inset-bottom));
+  }
+
+  .app-shell .composer {
+    min-width: 0;
+  }
+
+  .app-shell .composer textarea {
+    min-width: 0;
+    max-height: 132px;
+  }
+
+  .platform-workspace {
+    inset: 0 0 var(--mobile-bottom-nav);
+    width: 100%;
+  }
+
+  .social-hub-embedded,
+  .admin-dialog-embedded {
+    width: 100%;
+    height: 100%;
+    padding: 0 0 env(safe-area-inset-bottom);
+    overflow: hidden;
+  }
+
+  .social-hub > header,
+  .admin-dialog > header {
+    flex: 0 0 auto;
+    padding: calc(12px + env(safe-area-inset-top)) 14px 12px;
+  }
+
+  .social-hub > nav {
+    flex: 0 0 auto;
+    padding: 7px 10px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .social-hub > nav button {
+    flex: 0 0 auto;
+    min-height: 40px;
+    white-space: nowrap;
+  }
+
+  .direct-layout {
+    grid-template-rows: minmax(108px, 34%) minmax(0, 1fr);
+    overflow: hidden;
+  }
+
+  .direct-layout > aside {
+    max-height: none;
+    min-height: 0;
+    padding: 7px;
+  }
+
+  .direct-layout > aside > button {
+    min-height: 50px;
+  }
+
+  .direct-title {
+    height: 54px;
+    padding-inline: 10px;
+  }
+
+  .direct-messages {
+    min-height: 0;
+    padding: 12px 10px;
+  }
+
+  .direct-messages article {
+    max-width: 88%;
+  }
+
+  .direct-composer {
+    padding: 8px;
+  }
+
+  .direct-composer button {
+    width: 44px;
+    min-width: 44px;
+    padding: 0;
+    justify-content: center;
+  }
+
+  .friends-content,
+  .superflip-panel {
+    padding: 18px 14px calc(24px + env(safe-area-inset-bottom));
+  }
+
+  .friend-search {
+    align-items: stretch;
+  }
+
+  .friend-search button {
+    min-width: 44px;
+    justify-content: center;
+  }
+
+  .person-row {
+    grid-template-columns: 40px minmax(0, 1fr);
+    padding-block: 10px;
+  }
+
+  .person-row > button {
+    grid-column: 2;
+    justify-self: stretch;
+    justify-content: center;
+  }
+
+  .premium-features,
+  .admin-stats {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .admin-notice,
+  .admin-stats,
+  .admin-users,
+  .admin-log-summary {
+    margin-inline: 0;
+    padding-inline: 14px;
+  }
+
+  .admin-users article {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 8px;
+  }
+
+  .admin-users article button {
+    min-height: 38px;
+    justify-content: center;
+  }
+
+  .account-settings {
+    width: 100vw;
+    height: 100dvh;
+  }
+
+  .account-settings-nav {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    padding-top: calc(9px + env(safe-area-inset-top));
+    scrollbar-width: none;
+  }
+
+  .account-settings-brand {
+    flex: 0 0 auto;
+    width: auto;
+    padding: 0 8px 0 0;
+  }
+
+  .account-settings-brand strong {
+    display: none;
+  }
+
+  .account-settings-nav > button {
+    flex: 0 0 auto;
+    min-width: 108px;
+    min-height: 44px;
+  }
+
+  .account-settings-content {
+    padding: 24px var(--mobile-page-padding) calc(34px + env(safe-area-inset-bottom));
+  }
+
+  .account-settings-close {
+    top: calc(10px + env(safe-area-inset-top));
+    right: 10px;
+  }
+
+  .account-settings-heading {
+    padding-right: 48px;
+  }
+
+  .account-primary {
+    width: 100%;
+  }
+
+  .crop-dialog {
+    align-self: end;
+    width: 100%;
+    max-height: min(92dvh, 760px);
+    border-radius: 20px 20px 0 0;
+    padding: 16px var(--mobile-page-padding) calc(16px + env(safe-area-inset-bottom));
+  }
+
+  .crop-frame {
+    max-height: 52dvh;
+  }
+
+  .crop-dialog footer button {
+    flex: 1;
+    min-height: 44px;
+  }
+
+  .discovery-dialog {
+    width: 100vw;
+    height: calc(100dvh - var(--mobile-bottom-nav));
+  }
+
+  .discovery-hero {
+    padding-inline: var(--mobile-page-padding);
+  }
+
+  .discovery-results {
+    padding-inline: var(--mobile-page-padding);
+  }
+
+  .discovery-card {
+    grid-template-columns: 52px minmax(0, 1fr);
+    padding-inline: 13px;
+  }
+
+  .discovery-card-banner {
+    margin-inline: -13px;
+  }
+
+  .discovery-card > button {
+    grid-column: 1 / -1;
+    width: 100%;
+    min-height: 42px;
+    margin-top: 10px;
+  }
+
+  .events-heading,
+  .wiki-heading,
+  .developer-heading,
+  .moderation-heading,
+  .system-status-heading,
+  .gamification-head {
+    padding-right: 0;
+    flex-wrap: wrap;
+  }
+
+  .events-add,
+  .wiki-heading > button,
+  .developer-heading > button,
+  .moderation-heading > button,
+  .system-status-heading > button {
+    min-height: 44px;
+  }
+
+  .event-list article {
+    grid-template-columns: 48px minmax(0, 1fr);
+  }
+
+  .event-actions {
+    grid-column: 1 / -1;
+    justify-content: flex-end;
+  }
+
+  .wiki-layout,
+  .developer-layout {
+    min-height: calc(100dvh - 120px - env(safe-area-inset-top));
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .wiki-reader-head,
+  .developer-app-head {
+    gap: 10px;
+  }
+
+  .wiki-reader,
+  .wiki-editor,
+  .developer-layout > main {
+    padding-inline: 14px;
+  }
+
+  .secret-reveal,
+  .token-list article {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .secret-reveal > svg,
+  .token-list article > svg {
+    display: none;
+  }
+
+  .board-view,
+  .forum-view {
+    width: 100%;
+    padding: 16px 12px calc(84px + env(safe-area-inset-bottom));
+  }
+
+  .board-view > header,
+  .forum-view > header {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .board-columns {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .board-columns > section {
+    min-height: 230px;
+  }
+
+  .voice-room,
+  .voice-stage,
+  .voice-sidebar {
+    min-width: 0;
+  }
+
+  .download-page {
+    min-height: 100dvh;
+    padding: calc(28px + env(safe-area-inset-top)) var(--mobile-page-padding) calc(30px + env(safe-area-inset-bottom));
+  }
+
+  .download-action {
+    width: 100%;
+    min-height: 48px;
+    justify-content: center;
+  }
+
+  .community-page {
+    min-height: 100dvh;
+  }
+
+  .community-nav {
+    padding-top: env(safe-area-inset-top);
+    height: calc(64px + env(safe-area-inset-top));
+  }
+
+  .community-content {
+    padding-inline: 20px;
+  }
+
+  .landing-nav {
+    top: max(8px, env(safe-area-inset-top));
+  }
+
+  .landing-hero {
+    padding-top: calc(60px + env(safe-area-inset-top));
+  }
+
+  .landing-footer {
+    padding-bottom: calc(30px + env(safe-area-inset-bottom));
+  }
+
+  table {
+    display: block;
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+@media (max-width: 420px) {
+  .app-shell .channel-panel {
+    width: calc(100vw - 42px);
+  }
+
+  .app-shell .mobile-tab-bar button {
+    font-size: 0.48rem;
+  }
+
+  .social-hub header h2,
+  .admin-dialog header h2 {
+    font-size: 1.05rem;
+  }
+
+  .social-hub header small,
+  .admin-dialog header small {
+    font-size: 0.46rem;
+  }
+
+  .direct-layout {
+    grid-template-rows: minmax(96px, 31%) minmax(0, 1fr);
+  }
+
+  .community-content h1,
+  .download-card h1 {
+    overflow-wrap: anywhere;
+  }
+}
+
+@media (max-width: 760px) and (max-height: 520px) and (orientation: landscape) {
+  :root {
+    --mobile-bottom-nav: calc(54px + env(safe-area-inset-bottom));
+  }
+
+  .app-shell .mobile-tab-bar button {
+    min-height: 42px;
+    flex-direction: row;
+  }
+
+  .app-shell .mobile-tab-bar button span,
+  .app-shell .mobile-tab-bar button small {
+    display: none;
+  }
+
+  .direct-layout {
+    grid-template-columns: 210px minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr);
+  }
+
+  .direct-layout > aside {
+    border-right: 1px solid var(--border);
+    border-bottom: 0;
+  }
+}
+
+@media (hover: none) and (pointer: coarse) {
+  button,
+  a,
+  input,
+  select,
+  textarea {
+    cursor: default;
+  }
+
+  ::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+  }
+}

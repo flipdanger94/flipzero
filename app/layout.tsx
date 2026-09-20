@@ -6,6 +6,7 @@ import "./globals.css";
 import "./product-theme.css";
 import "./community.css";
 import "./account-settings.css";
+import "./mobile.css";
 
 export const metadata: Metadata = {
   title: "FlipZero — чаты, голос и сообщества",
