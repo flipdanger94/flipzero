@@ -1,4 +1,5 @@
 "use client";
+/* eslint-disable @next/next/no-img-element -- crop canvas needs a mutable HTMLImageElement backed by an object URL */
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Check, Minus, Plus, X } from "lucide-react";
