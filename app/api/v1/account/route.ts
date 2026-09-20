@@ -4,12 +4,15 @@ import { getDatabase } from "@/db/client";
 import { users } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
 import { updateAccountSchema } from "@/lib/account-validation";
+import { getSuperFlipCapabilities } from "@/lib/superflip";
 
 export async function PATCH(request: Request) {
   const current = await getCurrentUser();
   if (!current) return NextResponse.json({ code: "UNAUTHENTICATED", message: "Требуется вход." }, { status: 401 });
   const parsed = updateAccountSchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ code: "INVALID_INPUT", message: "Проверьте имя, никнейм и описание." }, { status: 400 });
+  const access = await getSuperFlipCapabilities(current.id);
+  if (parsed.data.bio.length > access.capabilities.profileBioLimit) return NextResponse.json({ code: "SUPERFLIP_REQUIRED", message: `Описание до ${access.capabilities.profileBioLimit} символов${access.active ? "." : ". Лимит 500 доступен с SuperFlip."}` }, { status: 403 });
 
   const database = getDatabase();
   const [taken] = await database.select({ id: users.id }).from(users).where(and(eq(users.username, parsed.data.username), ne(users.id, current.id))).limit(1);

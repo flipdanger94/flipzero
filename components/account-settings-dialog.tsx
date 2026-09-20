@@ -29,9 +29,11 @@ export function AccountSettingsDialog({ user, onClose, onSaved }: { user: Accoun
   const [success, setSuccess] = useState("");
   const [bio, setBio] = useState(user.bio ?? "");
   const [media, setMedia] = useState({ avatarUrl: user.avatarUrl, bannerUrl: user.bannerUrl });
+  const [superflipBioLimit, setSuperflipBioLimit] = useState(190);
   const closeRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => { closeRef.current?.focus(); }, []);
+  useEffect(() => { void fetch("/api/superflip/status").then((response) => response.json()).then((status: { capabilities?: { profileBioLimit?: number } }) => setSuperflipBioLimit(status.capabilities?.profileBioLimit ?? 190)).catch(() => {}); }, []);
   useEffect(() => {
     const onEscape = (event: KeyboardEvent) => { if (event.key === "Escape") onClose(); };
     window.addEventListener("keydown", onEscape);
@@ -98,11 +100,11 @@ export function AccountSettingsDialog({ user, onClose, onSaved }: { user: Accoun
         {section === "profile" ? <>
           <div className="account-settings-heading"><span>ПРОФИЛЬ</span><h2 id="account-settings-title">Мой профиль</h2><p>Так вас видят другие участники FlipZero.</p></div>
           <div className="account-profile-preview"><div className="account-profile-banner" style={media.bannerUrl ? { backgroundImage: `url(${media.bannerUrl})` } : undefined} /><div className="account-profile-details"><span className="account-profile-avatar">{media.avatarUrl ? <img src={media.avatarUrl} alt="" /> : initials}</span><strong>{user.displayName}</strong><small>@{user.username} · уровень {user.globalLevel}</small><p>{user.bio || "Расскажите немного о себе."}</p></div></div>
-          <div className="account-media-controls"><ImageUpload kind="avatar" label="Загрузить аватарку" currentUrl={media.avatarUrl} onUploaded={(result) => { const next = result.user as AccountProfile; setMedia({ avatarUrl: next.avatarUrl, bannerUrl: next.bannerUrl }); onSaved(next); }} /><ImageUpload kind="accountBanner" label="Загрузить баннер" currentUrl={media.bannerUrl} onUploaded={(result) => { const next = result.user as AccountProfile; setMedia({ avatarUrl: next.avatarUrl, bannerUrl: next.bannerUrl }); onSaved(next); }} /><small>Фото до 30 МБ уменьшаются автоматически · GIF до 2 МБ для аватарки и 4 МБ для баннера</small></div>
+          <div className="account-media-controls"><ImageUpload kind="avatar" label="Загрузить аватарку" currentUrl={media.avatarUrl} onUploaded={(result) => { const next = result.user as AccountProfile; setMedia({ avatarUrl: next.avatarUrl, bannerUrl: next.bannerUrl }); onSaved(next); }} /><ImageUpload kind="accountBanner" label="Загрузить баннер" currentUrl={media.bannerUrl} onUploaded={(result) => { const next = result.user as AccountProfile; setMedia({ avatarUrl: next.avatarUrl, bannerUrl: next.bannerUrl }); onSaved(next); }} /><small>Лимиты SuperFlip: аватар до 8 МБ, баннер до 16 МБ · GIF и расширенные лимиты доступны после активации.</small></div>
           <form className="account-settings-form" onSubmit={saveProfile}>
             <label><span>Отображаемое имя</span><input name="displayName" defaultValue={user.displayName} minLength={2} maxLength={40} required autoComplete="nickname" /></label>
             <label><span>Никнейм</span><div className="account-field-icon"><AtSign size={17} /><input name="username" defaultValue={user.username} minLength={3} maxLength={24} pattern="[A-Za-z0-9_]+" required autoComplete="username" /></div><small>Латинские буквы, цифры и нижнее подчёркивание.</small></label>
-            <label><span>О себе</span><textarea name="bio" value={bio} maxLength={190} rows={3} placeholder="Пара слов о вас" onChange={(event) => setBio(event.target.value)} /><small>{bio.length}/190</small></label>
+            <label><span>О себе</span><textarea name="bio" value={bio} maxLength={superflipBioLimit} rows={3} placeholder="Пара слов о вас" onChange={(event) => setBio(event.target.value)} /><small>{bio.length}/{superflipBioLimit}{superflipBioLimit > 190 ? " · SuperFlip" : ""}</small></label>
             {error ? <div className="account-feedback error" role="alert">{error}</div> : null}
             {success ? <div className="account-feedback success" role="status"><Check size={16} />{success}</div> : null}
             <button className="account-primary" disabled={busy}>{busy ? <><LoaderCircle size={17} className="spin" /> Сохраняем…</> : "Сохранить профиль"}</button>

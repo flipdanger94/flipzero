@@ -5,6 +5,7 @@ import { getDatabase } from "@/db/client";
 import { directConversationMembers, directConversations, directMessages, users } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
 import { normalizeDirectMessage } from "@/lib/direct-message";
+import { getSuperFlipCapabilities } from "@/lib/superflip";
 
 const conversationIdFor = (left: string, right: string) => createHash("sha256").update([left, right].sort().join(":"), "utf8").digest("hex");
 
@@ -32,7 +33,8 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   const user = await getCurrentUser(); if (!user) return NextResponse.json({ message: "Требуется вход." }, { status: 401 });
-  const body = await request.json().catch(() => null); const receiverId = String(body?.receiverId ?? ""); const text = normalizeDirectMessage(body?.text);
+  const access = await getSuperFlipCapabilities(user.id);
+  const body = await request.json().catch(() => null); const receiverId = String(body?.receiverId ?? ""); const text = normalizeDirectMessage(body?.text, access.capabilities.directMessageLimit);
   if (!receiverId || receiverId === user.id || !text) return NextResponse.json({ message: "Получатель или сообщение указаны неверно." }, { status: 400 });
   const database = getDatabase(); const [receiver] = await database.select({ id: users.id }).from(users).where(eq(users.id, receiverId)).limit(1); if (!receiver) return NextResponse.json({ message: "Получатель не найден." }, { status: 404 });
   const conversationId = conversationIdFor(user.id, receiverId); const id = randomUUID();
