@@ -6,6 +6,9 @@ export const channelKind = pgEnum("channel_kind", ["text", "forum", "voice", "st
 export const moderationAction = pgEnum("moderation_action", ["warn", "timeout", "kick", "ban", "unban"]);
 export const progressPath = pgEnum("progress_path", ["social", "voice", "organizer", "creator"]);
 export const achievementRarity = pgEnum("achievement_rarity", ["common", "rare", "epic", "legendary"]);
+export const platformRole = pgEnum("platform_role", ["user", "admin"]);
+export const superflipSource = pgEnum("superflip_source", ["purchase", "gift"]);
+export const friendRequestStatus = pgEnum("friend_request_status", ["pending", "accepted", "declined"]);
 
 const timestamps = {
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
@@ -26,6 +29,9 @@ export const users = pgTable("users", {
   emailVerifiedAt: timestamp("email_verified_at", { withTimezone: true }),
   globalXp: bigint("global_xp", { mode: "number" }).default(0).notNull(),
   globalLevel: integer("global_level").default(1).notNull(),
+  platformRole: platformRole("platform_role").default("user").notNull(),
+  bannedAt: timestamp("banned_at", { withTimezone: true }),
+  banReason: text("ban_reason"),
   ...timestamps,
 }, (table) => [uniqueIndex("users_email_unique").on(table.email), uniqueIndex("users_username_unique").on(table.username)]);
 
@@ -36,6 +42,69 @@ export const mediaAssets = pgTable("media_assets", {
   bytes: imageBytes("bytes").notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
+
+export const superflipPurchases = pgTable("superflip_purchases", {
+  id: text("id").primaryKey(),
+  userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  grantedBy: text("granted_by").references(() => users.id, { onDelete: "set null" }),
+  grantedAt: timestamp("granted_at", { withTimezone: true }).defaultNow().notNull(),
+  expiresAt: timestamp("expires_at", { withTimezone: true }),
+  source: superflipSource("source").notNull(),
+  reason: text("reason"),
+  revokedAt: timestamp("revoked_at", { withTimezone: true }),
+}, (table) => [index("superflip_user_status_idx").on(table.userId, table.expiresAt, table.revokedAt)]);
+
+export const superflipWaitlist = pgTable("superflip_waitlist", {
+  userId: text("user_id").primaryKey().references(() => users.id, { onDelete: "cascade" }),
+  joinedAt: timestamp("joined_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+export const directConversations = pgTable("direct_conversations", {
+  id: text("id").primaryKey(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+export const directConversationMembers = pgTable("direct_conversation_members", {
+  conversationId: text("conversation_id").notNull().references(() => directConversations.id, { onDelete: "cascade" }),
+  userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  joinedAt: timestamp("joined_at", { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [primaryKey({ columns: [table.conversationId, table.userId] }), index("direct_members_user_idx").on(table.userId)]);
+
+export const directMessages = pgTable("direct_messages", {
+  id: text("id").primaryKey(),
+  conversationId: text("conversation_id").notNull().references(() => directConversations.id, { onDelete: "cascade" }),
+  senderId: text("sender_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  receiverId: text("receiver_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  text: text("text").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  readAt: timestamp("read_at", { withTimezone: true }),
+  deletedAt: timestamp("deleted_at", { withTimezone: true }),
+}, (table) => [index("direct_messages_conversation_idx").on(table.conversationId, table.createdAt), index("direct_messages_receiver_unread_idx").on(table.receiverId, table.readAt)]);
+
+export const friendRequests = pgTable("friend_requests", {
+  id: text("id").primaryKey(),
+  fromId: text("from_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  toId: text("to_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  status: friendRequestStatus("status").default("pending").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  respondedAt: timestamp("responded_at", { withTimezone: true }),
+}, (table) => [uniqueIndex("friend_requests_pair_unique").on(table.fromId, table.toId), index("friend_requests_to_status_idx").on(table.toId, table.status)]);
+
+export const friends = pgTable("friends", {
+  userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  friendId: text("friend_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [primaryKey({ columns: [table.userId, table.friendId] }), index("friends_friend_idx").on(table.friendId)]);
+
+export const adminAuditLogs = pgTable("admin_audit_logs", {
+  id: text("id").primaryKey(),
+  adminId: text("admin_id").notNull().references(() => users.id, { onDelete: "restrict" }),
+  action: text("action").notNull(),
+  targetUserId: text("target_user_id").references(() => users.id, { onDelete: "set null" }),
+  metadata: jsonb("metadata").default({}).notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [index("admin_audit_created_idx").on(table.createdAt)]);
 
 export const sessions = pgTable("sessions", {
   id: text("id").primaryKey(),
