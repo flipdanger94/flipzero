@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { CommunityActions } from "@/components/community-actions";
 import { BrandMark } from "@/components/brand-mark";
 import { getDatabase } from "@/db/client";
+import { MediaImage } from "@/components/media-image";
 import { channels, members, spaces } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
 
@@ -33,7 +34,7 @@ export default async function CommunityPage({ params, searchParams }: { params: 
     <section className="community-hero" style={{ "--community-accent": space.accentColor } as React.CSSProperties}>
       <div className="community-glow" />
       <div className="community-banner" style={space.bannerUrl ? { backgroundImage: `linear-gradient(180deg, transparent, rgba(8, 9, 13, .88)), url(${space.bannerUrl})` } : undefined}>
-        <div className="community-avatar">{space.iconUrl ? <img className="uploaded-image" src={space.iconUrl} alt="" /> : space.name.slice(0, 2).toLocaleUpperCase("ru")}</div>
+        <div className="community-avatar">{space.iconUrl ? <MediaImage src={space.iconUrl} /> : space.name.slice(0, 2).toLocaleUpperCase("ru")}</div>
       </div>
       <div className="community-content">
         <span className="community-kicker"><Sparkles size={15} /> Сообщество FlipZero</span>
