@@ -59,14 +59,14 @@ SuperFlip подготовлен как подписка за `$4.99/месяц`
 
 ## Windows-клиент
 
-Клиент находится в `src-tauri` и загружает production-интерфейс `https://flipzero.app`. Сборка:
+Клиент находится в `src-tauri` и загружает production-интерфейс `https://flipzeroapp.vercel.app/app`. Сборка:
 
 ```bash
 pnpm desktop:dev
 pnpm desktop:build
 ```
 
-Workflow `.github/workflows/windows-desktop.yml` собирает NSIS `.exe` на Windows при публикации тега `desktop-v*` и сохраняет установщик в GitHub Releases. Страница загрузки: `/download`.
+Workflow `.github/workflows/windows-desktop.yml` автоматически собирает NSIS `.exe` при изменениях десктопного клиента в `main`, создаёт GitHub Release `desktop-v<version>` и публикует файл `FlipZero_<version>_x64-setup.exe`. Его также можно запустить вручную через GitHub Actions. Страница загрузки: `/download`.
 
 ## Тесты
 
