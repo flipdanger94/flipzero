@@ -4,13 +4,13 @@
   .app-shell.app-shell{display:block;grid-template-columns:none;min-height:100dvh;height:100dvh;padding-bottom:66px;background:radial-gradient(circle at 80% -10%,rgba(188,61,218,.16),transparent 34%),#0f0e13}
   .app-shell .space-rail{display:none}
   .app-shell .chat-panel{height:calc(100dvh - 66px);grid-template-rows:58px minmax(0,1fr) auto;background:rgba(24,23,29,.96)}
-  .app-shell .channel-panel{display:grid;position:fixed;z-index:82;inset:0 auto 65px 0;width:min(88vw,350px);grid-template-rows:auto 66px minmax(0,1fr) 60px;transform:translateX(-105%);transition:transform .28s cubic-bezier(.16,1,.3,1);box-shadow:20px 0 70px #0009;background:rgba(18,17,22,.98);backdrop-filter:blur(25px)}
+  .app-shell .channel-panel{display:grid;position:fixed;z-index:82;inset:0 auto 65px 0;width:min(88vw,350px);grid-template-rows:auto auto minmax(0,1fr) 60px;transform:translateX(-105%);transition:transform .28s cubic-bezier(.16,1,.3,1);box-shadow:20px 0 70px #0009;background:rgba(18,17,22,.98);backdrop-filter:blur(25px)}
   .mobile-channels-open .channel-panel{transform:translateX(0)}
   .mobile-space-switcher{display:flex;grid-row:1;gap:8px;overflow-x:auto;padding:11px 48px 10px 12px;border-bottom:1px solid var(--border);scrollbar-width:none}
   .mobile-space-switcher button{width:40px;height:40px;flex:0 0 40px;border:0;border-radius:13px;color:#fff;font-size:.6rem;font-weight:850;display:grid;place-items:center}
   .mobile-space-switcher button.active{box-shadow:0 0 0 2px #ff7182,0 8px 20px #0005}
   .mobile-space-switcher .mobile-add-space{background:#28252e;color:#b7f35a}
-  .channel-panel>.space-heading{grid-row:2}
+  .channel-panel>.space-heading-wrap{grid-row:2}
   .channel-panel>.channel-scroll{grid-row:3}
   .channel-panel>.user-dock{grid-row:4}
   .mobile-drawer-close{display:grid;position:absolute;z-index:2;right:10px;top:14px;width:34px;height:34px;border:0;border-radius:10px;background:#2a2730;color:#aaa4b0;place-items:center}
