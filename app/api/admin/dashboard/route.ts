@@ -10,7 +10,7 @@ export async function GET() {
   const access = await requireAdmin(); if ("error" in access) return access.error;
   const database = getDatabase();
   const [userRows, grants, logs, reports, recentMessages] = await Promise.all([
-    database.select({ id: users.id, email: users.email, username: users.username, displayName: users.displayName, platformRole: users.platformRole, bannedAt: users.bannedAt, createdAt: users.createdAt }).from(users).orderBy(desc(users.createdAt)).limit(100),
+    database.select({ id: users.id, email: users.email, username: users.username, displayName: users.displayName, platformRole: users.platformRole, bannedAt: users.bannedAt, createdAt: users.createdAt }).from(users).orderBy(desc(users.createdAt)),
     database.select().from(superflipPurchases).orderBy(desc(superflipPurchases.grantedAt)).limit(100),
     database.select().from(adminAuditLogs).orderBy(desc(adminAuditLogs.createdAt)).limit(100),
     database.select().from(moderationFlags).orderBy(desc(moderationFlags.createdAt)).limit(100),
