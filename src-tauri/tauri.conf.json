@@ -3,7 +3,7 @@
   "productName": "FlipZero",
   "version": "0.1.0",
   "identifier": "app.flipzero.desktop",
-  "build": { "frontendDist": "https://flipzero.app" },
+  "build": { "frontendDist": "https://flipzeroapp.vercel.app/app" },
   "app": {
     "windows": [{ "title": "FlipZero", "width": 1280, "height": 800, "minWidth": 920, "minHeight": 640, "resizable": true }],
     "security": { "csp": null }
