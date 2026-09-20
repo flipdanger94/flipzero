@@ -32,6 +32,11 @@ export const users = pgTable("users", {
   platformRole: platformRole("platform_role").default("user").notNull(),
   bannedAt: timestamp("banned_at", { withTimezone: true }),
   banReason: text("ban_reason"),
+  onboardingStep: integer("onboarding_step").default(0).notNull(),
+  onboardingCompleted: boolean("onboarding_completed").default(false).notNull(),
+  totpEnabled: boolean("totp_enabled").default(false).notNull(),
+  totpSecretEncrypted: text("totp_secret_encrypted"),
+  backupCodeHashes: jsonb("backup_code_hashes").$type<string[]>().default([]).notNull(),
   ...timestamps,
 }, (table) => [uniqueIndex("users_email_unique").on(table.email), uniqueIndex("users_username_unique").on(table.username)]);
 
@@ -115,6 +120,15 @@ export const sessions = pgTable("sessions", {
   expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 }, (table) => [uniqueIndex("sessions_token_hash_unique").on(table.tokenHash), index("sessions_user_idx").on(table.userId)]);
+
+export const loginHistory = pgTable("login_history", {
+  id: text("id").primaryKey(),
+  userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  userAgent: text("user_agent"),
+  ipHash: text("ip_hash"),
+  successful: boolean("successful").default(true).notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [index("login_history_user_created_idx").on(table.userId, table.createdAt)]);
 
 export const spaces = pgTable("spaces", {
   id: text("id").primaryKey(),

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { AtSign, Check, KeyRound, LoaderCircle, LogOut, ShieldCheck, UserRound, X } from "lucide-react";
 import { BrandMark } from "./brand-mark";
 import { ImageUpload } from "./image-upload";
+import { SecurityCenter } from "./security-center";
 
 export type AccountProfile = {
   id: string;
@@ -17,6 +18,9 @@ export type AccountProfile = {
   globalLevel: number;
   globalXp: number;
   platformRole?: "user" | "admin";
+  onboardingStep?: number;
+  onboardingCompleted?: boolean;
+  totpEnabled?: boolean;
 };
 
 type Section = "profile" | "security";
@@ -122,6 +126,7 @@ export function AccountSettingsDialog({ user, onClose, onSaved }: { user: Accoun
             {success ? <div className="account-feedback success" role="status"><Check size={16} />{success}</div> : null}
             <button className="account-primary" disabled={busy}>{busy ? <><LoaderCircle size={17} className="spin" /> Обновляем…</> : "Изменить пароль"}</button>
           </form>
+          <SecurityCenter />
           <button className="account-signout-mobile" type="button" onClick={signOut} disabled={busy}><LogOut size={18} /> Выйти из аккаунта</button>
         </>}
       </div>
