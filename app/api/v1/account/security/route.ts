@@ -1,4 +1,5 @@
 import { createHash, randomBytes } from "node:crypto";
+import { compare } from "bcryptjs";
 import QRCode from "qrcode";
 import { and, desc, eq } from "drizzle-orm";
 import { cookies } from "next/headers";
@@ -31,7 +32,19 @@ export async function POST(request: Request) {
     const [account] = await database.select({ encrypted: users.totpSecretEncrypted }).from(users).where(eq(users.id, user.id)).limit(1); if (!account?.encrypted || typeof body?.code !== "string" || !verifyTotp(decryptTotpSecret(account.encrypted), body.code)) return NextResponse.json({ code: "INVALID_OTP", message: "Неверный код приложения." }, { status: 400 });
     const codes = Array.from({ length: 8 }, () => `${randomBytes(3).toString("hex").toUpperCase()}-${randomBytes(3).toString("hex").toUpperCase()}`); await database.update(users).set({ totpEnabled: true, backupCodeHashes: codes.map(hashBackupCode) }).where(eq(users.id, user.id)); return NextResponse.json({ enabled: true, backupCodes: codes });
   }
-  if (action === "disable_2fa") { await database.update(users).set({ totpEnabled: false, totpSecretEncrypted: null, backupCodeHashes: [] }).where(eq(users.id, user.id)); return NextResponse.json({ enabled: false }); }
-  if (action === "end_session" && typeof body?.sessionId === "string") { await database.delete(sessions).where(and(eq(sessions.id, body.sessionId), eq(sessions.userId, user.id))); return NextResponse.json({ ok: true }); }
+  if (action === "disable_2fa") {
+    const [account] = await database.select({ passwordHash: users.passwordHash }).from(users).where(eq(users.id, user.id)).limit(1);
+    if (typeof body?.password !== "string" || !account?.passwordHash || !(await compare(body.password, account.passwordHash))) return NextResponse.json({ code: "INVALID_CREDENTIALS", message: "Текущий пароль указан неверно." }, { status: 401 });
+    await database.update(users).set({ totpEnabled: false, totpSecretEncrypted: null, backupCodeHashes: [] }).where(eq(users.id, user.id));
+    return NextResponse.json({ enabled: false });
+  }
+  if (action === "end_session" && typeof body?.sessionId === "string") {
+    const token = (await cookies()).get(SESSION_COOKIE)?.value;
+    const [target] = await database.select({ tokenHash: sessions.tokenHash }).from(sessions).where(and(eq(sessions.id, body.sessionId), eq(sessions.userId, user.id))).limit(1);
+    if (!target) return NextResponse.json({ code: "SESSION_NOT_FOUND", message: "Сессия не найдена." }, { status: 404 });
+    if (token && target.tokenHash === hashToken(token)) return NextResponse.json({ code: "CURRENT_SESSION", message: "Текущую сессию можно завершить только через выход из аккаунта." }, { status: 409 });
+    await database.delete(sessions).where(and(eq(sessions.id, body.sessionId), eq(sessions.userId, user.id)));
+    return NextResponse.json({ ok: true });
+  }
   return NextResponse.json({ code: "INVALID_ACTION", message: "Неизвестное действие." }, { status: 400 });
 }

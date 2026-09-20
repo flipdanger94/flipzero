@@ -1,0 +1,6 @@
+.two-factor-disable { display:grid; gap:12px; width:100%; padding:14px; border:1px solid rgba(255,95,115,.2); border-radius:12px; background:rgba(255,95,115,.045) }
+.two-factor-disable label { width:100% }
+.two-factor-disable label span { color:#b7afb9; font-size:.73rem }
+.two-factor-disable input { width:100%; margin-top:6px; padding:10px; border:1px solid rgba(255,255,255,.14); border-radius:9px; background:#191c24; color:#fff }
+.two-factor-disable>div { display:flex; flex-wrap:wrap; gap:8px }
+.two-factor-disable .security-action { justify-self:auto }
