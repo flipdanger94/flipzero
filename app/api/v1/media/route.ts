@@ -4,13 +4,12 @@ import { NextResponse } from "next/server";
 import { getDatabase } from "@/db/client";
 import { mediaAssets, spaces, users } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
+import { getSuperFlipCapabilities } from "@/lib/superflip";
 
 export const runtime = "nodejs";
 
 type ImageKind = "avatar" | "accountBanner" | "spaceIcon" | "spaceBanner";
 const kinds: ImageKind[] = ["avatar", "accountBanner", "spaceIcon", "spaceBanner"];
-const maxBytes = (kind: ImageKind) => kind.endsWith("Banner") ? 4 * 1024 * 1024 : 2 * 1024 * 1024;
-
 function imageType(bytes: Buffer) {
   if (bytes.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]))) return "image/png";
   if (bytes.subarray(0, 3).equals(Buffer.from([255, 216, 255]))) return "image/jpeg";
@@ -22,13 +21,16 @@ function imageType(bytes: Buffer) {
 export async function POST(request: Request) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ message: "Требуется вход." }, { status: 401 });
-  if (Number(request.headers.get("content-length") ?? 0) > 5 * 1024 * 1024) return NextResponse.json({ message: "Файл слишком большой." }, { status: 413 });
+  const access = await getSuperFlipCapabilities(user.id);
+  const requestLimit = Math.max(access.capabilities.avatarUploadMb, access.capabilities.bannerUploadMb) * 1024 * 1024 + 512 * 1024;
+  if (Number(request.headers.get("content-length") ?? 0) > requestLimit) return NextResponse.json({ message: `Файл слишком большой. Максимум ${Math.max(access.capabilities.avatarUploadMb, access.capabilities.bannerUploadMb)} МБ.` }, { status: 413 });
   const form = await request.formData().catch(() => null);
   const kind = form?.get("kind");
   const file = form?.get("file");
   if (!kinds.includes(kind as ImageKind) || !(file instanceof File)) return NextResponse.json({ message: "Выберите изображение." }, { status: 400 });
   const imageKind = kind as ImageKind;
-  if (!file.size || file.size > maxBytes(imageKind)) return NextResponse.json({ message: `Максимальный размер: ${maxBytes(imageKind) / 1024 / 1024} МБ.` }, { status: 413 });
+  const allowedBytes = imageKind.endsWith("Banner") ? access.capabilities.bannerUploadMb * 1024 * 1024 : access.capabilities.avatarUploadMb * 1024 * 1024;
+  if (!file.size || file.size > allowedBytes) return NextResponse.json({ message: `Максимальный размер: ${allowedBytes / 1024 / 1024} МБ${access.active ? " с SuperFlip" : ". SuperFlip увеличивает лимит"}.` }, { status: 413 });
 
   const database = getDatabase();
   const spaceId = form?.get("spaceId");

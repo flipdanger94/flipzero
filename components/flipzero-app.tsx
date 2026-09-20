@@ -94,9 +94,9 @@ export default function Home({ initialSpaceId, initialChannelId }: { initialSpac
 
   useEffect(() => {
     let cancelled = false;
-    Promise.all([fetch("/api/v1/auth/me").then((response) => response.json()), fetch("/api/v1/spaces").then((response) => response.json())]).then(([profile, spaceData]) => {
+    Promise.all([fetch("/api/v1/auth/me", { cache: "no-store" }).then((response) => response.json()), fetch("/api/v1/spaces").then((response) => response.json()), fetch("/api/admin/access", { cache: "no-store" }).then((response) => ({ admin: response.ok }))]).then(([profile, spaceData, adminAccess]) => {
       if (cancelled) return;
-      setUser(profile.user ?? null);
+      setUser(profile.user ? { ...profile.user, ...(adminAccess.admin ? { platformRole: "admin" as const } : {}) } : null);
       const loadedSpaces = (spaceData.spaces ?? []) as ApiSpace[];
       setUserSpaces(loadedSpaces);
       const requestedSpace = loadedSpaces.find((space) => space.id === initialSpaceId) ?? loadedSpaces[0] ?? null;
@@ -274,7 +274,7 @@ export default function Home({ initialSpaceId, initialChannelId }: { initialSpac
         <div className="rail-bottom"><button className="rail-action" aria-label="Платформа разработчиков" onClick={() => setShowDeveloper(true)}><Code2 size={20} /></button><button className="rail-action" aria-label="Состояние системы" onClick={() => setShowSystemStatus(true)}><HelpCircle size={20} /></button></div>
       </nav>
 
-      {user && platformView ? <section className="platform-workspace" aria-label={platformView === "social" ? "Личное пространство" : "Панель администратора"}>{platformView === "social" ? <SocialHubDialog currentUserId={user.id} embedded /> : user.platformRole === "admin" ? <AdminDialog embedded /> : null}</section> : null}
+      {user && platformView ? <section className="platform-workspace" aria-label={platformView === "social" ? "Личное пространство" : "Панель администратора"}>{platformView === "social" ? <SocialHubDialog currentUserId={user.id} embedded isAdmin={user.platformRole === "admin"} onOpenAdmin={() => setPlatformView("admin")} /> : user.platformRole === "admin" ? <AdminDialog embedded /> : null}</section> : null}
 
       <aside className="channel-panel">
         <button className="mobile-drawer-close" aria-label="Закрыть список каналов" onClick={() => setMobileChannelsOpen(false)}><X size={19} /></button>
