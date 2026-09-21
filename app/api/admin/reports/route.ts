@@ -5,7 +5,7 @@ import { getDatabase } from "@/db/client";
 import { adminAuditLogs, reports } from "@/db/schema";
 import { requireAdmin } from "@/lib/admin";
 
-const targetTypes=new Set(["user","message","server","channel","profile","media"]);
+const targetTypes=new Set(["user","message","server","channel","profile","media"]);\nconst reasons=new Set(["spam","abuse","harassment","fraud","unwanted_content","impersonation","other"]);
 const transitions:Record<string,Set<string>>={open:new Set(["reviewing","resolved","rejected"]),reviewing:new Set(["open","resolved","rejected"]),resolved:new Set(["open"]),rejected:new Set(["open"])};
 
 export async function GET() {
@@ -39,8 +39,8 @@ export async function POST(request: Request) {
   const targetType = String(body?.targetType ?? "");
   const targetId = String(body?.targetId ?? "");
   const reason = String(body?.reason ?? "");
-  if (!targetTypes.has(targetType) || !targetId || !reason.trim()) return NextResponse.json({ message: "Некорректные данные жалобы." }, { status: 400 });
+  if (!targetTypes.has(targetType) || !targetId || !reasons.has(reason)) return NextResponse.json({ message: "Некорректные данные жалобы." }, { status: 400 });
   const id = randomUUID();
-  await getDatabase().insert(reports).values({ id, reporterId: access.user.id, targetType, targetId, reason: reason.trim().slice(0,120), description: body?.description ? String(body.description).trim().slice(0,2000) : null });
+  await getDatabase().insert(reports).values({ id, reporterId: access.user.id, targetType, targetId: targetId.slice(0,200), reason, description: body?.description ? String(body.description).trim().slice(0,2000) : null });
   return NextResponse.json({ id }, { status: 201 });
 }
