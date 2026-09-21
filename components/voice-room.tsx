@@ -126,7 +126,7 @@ export function VoiceRoom({
     let room: Room | null = null;
     let connectTimeout: number | undefined;
     try {
-      const response = await fetch(`/api/v1/channels/${channelId}/voice-token`, {
+      const presenceResponse = await fetch(`/api/v1/channels/${channelId}/voice`, { method: "POST" });\n      const presenceData = await presenceResponse.json().catch(() => null);\n      if (!presenceResponse.ok) { setError(presenceData?.message ?? "Нет доступа к голосовому каналу."); setStatus("idle"); return; }\n      const response = await fetch(`/api/v1/channels/${channelId}/voice-token`, {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ breakout }),
@@ -237,7 +237,7 @@ export function VoiceRoom({
         setSharing(false);
         setRemoteVideo(false);
         setActiveSpeaker("");
-        onPresenceChange?.([]);
+        onPresenceChange?.([]);\n        void fetch(`/api/v1/channels/${channelId}/voice`, { method: "DELETE" });
       });
       room.on(RoomEvent.AudioPlaybackStatusChanged, () => setAudioBlocked(!connectedRoom.canPlaybackAudio));
       await Promise.race([
@@ -267,7 +267,7 @@ export function VoiceRoom({
       refresh();
       setStatus("connected");
     } catch (cause) {
-      if (room) void room.disconnect();
+      if (room) void room.disconnect();\n      void fetch(`/api/v1/channels/${channelId}/voice`, { method: "DELETE" });
       if (roomRef.current === room) roomRef.current = null;
       if (attempt !== joinAttemptRef.current) return;
       setStatus("idle");
