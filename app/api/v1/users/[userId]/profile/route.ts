@@ -1,4 +1,4 @@
-import { and, count, eq, or } from "drizzle-orm";
+import { and, count, eq, or, sql } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { getDatabase } from "@/db/client";
 import { friends, members, messages, spaces, users } from "@/db/schema";
@@ -9,6 +9,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ use
   if (!viewer) return NextResponse.json({ code: "UNAUTHENTICATED", message: "Требуется вход." }, { status: 401 });
   const { userId } = await params;
   const db = getDatabase();
+  await db.execute(sql\`ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "profile_location" text; ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "profile_status" text; ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "profile_links" jsonb DEFAULT '[]'::jsonb NOT NULL;\`);
   const [user] = await db.select({
     id: users.id, username: users.username, displayName: users.displayName, avatarUrl: users.avatarUrl,
     bannerUrl: users.bannerUrl, bio: users.bio, accentColor: users.accentColor, presence: users.presence,
