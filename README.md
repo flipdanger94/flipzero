@@ -75,3 +75,46 @@ pnpm test
 pnpm lint
 pnpm build
 ```
+
+
+## UI reference implementation (22.09.2026)
+
+Ветка `feat/reference-ui-2026-09-22` используется для внедрения нового интерфейса FlipZero по утверждённым макетам. Целевые поверхности:
+
+- профиль пользователя: баннер, аватар, статус, роли, награды, статистика, активность, медиа и общие серверы/друзья;
+- Обзор: hero-блок, категории, карточки рекомендуемых/популярных серверов и фильтры;
+- сервер/чат: rail серверов, каналы, голосовые комнаты с видимыми участниками, чат, реакции, список участников;
+- Админ-панель: метрики, пользователи, роли, блокировки, SuperFlip, аудит и системные статусы;
+- SuperFlip: промо-hero, преимущества, состояние подписки и тарифы;
+- Сообщения/друзья: список диалогов, чат, карточка профиля собеседника, поиск и заявки в друзья.
+
+### Как опубликовать изменения в `main`
+
+После проверки ветки создайте Pull Request из `feat/reference-ui-2026-09-22` в `main`, дождитесь успешных проверок и выполните squash merge. Локально эквивалентный поток:
+
+```bash
+git fetch origin
+git checkout feat/reference-ui-2026-09-22
+pnpm install
+pnpm lint
+pnpm test
+pnpm build
+
+git checkout main
+git pull --ff-only origin main
+git merge --no-ff feat/reference-ui-2026-09-22
+git push origin main
+```
+
+### Деплой на Vercel
+
+1. В Vercel импортируйте репозиторий `flipdanger94/flipzero`.
+2. Framework Preset: Next.js.
+3. Production Branch: `main`.
+4. Install Command: `pnpm install`.
+5. Build Command: `pnpm build`.
+6. Добавьте переменные окружения из `.env.example` и production-значения `DATABASE_URL`, `ADMIN_EMAIL`, LiveKit и остальных используемых интеграций.
+7. После merge в `main` Vercel автоматически создаст production deployment, если Git Integration включена.
+8. Для ручной публикации: Vercel → Project → Deployments → Redeploy последнего deployment из `main`.
+
+Перед production-deploy обязательно выполните `pnpm lint && pnpm test && pnpm build`.
