@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { and, desc, eq, or } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { getDatabase } from "@/db/client";
-import { friendRequests, friends, userBlocks, userPrivacySettings, users } from "@/db/schema";
+import { friendRequests, friends, notifications, userBlocks, userPrivacySettings, users } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
 
 export async function GET() {
@@ -26,7 +26,7 @@ export async function POST(request: Request) {
   const [existingFriend] = await database.select().from(friends).where(and(eq(friends.userId, user.id), eq(friends.friendId, toId))).limit(1); if (existingFriend) return NextResponse.json({ message: "Пользователь уже в друзьях." }, { status: 409 });
   const reverse = await database.select().from(friendRequests).where(and(eq(friendRequests.fromId, toId), eq(friendRequests.toId, user.id), eq(friendRequests.status, "pending"))).limit(1);
   if (reverse[0]) return acceptRequest(database, reverse[0].id, user.id, toId);
-  await database.insert(friendRequests).values({ id: randomUUID(), fromId: user.id, toId }).onConflictDoUpdate({ target: [friendRequests.fromId, friendRequests.toId], set: { status: "pending", respondedAt: null, createdAt: new Date() } });
+  const requestId=randomUUID(); await database.transaction(async tx=>{await tx.insert(friendRequests).values({ id: requestId, fromId: user.id, toId }).onConflictDoUpdate({ target: [friendRequests.fromId, friendRequests.toId], set: { status: "pending", respondedAt: null, createdAt: new Date() } }); await tx.insert(notifications).values({id:randomUUID(),userId:toId,actorId:user.id,type:"friend_request",title:"Новый запрос в друзья",body:`@${user.username} хочет добавить вас в друзья.`,entityType:"friend_request",entityId:requestId});});
   return NextResponse.json({ status: "pending" }, { status: 201 });
 }
 
