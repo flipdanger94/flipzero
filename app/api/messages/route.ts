@@ -2,7 +2,7 @@ import { createHash, randomUUID } from "node:crypto";
 import { and, asc, desc, eq, isNull, ne, or, sql } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { getDatabase } from "@/db/client";
-import { directConversationMembers, directConversations, directMessages, userBlocks, users } from "@/db/schema";
+import { directConversationMembers, directConversations, directMessages, userBlocks, userPrivacySettings, users } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
 import { normalizeDirectMessage } from "@/lib/direct-message";
 import { getSuperFlipCapabilities } from "@/lib/superflip";
@@ -38,6 +38,7 @@ export async function POST(request: Request) {
   if (!receiverId || receiverId === user.id || !text) return NextResponse.json({ message: "Получатель или сообщение указаны неверно." }, { status: 400 });
   const database = getDatabase(); const [receiver] = await database.select({ id: users.id }).from(users).where(eq(users.id, receiverId)).limit(1); if (!receiver) return NextResponse.json({ message: "Получатель не найден." }, { status: 404 });
   const [blocked] = await database.select().from(userBlocks).where(or(and(eq(userBlocks.blockerId, user.id), eq(userBlocks.blockedId, receiverId)), and(eq(userBlocks.blockerId, receiverId), eq(userBlocks.blockedId, user.id)))).limit(1); if (blocked) return NextResponse.json({ message: "Личные сообщения недоступны из-за блокировки." }, { status: 403 });
+  const [privacy] = await database.select({ directMessages: userPrivacySettings.directMessages }).from(userPrivacySettings).where(eq(userPrivacySettings.userId, receiverId)).limit(1); if (privacy?.directMessages === false) return NextResponse.json({ message: "Пользователь отключил входящие личные сообщения." }, { status: 403 });
   const conversationId = conversationIdFor(user.id, receiverId); const id = randomUUID();
   await database.transaction(async (tx) => {
     await tx.insert(directConversations).values({ id: conversationId }).onConflictDoUpdate({ target: directConversations.id, set: { updatedAt: new Date() } });
