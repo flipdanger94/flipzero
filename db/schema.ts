@@ -341,6 +341,12 @@ export const moderationCases = pgTable("moderation_cases", {
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 }, (table) => [index("moderation_space_target_idx").on(table.spaceId, table.targetUserId)]);
 
+export const userBlocks = pgTable("user_blocks", {
+  blockerId: text("blocker_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  blockedId: text("blocked_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [primaryKey({ columns: [table.blockerId, table.blockedId] }), index("user_blocks_blocked_idx").on(table.blockedId)]);
+
 export const reports = pgTable("reports", {
   id: text("id").primaryKey(),
   reporterId: text("reporter_id").notNull().references(() => users.id, { onDelete: "cascade" }),
