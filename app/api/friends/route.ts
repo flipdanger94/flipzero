@@ -50,7 +50,11 @@ export async function PATCH(request: Request) {
   if (!requestId || !["accepted", "declined"].includes(status)) return NextResponse.json({ message: "Некорректное действие." }, { status: 400 });
   const database = getDatabase(); const [item] = await database.select().from(friendRequests).where(and(eq(friendRequests.id, requestId), eq(friendRequests.toId, user.id), eq(friendRequests.status, "pending"))).limit(1);
   if (!item) return NextResponse.json({ message: "Заявка не найдена." }, { status: 404 });
-  if (status === "accepted") return acceptRequest(database, requestId, user.id, item.fromId);
+  if (status === "accepted") {
+    const [blocked]=await database.select({blockerId:userBlocks.blockerId}).from(userBlocks).where(or(and(eq(userBlocks.blockerId,user.id),eq(userBlocks.blockedId,item.fromId)),and(eq(userBlocks.blockerId,item.fromId),eq(userBlocks.blockedId,user.id)))).limit(1);
+    if(blocked)return NextResponse.json({message:"Заявка больше недоступна из-за блокировки."},{status:403});
+    return acceptRequest(database, requestId, user.id, item.fromId);
+  }
   await database.update(friendRequests).set({ status: "declined", respondedAt: new Date() }).where(eq(friendRequests.id, requestId)); return NextResponse.json({ status });
 }
 
