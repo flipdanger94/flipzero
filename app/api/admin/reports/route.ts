@@ -5,7 +5,8 @@ import { getDatabase } from "@/db/client";
 import { adminAuditLogs, reports } from "@/db/schema";
 import { requireAdmin } from "@/lib/admin";
 
-const targetTypes=new Set(["user","message","server","channel","profile","media"]);\nconst reasons=new Set(["spam","abuse","harassment","fraud","unwanted_content","impersonation","other"]);
+const targetTypes=new Set(["user","message","server","channel","profile","media"]);
+const reasons=new Set(["spam","abuse","harassment","fraud","unwanted_content","impersonation","other"]);
 const transitions:Record<string,Set<string>>={open:new Set(["reviewing","resolved","rejected"]),reviewing:new Set(["open","resolved","rejected"]),resolved:new Set(["open"]),rejected:new Set(["open"])};
 
 export async function GET() {
