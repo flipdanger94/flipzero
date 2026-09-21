@@ -9,7 +9,7 @@ type FriendRequest = { id: string; from: Person };
 type Conversation = { id: string; other: Person; unread: number; lastMessage: { text: string; createdAt: string } | null };
 type DirectMessage = { id: string; senderId: string; receiverId: string; text: string; createdAt: string };
 
-export function SocialHubDialog({ currentUserId, initialTab = "messages", onClose, embedded = false, isAdmin = false, onOpenAdmin }: { currentUserId: string; initialTab?: "messages" | "friends" | "superflip"; onClose?: () => void; embedded?: boolean; isAdmin?: boolean; onOpenAdmin?: () => void }) {
+export function SocialHubDialog({ currentUserId, initialTab = "messages", initialUserId, onClose, embedded = false, isAdmin = false, onOpenAdmin }: { currentUserId: string; initialTab?: "messages" | "friends" | "superflip"; initialUserId?: string | null; onClose?: () => void; embedded?: boolean; isAdmin?: boolean; onOpenAdmin?: () => void }) {
   const [tab, setTab] = useState(initialTab); const [loading, setLoading] = useState(true); const [notice, setNotice] = useState("");
   const [friends, setFriends] = useState<Person[]>([]); const [requests, setRequests] = useState<FriendRequest[]>([]); const [results, setResults] = useState<Person[]>([]);
   const [conversations, setConversations] = useState<Conversation[]>([]); const [active, setActive] = useState<Conversation | null>(null); const [messages, setMessages] = useState<DirectMessage[]>([]);
@@ -21,6 +21,7 @@ export function SocialHubDialog({ currentUserId, initialTab = "messages", onClos
   const loadConversations = useCallback(async () => { const response = await fetch("/api/messages"); const data = await response.json(); if (response.ok) setConversations(data.conversations ?? []); }, []);
   const loadMessages = useCallback(async (conversation: Conversation) => { const response = await fetch(`/api/messages?conversationId=${conversation.id}`); const data = await response.json(); if (response.ok) setMessages(data.messages ?? []); }, []);
   useEffect(() => { void (async () => { await Promise.all([loadFriends(), loadConversations(), fetch("/api/superflip/status").then((r) => r.json()).then(setSuperflip)]); setLoading(false); })(); }, [loadConversations, loadFriends]);
+  useEffect(() => { if (!initialUserId || loading) return; const existing=conversations.find(item=>item.other.id===initialUserId); if(existing){setActive(existing);setTab("messages");return} fetch(`/api/v1/users/${initialUserId}/profile`).then(r=>r.json()).then(d=>{if(d.profile) void openChat({id:d.profile.id,username:d.profile.username,displayName:d.profile.displayName,avatarUrl:d.profile.avatarUrl,presence:d.profile.presence})}); }, [initialUserId, loading]);
   useEffect(() => { if (!active) return; const selected = active; void (async () => { await loadMessages(selected); })(); const timer = window.setInterval(() => { void loadMessages(selected); }, 4000); return () => window.clearInterval(timer); }, [active, loadMessages]);
   useEffect(() => { const list = directMessagesRef.current; if (list && followLatestRef.current) list.scrollTop = list.scrollHeight; }, [messages]);
   useEffect(() => {
