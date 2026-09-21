@@ -12,8 +12,14 @@ export async function GET(){
 }
 export async function PATCH(request:Request){
  const user=await getCurrentUser();if(!user)return NextResponse.json({message:"Требуется вход."},{status:401});
- const body=await request.json().catch(()=>null);if(!body)return NextResponse.json({message:"Некорректные данные."},{status:400});
- const values={directMessages:body.directMessages!==false,friendRequests:body.friendRequests!==false,profileDiscovery:body.profileDiscovery!==false,updatedAt:new Date()};
- await getDatabase().insert(userPrivacySettings).values({userId:user.id,...values}).onConflictDoUpdate({target:userPrivacySettings.userId,set:values});
- return NextResponse.json({privacy:values});
+ const body=await request.json().catch(()=>null);if(!body||typeof body!=="object")return NextResponse.json({message:"Некорректные данные."},{status:400});
+ const keys=["directMessages","friendRequests","profileDiscovery"] as const;
+ const supplied=keys.filter(key=>Object.prototype.hasOwnProperty.call(body,key));
+ if(!supplied.length||supplied.some(key=>typeof body[key]!=="boolean"))return NextResponse.json({message:"Передайте хотя бы одну настройку типа boolean."},{status:400});
+ const db=getDatabase(); const [current]=await db.select().from(userPrivacySettings).where(eq(userPrivacySettings.userId,user.id)).limit(1);
+ const base=current?{directMessages:current.directMessages,friendRequests:current.friendRequests,profileDiscovery:current.profileDiscovery}:defaults;
+ const privacy={...base,...Object.fromEntries(supplied.map(key=>[key,body[key]]))} as typeof defaults;
+ const values={...privacy,updatedAt:new Date()};
+ await db.insert(userPrivacySettings).values({userId:user.id,...values}).onConflictDoUpdate({target:userPrivacySettings.userId,set:values});
+ return NextResponse.json({privacy});
 }
