@@ -50,7 +50,7 @@ export function SocialHubDialog({ currentUserId, initialTab = "messages", initia
     } catch { setNotice("Нет соединения. Сообщение не отправлено."); }
     finally { setSending(false); }
   }
-  async function openChat(person: Person) { let conversation = conversations.find((item) => item.other.id === person.id); if (!conversation) { const response = await fetch("/api/messages", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ receiverId: person.id, text: "Привет! 👋" }) }); const data = await response.json(); if (!response.ok) return; conversation = { id: data.message.conversationId, other: person, unread: 0, lastMessage: data.message }; await loadConversations(); } followLatestRef.current = true; setActive(conversation); setTab("messages"); }
+  async function openChat(person: Person) { const conversation = conversations.find((item) => item.other.id === person.id); followLatestRef.current = true; setMessages([]); setNotice(""); setActive(conversation ?? { id: "", other: person, unread: 0, lastMessage: null }); setTab("messages"); }
   async function joinWaitlist() { const response = await fetch("/api/superflip/purchase", { method: "POST" }); const data = await response.json(); setNotice(data.message); setSuperflip((value) => value ? { ...value, waitlisted: true } : value); }
   async function inviteFriend() { const url = `${window.location.origin}/register`; if (navigator.share) { try { await navigator.share({ title: "FlipZero", text: "Присоединяйся ко мне в FlipZero", url }); return; } catch {} } await navigator.clipboard.writeText(url); setNotice("Ссылка-приглашение скопирована."); }
 
