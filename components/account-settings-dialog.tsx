@@ -2,7 +2,7 @@
 
 import { type FormEvent, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { AtSign, Bell, Check, Crown, Gem, Headphones, KeyRound, LoaderCircle, LogOut, Mic, Palette, RefreshCw, ShieldCheck, UserRound, Volume2, X } from "lucide-react";
+import { AtSign, Bell, Check, Crown, Gem, Headphones, KeyRound, LoaderCircle, LogOut, Mic, Palette, RefreshCw, ShieldCheck, UserRound, Volume2, X, UserX } from "lucide-react";
 import { BrandMark } from "./brand-mark";
 import { ImageUpload } from "./image-upload";
 import { SecurityCenter } from "./security-center";
@@ -164,7 +164,12 @@ function readPreferences(): Preferences {
   catch { return preferenceDefaults; }
 }
 
+type BlockedUser = { id:string; username:string; displayName:string; avatarUrl?:string|null; createdAt:string };
 function PreferencesSection({ kind }: { kind: "privacy" | "notifications" }) {
+  const [blocked,setBlocked]=useState<BlockedUser[]>([]); const [blockBusy,setBlockBusy]=useState("");
+  async function loadBlocked(){if(kind!=="privacy")return;const r=await fetch("/api/blocks");if(r.ok)setBlocked((await r.json()).blocked??[])}
+  useEffect(()=>{void loadBlocked()},[kind]);
+  async function unblock(id:string){setBlockBusy(id);const r=await fetch(`/api/blocks?userId=${encodeURIComponent(id)}`,{method:"DELETE"});if(r.ok)setBlocked(items=>items.filter(item=>item.id!==id));setBlockBusy("")}
   const [preferences, setPreferences] = useState(readPreferences);
   function toggle(key: keyof typeof preferenceDefaults) {
     setPreferences((current) => {
@@ -182,7 +187,7 @@ function PreferencesSection({ kind }: { kind: "privacy" | "notifications" }) {
     ["messageSounds", "Звуки сообщений", "Воспроизводить звук при новом сообщении."],
     ["mentionsOnly", "Только упоминания", "Не отвлекать уведомлениями без упоминания."],
   ] as const;
-  return <><SettingsHeading kicker={kind === "privacy" ? "КОНФИДЕНЦИАЛЬНОСТЬ" : "УВЕДОМЛЕНИЯ"} title={kind === "privacy" ? "Приватность и безопасность" : "Настройки уведомлений"} description={kind === "privacy" ? "Управляйте тем, кто может связаться с вами и видеть профиль." : "Выберите, какие события требуют вашего внимания."} /><div className="settings-list">{items.map(([key, title, description]) => <label key={key} className="settings-row"><span><strong>{title}</strong><small>{description}</small></span><input type="checkbox" checked={preferences[key]} onChange={() => toggle(key)} /><i /></label>)}</div></>;
+  return <><SettingsHeading kicker={kind === "privacy" ? "КОНФИДЕНЦИАЛЬНОСТЬ" : "УВЕДОМЛЕНИЯ"} title={kind === "privacy" ? "Приватность и безопасность" : "Настройки уведомлений"} description={kind === "privacy" ? "Управляйте тем, кто может связаться с вами и видеть профиль." : "Выберите, какие события требуют вашего внимания."} /><div className="settings-list">{items.map(([key, title, description]) => <label key={key} className="settings-row"><span><strong>{title}</strong><small>{description}</small></span><input type="checkbox" checked={preferences[key]} onChange={() => toggle(key)} /><i /></label>)}</div>{kind==="privacy"?<div className="blocked-users-settings"><h3><UserX size={18}/> Заблокированные пользователи</h3><p>Заблокированные пользователи не могут отправлять вам личные сообщения или заявки в друзья.</p>{blocked.length?blocked.map(item=><article key={item.id}><span className="account-profile-avatar">{item.avatarUrl?<MediaImage src={item.avatarUrl}/>:item.displayName.slice(0,2)}</span><div><strong>{item.displayName}</strong><small>@{item.username}</small></div><button type="button" disabled={blockBusy===item.id} onClick={()=>void unblock(item.id)}>{blockBusy===item.id?"Подождите…":"Разблокировать"}</button></article>):<small>У вас нет заблокированных пользователей.</small>}</div>:null}</>;
 }
 
 type AudioDevices = { inputs: MediaDeviceInfo[]; outputs: MediaDeviceInfo[] };
