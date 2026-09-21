@@ -20,7 +20,7 @@ export function SocialHubDialog({ currentUserId, initialTab = "messages", initia
 
   const loadFriends = useCallback(async () => { const response = await fetch("/api/friends"); const data = await response.json(); if (response.ok) { setFriends(data.friends ?? []); setRequests(data.requests ?? []); } }, []);
   const loadConversations = useCallback(async () => { const response = await fetch("/api/messages"); const data = await response.json(); if (response.ok) setConversations(data.conversations ?? []); }, []);
-  const loadMessages = useCallback(async (conversation: Conversation) => { const response = await fetch(`/api/messages?conversationId=${conversation.id}`); const data = await response.json(); if (response.ok) setMessages(data.messages ?? []); }, []);
+  const loadMessages = useCallback(async (conversation: Conversation) => { if (!conversation.id) { setMessages([]); return; } const response = await fetch(`/api/messages?conversationId=${conversation.id}`); const data = await response.json(); if (response.ok) setMessages(data.messages ?? []); }, []);
   useEffect(() => { void (async () => { await Promise.all([loadFriends(), loadConversations(), fetch("/api/superflip/status").then((r) => r.json()).then(setSuperflip)]); setLoading(false); })(); }, [loadConversations, loadFriends]);
   useEffect(() => { if (!initialUserId || loading) return; const existing=conversations.find(item=>item.other.id===initialUserId); if(existing){setActive(existing);setTab("messages");return} fetch(`/api/v1/users/${initialUserId}/profile`).then(r=>r.json()).then(d=>{if(d.profile){setActive({id:"",other:{id:d.profile.id,username:d.profile.username,displayName:d.profile.displayName,avatarUrl:d.profile.avatarUrl,presence:d.profile.presence},unread:0,lastMessage:null});setTab("messages")}}); }, [initialUserId, loading, conversations]);
   useEffect(() => { if (!active) return; const selected = active; void (async () => { await loadMessages(selected); })(); const timer = window.setInterval(() => { void loadMessages(selected); }, 4000); return () => window.clearInterval(timer); }, [active, loadMessages]);
@@ -46,6 +46,7 @@ export function SocialHubDialog({ currentUserId, initialTab = "messages", initia
       if (!response.ok) { setNotice(data?.message ?? "Не удалось отправить сообщение."); return; }
       form.reset(); followLatestRef.current = true;
       setMessages((current) => current.some((item) => item.id === data.message.id) ? current : [...current, data.message]);
+      if (!active.id && data.message?.conversationId) setActive((current) => current ? { ...current, id: data.message.conversationId, lastMessage: data.message } : current);
       await loadConversations();
     } catch { setNotice("Нет соединения. Сообщение не отправлено."); }
     finally { setSending(false); }
