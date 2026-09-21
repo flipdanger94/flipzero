@@ -17,7 +17,11 @@ export async function POST(request: Request, { params }: { params: Promise<{ spa
   const database = getDatabase();
   const [space] = await database.select({ ownerId: spaces.ownerId }).from(spaces).where(eq(spaces.id, spaceId)).limit(1);
   if (!space) return NextResponse.json({ code: "NOT_FOUND", message: "Пространство не найдено." }, { status: 404 });
-  if (space.ownerId !== user.id) {\n    const [probe] = await database.select({ id: channels.id }).from(channels).where(eq(channels.spaceId, spaceId)).limit(1);\n    const permissionState = probe ? await getChannelPermissions(probe.id, user.id) : null;\n    if (!permissionState || !hasPermission(permissionState.permissions, Permission.ManageChannels)) return NextResponse.json({ code: "FORBIDDEN", message: "Недостаточно прав для создания каналов." }, { status: 403 });\n  }
+  if (space.ownerId !== user.id) {
+    const [probe] = await database.select({ id: channels.id }).from(channels).where(eq(channels.spaceId, spaceId)).limit(1);
+    const permissionState = probe ? await getChannelPermissions(probe.id, user.id) : null;
+    if (!permissionState || !hasPermission(permissionState.permissions, Permission.ManageChannels)) return NextResponse.json({ code: "FORBIDDEN", message: "Недостаточно прав для создания каналов." }, { status: 403 });
+  }
 
   if (parsed.data.parentId) {
     const [category] = await database.select({ id: channelCategories.id }).from(channelCategories).where(and(eq(channelCategories.id, parsed.data.parentId), eq(channelCategories.spaceId, spaceId))).limit(1);
@@ -42,7 +46,8 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ s
   const [space] = await database.select({ ownerId: spaces.ownerId }).from(spaces).where(eq(spaces.id, spaceId)).limit(1);
   if (!space) return NextResponse.json({ code: "NOT_FOUND", message: "Пространство не найдено." }, { status: 404 });
   const [channel] = await database.select({ id: channels.id, kind: channels.kind }).from(channels).where(and(eq(channels.id, channelId), eq(channels.spaceId, spaceId))).limit(1);
-  if (!channel) return NextResponse.json({ code: "NOT_FOUND", message: "Канал не найден." }, { status: 404 });\n  if (space.ownerId !== user.id) { const permissionState = await getChannelPermissions(channelId, user.id); if (!hasPermission(permissionState.permissions, Permission.ManageChannels)) return NextResponse.json({ code: "FORBIDDEN", message: "Недостаточно прав для удаления каналов." }, { status: 403 }); }
+  if (!channel) return NextResponse.json({ code: "NOT_FOUND", message: "Канал не найден." }, { status: 404 });
+  if (space.ownerId !== user.id) { const permissionState = await getChannelPermissions(channelId, user.id); if (!hasPermission(permissionState.permissions, Permission.ManageChannels)) return NextResponse.json({ code: "FORBIDDEN", message: "Недостаточно прав для удаления каналов." }, { status: 403 }); }
   if (channel.kind === "text") {
     const [textCount] = await database.select({ value: count() }).from(channels).where(and(eq(channels.spaceId, spaceId), eq(channels.kind, "text")));
     if (textCount.value <= 1) return NextResponse.json({ code: "LAST_TEXT_CHANNEL", message: "Нельзя удалить последний текстовый канал." }, { status: 409 });
