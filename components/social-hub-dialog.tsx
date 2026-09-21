@@ -5,6 +5,7 @@ import { Award, Crown, FileText, Gamepad2, ImageIcon, Link2, LoaderCircle, MapPi
 import { MediaImage } from "./media-image";
 
 type Person = { id: string; username: string; displayName: string; avatarUrl?: string | null; presence?: string };
+type ProfileDetails = { bio:string|null; profileLocation:string|null; profileStatus:string|null; globalLevel:number; stats:{messages:number;friends:number;servers:number}; servers:Array<{id:string;name:string;iconUrl:string|null}> };
 type FriendRequest = { id: string; from: Person };
 type Conversation = { id: string; other: Person; unread: number; lastMessage: { text: string; createdAt: string } | null };
 type DirectMessage = { id: string; senderId: string; receiverId: string; text: string; createdAt: string };
@@ -61,6 +62,8 @@ export function SocialHubDialog({ currentUserId, initialTab = "messages", initia
 function Avatar({ person }: { person: Person }) { return <i className="social-avatar">{person.avatarUrl ? <MediaImage src={person.avatarUrl} /> : person.displayName.slice(0, 2).toUpperCase()}</i>; }
 
 function DirectProfile({ person, onOpenFriends }: { person: Person; onOpenFriends: () => void }) {
+  const [details,setDetails]=useState<ProfileDetails|null>(null);
+  useEffect(()=>{let cancelled=false;void fetch(`/api/v1/users/${person.id}/profile`,{cache:"no-store"}).then(async r=>r.ok?r.json():null).then(data=>{if(!cancelled)setDetails(data?.profile??null)});return()=>{cancelled=true}},[person.id]);
   const isOnline = person.presence === "online";
   return <aside className="direct-profile profile-reference" aria-label={`Профиль ${person.displayName}`}>
     <div className="direct-profile-cover"><span>FLIPZERO</span></div>
@@ -72,10 +75,14 @@ function DirectProfile({ person, onOpenFriends }: { person: Person; onOpenFriend
       <small>{isOnline ? "● В сети" : "Не в сети"}</small>
       <div className="profile-reference-actions"><button><MessageCircle size={15}/> Сообщение</button><button onClick={onOpenFriends}><Users size={15}/> Друзья</button></div>
     </div>
-    <div className="profile-reference-tabs"><b>Профиль</b></div>
+    <div className="profile-reference-tabs"><b>Профиль</b><span>Общие серверы</span></div>
     <section className="profile-reference-about">
       <h4>О пользователе</h4>
-      <p>Дополнительная информация появится здесь, когда пользователь заполнит профиль.</p>
+      <p>{details?.bio || "Пользователь пока ничего о себе не рассказал."}</p>
+      {details?.profileStatus ? <span>{details.profileStatus}</span> : null}
+      {details?.profileLocation ? <span><MapPin size={15}/>{details.profileLocation}</span> : null}
     </section>
+    {details ? <section className="profile-reference-stats"><h4>Статистика</h4><div><span><Star size={16}/><b>{details.globalLevel}</b><small>Уровень</small></span><span><MessageCircle size={16}/><b>{details.stats.messages}</b><small>Сообщений</small></span><span><Users size={16}/><b>{details.stats.friends}</b><small>Друзей</small></span></div></section> : null}
+    {details?.servers.length ? <section><h4>Серверы</h4>{details.servers.map(server=><span key={server.id}><ShieldCheck size={16}/>{server.name}</span>)}</section> : null}
   </aside>;
 }
