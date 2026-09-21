@@ -118,3 +118,5 @@ git push origin main
 8. Для ручной публикации: Vercel → Project → Deployments → Redeploy последнего deployment из `main`.
 
 Перед production-deploy обязательно выполните `pnpm lint && pnpm test && pnpm build`.
+
+<!-- deployment pipeline check: 2026-09-22 -->
