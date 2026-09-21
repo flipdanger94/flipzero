@@ -1,18 +1,93 @@
 "use client";
+
 import { useEffect, useState } from "react";
 import Image from "next/image";
-import { KeyRound, Laptop, LoaderCircle, ShieldCheck } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { KeyRound, Laptop, LoaderCircle, LogOut, RefreshCw, ShieldCheck } from "lucide-react";
+
 type Session = { id: string; userAgent: string | null; ipHash: string | null; createdAt: string; expiresAt: string; current: boolean };
 type Login = { id: string; userAgent: string | null; ipHash: string | null; successful: boolean; createdAt: string };
+type SecurityData = { totpEnabled: boolean; sessions: Session[]; loginHistory: Login[] };
+type SensitiveAction = "backup_codes" | "end_all_sessions" | null;
+
 export function SecurityCenter() {
-  const [data, setData] = useState<{ totpEnabled: boolean; sessions: Session[]; loginHistory: Login[] } | null>(null); const [setup, setSetup] = useState<{ qrDataUrl: string; secret: string } | null>(null); const [codes, setCodes] = useState<string[]>([]); const [showDisable, setShowDisable] = useState(false); const [busy, setBusy] = useState(false); const [error, setError] = useState("");
-  async function load() { const response = await fetch("/api/v1/account/security", { cache: "no-store" }); if (response.ok) setData(await response.json()); }
-  useEffect(() => { let active = true; void fetch("/api/v1/account/security", { cache: "no-store" }).then((response) => response.ok ? response.json() : null).then((result) => { if (active && result) setData(result); }); return () => { active = false; }; }, []);
-  async function action(body: Record<string, unknown>) { setBusy(true); setError(""); const response = await fetch("/api/v1/account/security", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) }); const result = await response.json(); setBusy(false); if (!response.ok) { setError(result.message ?? "Не удалось выполнить действие."); return null; } return result; }
+  const router = useRouter();
+  const [data, setData] = useState<SecurityData | null>(null);
+  const [setup, setSetup] = useState<{ qrDataUrl: string; secret: string } | null>(null);
+  const [codes, setCodes] = useState<string[]>([]);
+  const [showDisable, setShowDisable] = useState(false);
+  const [sensitiveAction, setSensitiveAction] = useState<SensitiveAction>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  async function load() {
+    const response = await fetch("/api/v1/account/security", { cache: "no-store" });
+    if (response.ok) setData(await response.json());
+  }
+
+  useEffect(() => {
+    let active = true;
+    void fetch("/api/v1/account/security", { cache: "no-store" })
+      .then((response) => response.ok ? response.json() : null)
+      .then((result) => { if (active && result) setData(result); });
+    return () => { active = false; };
+  }, []);
+
+  async function action(body: Record<string, unknown>) {
+    setBusy(true);
+    setError("");
+    const response = await fetch("/api/v1/account/security", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
+    const result = await response.json();
+    setBusy(false);
+    if (!response.ok) { setError(result.message ?? "Не удалось выполнить действие."); return null; }
+    return result;
+  }
+
   async function begin() { const result = await action({ action: "begin_2fa" }); if (result) setSetup(result); }
   async function confirmSetup(event: React.FormEvent<HTMLFormElement>) { event.preventDefault(); const code = new FormData(event.currentTarget).get("code"); const result = await action({ action: "confirm_2fa", code }); if (result) { setCodes(result.backupCodes); setSetup(null); await load(); } }
-  async function disable(event: React.FormEvent<HTMLFormElement>) { event.preventDefault(); const password = new FormData(event.currentTarget).get("password"); const result = await action({ action: "disable_2fa", password }); if (result) { setShowDisable(false); await load(); } }
+  async function disable(event: React.FormEvent<HTMLFormElement>) { event.preventDefault(); const password = new FormData(event.currentTarget).get("password"); const result = await action({ action: "disable_2fa", password }); if (result) { setShowDisable(false); setCodes([]); await load(); } }
   async function endSession(id: string) { if (await action({ action: "end_session", sessionId: id })) await load(); }
-  return <div className="security-center"><h3><ShieldCheck size={19} /> Двухфакторная аутентификация</h3>{error ? <div className="account-feedback error" role="alert">{error}</div> : null}{!data ? <LoaderCircle className="spin" /> : data.totpEnabled ? showDisable ? <form className="two-factor-disable" onSubmit={disable}><label><span>Подтвердите текущим паролем</span><input name="password" type="password" autoComplete="current-password" required autoFocus /></label><div><button type="button" className="security-action" onClick={() => { setShowDisable(false); setError(""); }}>Отмена</button><button className="security-action danger" disabled={busy}>{busy ? <LoaderCircle className="spin" size={16} /> : "Отключить 2FA"}</button></div></form> : <button type="button" className="security-action danger" onClick={() => { setShowDisable(true); setError(""); }}>Отключить 2FA</button> : setup ? <form className="two-factor-setup" onSubmit={confirmSetup}><Image src={setup.qrDataUrl} alt="QR-код для приложения-аутентификатора" width={180} height={180} unoptimized /><code>{setup.secret}</code><label><span>Код из приложения</span><input name="code" inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" required /></label><button className="account-primary" disabled={busy}>Подтвердить</button></form> : <button type="button" className="security-action" onClick={() => void begin()}>Настроить 2FA</button>}{codes.length ? <div className="backup-codes"><strong>Сохраните резервные коды</strong>{codes.map((code) => <code key={code}>{code}</code>)}</div> : null}<h3><Laptop size={19} /> Активные сессии</h3><div className="security-list">{data?.sessions.map((session) => <article key={session.id}><div><strong>{session.current ? "Это устройство" : deviceName(session.userAgent)}</strong><small>{new Date(session.createdAt).toLocaleString("ru-RU")} · IP …{session.ipHash?.slice(-6) ?? "скрыт"}</small></div><button disabled={session.current || busy} onClick={() => void endSession(session.id)}>{session.current ? "Текущая" : "Завершить"}</button></article>)}</div><h3><KeyRound size={19} /> История входов</h3><div className="security-list">{data?.loginHistory.map((entry) => <article key={entry.id}><div><strong>{deviceName(entry.userAgent)}</strong><small>{new Date(entry.createdAt).toLocaleString("ru-RU")} · {entry.successful ? "Успешный вход" : "Ошибка входа"}</small></div><i className={entry.successful ? "success" : "failed"} /></article>)}</div></div>;
+
+  async function confirmSensitiveAction(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const password = new FormData(event.currentTarget).get("password");
+    if (sensitiveAction === "backup_codes") {
+      const result = await action({ action: "regenerate_backup_codes", password });
+      if (result) { setCodes(result.backupCodes); setSensitiveAction(null); }
+      return;
+    }
+    if (sensitiveAction === "end_all_sessions") {
+      const result = await action({ action: "end_all_sessions", password });
+      if (result) { router.replace("/login?sessions=ended"); router.refresh(); }
+    }
+  }
+
+  return <div className="security-center">
+    <h3><ShieldCheck size={19} /> Двухфакторная аутентификация</h3>
+    {error ? <div className="account-feedback error" role="alert">{error}</div> : null}
+    {!data ? <LoaderCircle className="spin" /> : data.totpEnabled ? showDisable ? <form className="two-factor-disable" onSubmit={disable}>
+      <label><span>Подтвердите текущим паролем</span><input name="password" type="password" autoComplete="current-password" required autoFocus /></label>
+      <div><button type="button" className="security-action" onClick={() => { setShowDisable(false); setError(""); }}>Отмена</button><button className="security-action danger" disabled={busy}>{busy ? <LoaderCircle className="spin" size={16} /> : "Отключить 2FA"}</button></div>
+    </form> : <div className="security-actions-row"><button type="button" className="security-action" onClick={() => setSensitiveAction("backup_codes")}><RefreshCw size={15} /> Новые резервные коды</button><button type="button" className="security-action danger" onClick={() => { setShowDisable(true); setError(""); }}>Отключить 2FA</button></div> : setup ? <form className="two-factor-setup" onSubmit={confirmSetup}>
+      <Image src={setup.qrDataUrl} alt="QR-код для приложения-аутентификатора" width={180} height={180} unoptimized /><code>{setup.secret}</code><label><span>Код из приложения</span><input name="code" inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" required /></label><button className="account-primary" disabled={busy}>Подтвердить</button>
+    </form> : <button type="button" className="security-action" onClick={() => void begin()}>Настроить 2FA</button>}
+
+    {codes.length ? <div className="backup-codes" role="status"><strong>Сохраните резервные коды. Предыдущие коды больше не действуют.</strong>{codes.map((code) => <code key={code}>{code}</code>)}</div> : null}
+
+    <h3><Laptop size={19} /> Активные сессии</h3>
+    <div className="security-list">{data?.sessions.length ? data.sessions.map((session) => <article key={session.id}><div><strong>{session.current ? "Это устройство" : deviceName(session.userAgent)}</strong><small>{new Date(session.createdAt).toLocaleString("ru-RU")} · IP …{session.ipHash?.slice(-6) ?? "скрыт"}</small></div><button disabled={session.current || busy} onClick={() => void endSession(session.id)}>{session.current ? "Текущая" : "Завершить"}</button></article>) : <p className="security-empty">Активные сессии не найдены.</p>}</div>
+    <button type="button" className="security-action danger security-signout-all" onClick={() => setSensitiveAction("end_all_sessions")}><LogOut size={15} /> Завершить все сессии</button>
+
+    {sensitiveAction ? <form className="security-confirm" onSubmit={confirmSensitiveAction}>
+      <strong>{sensitiveAction === "backup_codes" ? "Создать новые резервные коды?" : "Выйти на всех устройствах?"}</strong>
+      <p>{sensitiveAction === "backup_codes" ? "Все ранее сохранённые коды перестанут работать." : "Все активные сессии, включая текущую, будут немедленно завершены."}</p>
+      <label><span>Текущий пароль</span><input name="password" type="password" autoComplete="current-password" required autoFocus /></label>
+      <div><button type="button" className="security-action" onClick={() => { setSensitiveAction(null); setError(""); }}>Отмена</button><button className="security-action danger" disabled={busy}>{busy ? <LoaderCircle className="spin" size={16} /> : "Подтвердить"}</button></div>
+    </form> : null}
+
+    <h3><KeyRound size={19} /> История входов</h3>
+    <div className="security-list">{data?.loginHistory.length ? data.loginHistory.map((entry) => <article key={entry.id}><div><strong>{deviceName(entry.userAgent)}</strong><small>{new Date(entry.createdAt).toLocaleString("ru-RU")} · {entry.successful ? "Успешный вход" : "Ошибка входа"}</small></div><i className={entry.successful ? "success" : "failed"} /></article>) : <p className="security-empty">История входов пока пуста.</p>}</div>
+  </div>;
 }
+
 function deviceName(agent: string | null) { if (!agent) return "Неизвестное устройство"; if (/iPhone|iPad/i.test(agent)) return "Safari · iOS"; if (/Android/i.test(agent)) return "Android"; if (/Windows/i.test(agent)) return "Windows"; if (/Macintosh/i.test(agent)) return "macOS"; return "Браузер"; }
