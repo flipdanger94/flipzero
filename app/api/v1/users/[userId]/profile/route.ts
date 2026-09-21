@@ -1,7 +1,7 @@
 import { and, count, eq, or, sql } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { getDatabase } from "@/db/client";
-import { friends, members, messages, spaces, users } from "@/db/schema";
+import { friendRequests, friends, members, messages, spaces, users } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
 
 export async function GET(_request: Request, { params }: { params: Promise<{ userId: string }> }) {
@@ -25,8 +25,10 @@ export async function GET(_request: Request, { params }: { params: Promise<{ use
     db.select({ id: spaces.id, name: spaces.name, iconUrl: spaces.iconUrl }).from(members).innerJoin(spaces, eq(spaces.id, members.spaceId)).where(eq(members.userId, userId)).limit(3),
   ]);
   const [friendship] = viewer.id === userId ? [] : await db.select({ friendId: friends.friendId }).from(friends).where(and(eq(friends.userId, viewer.id), eq(friends.friendId, userId))).limit(1);
+  const [outgoingRequest] = viewer.id === userId || friendship ? [] : await db.select({ id: friendRequests.id }).from(friendRequests).where(and(eq(friendRequests.fromId, viewer.id), eq(friendRequests.toId, userId), eq(friendRequests.status, "pending"))).limit(1);
+  const [incomingRequest] = viewer.id === userId || friendship ? [] : await db.select({ id: friendRequests.id }).from(friendRequests).where(and(eq(friendRequests.fromId, userId), eq(friendRequests.toId, viewer.id), eq(friendRequests.status, "pending"))).limit(1);
   return NextResponse.json({
-    profile: { ...user, isOwnProfile: viewer.id === userId, isFriend: Boolean(friendship),
+    profile: { ...user, isOwnProfile: viewer.id === userId, isFriend: Boolean(friendship), friendshipStatus: friendship ? "friends" : outgoingRequest ? "outgoing" : incomingRequest ? "incoming" : "none", incomingRequestId: incomingRequest?.id ?? null,
       stats: { messages: messageCount?.value ?? 0, friends: friendCount?.value ?? 0, servers: serverCount?.value ?? 0 },
       servers: serverRows,
     }
