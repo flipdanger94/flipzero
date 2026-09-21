@@ -60,7 +60,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ sp
 
 export async function DELETE(request: Request, { params }: { params: Promise<{ spaceId: string }> }) {
   const { spaceId } = await params;
-  const access = await requireOwner(spaceId);
+  const access = await requireMemberManager(spaceId, Permission.KickMembers);
   if ("error" in access) return access.error;
   const userId = new URL(request.url).searchParams.get("userId");
   if (!userId) return NextResponse.json({ code: "INVALID_INPUT", message: "Не указан участник." }, { status: 400 });
