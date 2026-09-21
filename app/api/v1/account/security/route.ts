@@ -38,6 +38,21 @@ export async function POST(request: Request) {
     await database.update(users).set({ totpEnabled: false, totpSecretEncrypted: null, backupCodeHashes: [] }).where(eq(users.id, user.id));
     return NextResponse.json({ enabled: false });
   }
+  if (action === "regenerate_backup_codes") {
+    const [account] = await database.select({ passwordHash: users.passwordHash, totpEnabled: users.totpEnabled }).from(users).where(eq(users.id, user.id)).limit(1);
+    if (!(await verifyCurrentPassword(body?.password, account?.passwordHash))) return NextResponse.json({ code: "INVALID_CREDENTIALS", message: "Текущий пароль указан неверно." }, { status: 401 });
+    if (!account?.totpEnabled) return NextResponse.json({ code: "TWO_FACTOR_DISABLED", message: "Сначала включите двухфакторную аутентификацию." }, { status: 409 });
+    const codes = Array.from({ length: 8 }, () => `${randomBytes(3).toString("hex").toUpperCase()}-${randomBytes(3).toString("hex").toUpperCase()}`);
+    await database.update(users).set({ backupCodeHashes: codes.map(hashBackupCode), updatedAt: new Date() }).where(eq(users.id, user.id));
+    return NextResponse.json({ backupCodes: codes });
+  }
+  if (action === "end_all_sessions") {
+    const [account] = await database.select({ passwordHash: users.passwordHash }).from(users).where(eq(users.id, user.id)).limit(1);
+    if (!(await verifyCurrentPassword(body?.password, account?.passwordHash))) return NextResponse.json({ code: "INVALID_CREDENTIALS", message: "Текущий пароль указан неверно." }, { status: 401 });
+    await database.delete(sessions).where(eq(sessions.userId, user.id));
+    (await cookies()).delete(SESSION_COOKIE);
+    return NextResponse.json({ ok: true, signedOut: true });
+  }
   if (action === "end_session" && typeof body?.sessionId === "string") {
     const token = (await cookies()).get(SESSION_COOKIE)?.value;
     const [target] = await database.select({ tokenHash: sessions.tokenHash }).from(sessions).where(and(eq(sessions.id, body.sessionId), eq(sessions.userId, user.id))).limit(1);

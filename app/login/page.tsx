@@ -10,7 +10,9 @@ function LoginForm() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [requiresOtp, setRequiresOtp] = useState(false);
-  const next = useSearchParams().get("next");
+  const searchParams = useSearchParams();
+  const next = searchParams.get("next");
+  const sessionsEnded = searchParams.get("sessions") === "ended";
   const safeNext = next?.startsWith("/") && !next.startsWith("//") && !next.startsWith("/\\") ? next : null;
 
   async function submit(event: FormEvent<HTMLFormElement>) {
@@ -27,6 +29,7 @@ function LoginForm() {
   return <AuthShell title="С возвращением" description="Войдите, чтобы продолжить общение." alternateText="Нет аккаунта?" alternateHref={safeNext ? `/register?next=${encodeURIComponent(safeNext)}` : "/register"} alternateLabel="Создать">
     <form className="auth-form" onSubmit={submit}>
       {error && <div className="auth-error" role="alert">{error}</div>}
+      {sessionsEnded && !error ? <div className="auth-success" role="status">Все активные сессии завершены. Войдите снова на этом устройстве.</div> : null}
       <label><span>Email</span><div className="auth-input"><Mail size={17} /><input name="email" type="email" autoComplete="email" placeholder="you@example.com" required /></div></label>
       <label><span>Пароль</span><div className="auth-input"><LockKeyhole size={17} /><input name="password" type={showPassword ? "text" : "password"} autoComplete="current-password" placeholder="Ваш пароль" required /><button type="button" onClick={() => setShowPassword((value) => !value)} aria-label={showPassword ? "Скрыть пароль" : "Показать пароль"}>{showPassword ? <EyeOff size={17} /> : <Eye size={17} />}</button></div></label>
       {requiresOtp ? <label><span>Код 2FA или резервный код</span><div className="auth-input"><KeyRound size={17} /><input name="otp" inputMode="numeric" autoComplete="one-time-code" placeholder="000000" required autoFocus /></div></label> : null}

@@ -1,6 +1,20 @@
+.auth-success { border:1px solid rgba(98,221,169,.25); border-radius:10px; background:rgba(98,221,169,.09); color:#9aebc8; padding:10px 12px; font-size:.68rem }
 .two-factor-disable { display:grid; gap:12px; width:100%; padding:14px; border:1px solid rgba(255,95,115,.2); border-radius:12px; background:rgba(255,95,115,.045) }
 .two-factor-disable label { width:100% }
 .two-factor-disable label span { color:#b7afb9; font-size:.73rem }
 .two-factor-disable input { width:100%; margin-top:6px; padding:10px; border:1px solid rgba(255,255,255,.14); border-radius:9px; background:#191c24; color:#fff }
 .two-factor-disable>div { display:flex; flex-wrap:wrap; gap:8px }
 .two-factor-disable .security-action { justify-self:auto }
+.security-actions-row { display:flex; flex-wrap:wrap; gap:8px }
+.security-actions-row .security-action { justify-self:auto }
+.security-signout-all { margin-top:2px }
+.security-confirm { display:grid; gap:11px; width:100%; padding:15px; border:1px solid rgba(255,95,115,.22); border-radius:12px; background:rgba(255,95,115,.05) }
+.security-confirm>strong { color:#ffd5da }
+.security-confirm>p { margin:0; color:#a9a1aa; font-size:.73rem; line-height:1.5 }
+.security-confirm label span { color:#c5bec7; font-size:.73rem }
+.security-confirm input { width:100%; min-height:44px; margin-top:6px; padding:10px; border:1px solid rgba(255,255,255,.14); border-radius:9px; background:#191c24; color:#fff; font-size:16px }
+.security-confirm>div { display:flex; flex-wrap:wrap; gap:8px }
+.security-confirm .security-action { justify-self:auto }
+.security-empty { margin:0; padding:12px; border:1px dashed rgba(255,255,255,.1); border-radius:10px; color:#8f9aa6; font-size:.75rem }
+.security-action:disabled { opacity:.55; cursor:wait }
+@media(max-width:700px){.security-actions-row,.security-confirm>div{display:grid;grid-template-columns:1fr}.security-actions-row .security-action,.security-confirm .security-action,.security-signout-all{width:100%;min-height:44px;justify-content:center}.backup-codes{grid-template-columns:1fr}.security-list article{align-items:flex-start}.security-list article button{min-height:44px}}
