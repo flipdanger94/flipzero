@@ -22,7 +22,7 @@ export async function PATCH(request: Request) {
   const parsed = schema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ code: "INVALID_INPUT", message: "Проверьте данные профиля." }, { status: 400 });
   const db = getDatabase();
-  await db.execute(sql\`ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "profile_location" text; ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "profile_status" text; ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "profile_links" jsonb DEFAULT '[]'::jsonb NOT NULL;\`);
+  await db.execute(sql`ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "profile_location" text; ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "profile_status" text; ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "profile_links" jsonb DEFAULT '[]'::jsonb NOT NULL;`);
   const [profile] = await db.update(users).set({
     ...parsed.data,
     avatarUrl: parsed.data.avatarUrl || null, bannerUrl: parsed.data.bannerUrl || null,
