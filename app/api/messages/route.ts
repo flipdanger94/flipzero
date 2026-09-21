@@ -15,6 +15,8 @@ export async function GET(request: Request) {
   if (conversationId) {
     const [membership] = await database.select().from(directConversationMembers).where(and(eq(directConversationMembers.conversationId, conversationId), eq(directConversationMembers.userId, user.id))).limit(1);
     if (!membership) return NextResponse.json({ message: "Диалог недоступен." }, { status: 403 });
+    const [otherMember] = await database.select({ userId: directConversationMembers.userId }).from(directConversationMembers).where(and(eq(directConversationMembers.conversationId,conversationId),ne(directConversationMembers.userId,user.id))).limit(1);
+    if (otherMember) { const [blocked] = await database.select({ blockerId:userBlocks.blockerId }).from(userBlocks).where(or(and(eq(userBlocks.blockerId,user.id),eq(userBlocks.blockedId,otherMember.userId)),and(eq(userBlocks.blockerId,otherMember.userId),eq(userBlocks.blockedId,user.id)))).limit(1); if(blocked)return NextResponse.json({message:"Диалог недоступен из-за блокировки."},{status:403}); }
     const rows = await database.select({ id: directMessages.id, conversationId: directMessages.conversationId, senderId: directMessages.senderId, receiverId: directMessages.receiverId, text: directMessages.text, createdAt: directMessages.createdAt, readAt: directMessages.readAt }).from(directMessages).where(and(eq(directMessages.conversationId, conversationId), isNull(directMessages.deletedAt))).orderBy(asc(directMessages.createdAt)).limit(200);
     await database.update(directMessages).set({ readAt: new Date() }).where(and(eq(directMessages.conversationId, conversationId), eq(directMessages.receiverId, user.id), isNull(directMessages.readAt)));
     return NextResponse.json({ messages: rows });
@@ -23,6 +25,8 @@ export async function GET(request: Request) {
   const conversations = await Promise.all(memberships.map(async ({ conversationId: id }) => {
     const [otherMember] = await database.select({ userId: directConversationMembers.userId }).from(directConversationMembers).where(and(eq(directConversationMembers.conversationId, id), ne(directConversationMembers.userId, user.id))).limit(1);
     if (!otherMember) return null;
+    const [blocked] = await database.select({ blockerId: userBlocks.blockerId }).from(userBlocks).where(or(and(eq(userBlocks.blockerId,user.id),eq(userBlocks.blockedId,otherMember.userId)),and(eq(userBlocks.blockerId,otherMember.userId),eq(userBlocks.blockedId,user.id)))).limit(1);
+    if (blocked) return null;
     const [other] = await database.select({ id: users.id, username: users.username, displayName: users.displayName, avatarUrl: users.avatarUrl, presence: users.presence }).from(users).where(eq(users.id, otherMember.userId)).limit(1);
     const [lastMessage] = await database.select({ text: directMessages.text, createdAt: directMessages.createdAt }).from(directMessages).where(and(eq(directMessages.conversationId, id), isNull(directMessages.deletedAt))).orderBy(desc(directMessages.createdAt)).limit(1);
     const [counter] = await database.select({ count: sql<number>`count(*)::int` }).from(directMessages).where(and(eq(directMessages.conversationId, id), eq(directMessages.receiverId, user.id), isNull(directMessages.readAt), isNull(directMessages.deletedAt)));
