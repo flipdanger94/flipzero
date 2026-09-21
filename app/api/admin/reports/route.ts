@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { desc, eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { getDatabase } from "@/db/client";
-import { reports } from "@/db/schema";
+import { adminAuditLogs, reports } from "@/db/schema";
 import { requireAdmin } from "@/lib/admin";
 
 export async function GET() {
@@ -17,7 +17,14 @@ export async function PATCH(request: Request) {
   const id = String(body?.id ?? "");
   const status = String(body?.status ?? "");
   if (!id || !["open","reviewing","resolved","rejected"].includes(status)) return NextResponse.json({ message: "Некорректные данные." }, { status: 400 });
-  await getDatabase().update(reports).set({ status, assignedModeratorId: access.user.id, moderatorNote: body?.moderatorNote ? String(body.moderatorNote).slice(0,1000) : null, resolvedAt: status === "resolved" || status === "rejected" ? new Date() : null }).where(eq(reports.id,id));
+  const db=getDatabase();
+  const [existing]=await db.select().from(reports).where(eq(reports.id,id)).limit(1);
+  if(!existing)return NextResponse.json({message:"Жалоба не найдена."},{status:404});
+  const moderatorNote=body?.moderatorNote ? String(body.moderatorNote).slice(0,1000) : null;
+  await db.transaction(async tx=>{
+    await tx.update(reports).set({ status, assignedModeratorId: access.user.id, moderatorNote, resolvedAt: status === "resolved" || status === "rejected" ? new Date() : null }).where(eq(reports.id,id));
+    await tx.insert(adminAuditLogs).values({id:randomUUID(),adminId:access.user.id,action:`report.${status}`,metadata:{reportId:id,previousStatus:existing.status,targetType:existing.targetType,targetId:existing.targetId,moderatorNote}});
+  });
   return NextResponse.json({ ok: true });
 }
 
