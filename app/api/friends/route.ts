@@ -26,7 +26,9 @@ export async function POST(request: Request) {
   const [existingFriend] = await database.select().from(friends).where(and(eq(friends.userId, user.id), eq(friends.friendId, toId))).limit(1); if (existingFriend) return NextResponse.json({ message: "Пользователь уже в друзьях." }, { status: 409 });
   const reverse = await database.select().from(friendRequests).where(and(eq(friendRequests.fromId, toId), eq(friendRequests.toId, user.id), eq(friendRequests.status, "pending"))).limit(1);
   if (reverse[0]) return acceptRequest(database, reverse[0].id, user.id, toId);
-  const requestId=randomUUID(); await database.transaction(async tx=>{await tx.insert(friendRequests).values({ id: requestId, fromId: user.id, toId }).onConflictDoUpdate({ target: [friendRequests.fromId, friendRequests.toId], set: { status: "pending", respondedAt: null, createdAt: new Date() } }); await tx.insert(notifications).values({id:randomUUID(),userId:toId,actorId:user.id,type:"friend_request",title:"Новый запрос в друзья",body:`@${user.username} хочет добавить вас в друзья.`,entityType:"friend_request",entityId:requestId});});
+  const [sameDirection]=await database.select({id:friendRequests.id}).from(friendRequests).where(and(eq(friendRequests.fromId,user.id),eq(friendRequests.toId,toId),eq(friendRequests.status,"pending"))).limit(1);
+  if(sameDirection)return NextResponse.json({status:"pending",requestId:sameDirection.id});
+  const requestId=randomUUID(); await database.transaction(async tx=>{await tx.insert(friendRequests).values({id:requestId,fromId:user.id,toId}).onConflictDoUpdate({target:[friendRequests.fromId,friendRequests.toId],set:{status:"pending",respondedAt:null,createdAt:new Date()}});const [stored]=await tx.select({id:friendRequests.id}).from(friendRequests).where(and(eq(friendRequests.fromId,user.id),eq(friendRequests.toId,toId))).limit(1);await tx.insert(notifications).values({id:randomUUID(),userId:toId,actorId:user.id,type:"friend_request",title:"Новый запрос в друзья",body:`@${user.username} хочет добавить вас в друзья.`,entityType:"friend_request",entityId:stored?.id??requestId});});
   return NextResponse.json({ status: "pending" }, { status: 201 });
 }
 
@@ -34,6 +36,8 @@ async function acceptRequest(database: ReturnType<typeof getDatabase>, requestId
   await database.transaction(async (tx) => {
     await tx.update(friendRequests).set({ status: "accepted", respondedAt: new Date() }).where(eq(friendRequests.id, requestId));
     await tx.insert(friends).values([{ userId: currentUserId, friendId }, { userId: friendId, friendId: currentUserId }]).onConflictDoNothing();
+    const [actor]=await tx.select({username:users.username}).from(users).where(eq(users.id,currentUserId)).limit(1);
+    await tx.insert(notifications).values({id:randomUUID(),userId:friendId,actorId:currentUserId,type:"friend_accepted",title:"Заявка в друзья принята",body:actor?`@${actor.username} теперь у вас в друзьях.`:null,entityType:"user",entityId:currentUserId});
   });
   return NextResponse.json({ status: "accepted" });
 }
