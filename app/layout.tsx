@@ -4,6 +4,7 @@ import { SpeedInsights } from "@vercel/speed-insights/next";
 import { PwaClient } from "./pwa-client";
 import "./globals.css";
 import "./product-theme.css";
+import "./neon-redesign.css";
 import "./community.css";
 import "./account-settings.css";
 import "./mobile.css";

@@ -1,0 +1,602 @@
+/* FlipZero 2026 neon redesign — shared app workspace skin. */
+.app-shell {
+  --fz-blue: #4c7dff;
+  --fz-violet: #7b50ff;
+  --fz-purple: #a943f4;
+  --fz-pink: #f34fda;
+  --fz-cyan: #39d8ff;
+  --fz-success: #31dc94;
+  --bg: #060913;
+  --panel: rgba(11, 17, 34, 0.9);
+  --deep: #050812;
+  --raised: rgba(24, 32, 57, 0.9);
+  --text: #f4f3ff;
+  --muted: #8992b0;
+  --border: rgba(130, 126, 255, 0.18);
+  --pink: var(--fz-pink);
+  --lime: var(--fz-success);
+  grid-template-columns: 74px 266px minmax(420px, 1fr) 286px;
+  isolation: isolate;
+  background:
+    radial-gradient(circle at 74% -16%, rgba(157, 55, 245, 0.2), transparent 34%),
+    radial-gradient(circle at 8% 112%, rgba(49, 95, 255, 0.16), transparent 36%),
+    linear-gradient(145deg, #050812, #080b18 54%, #080713);
+}
+
+.app-shell::before {
+  content: "";
+  position: fixed;
+  z-index: -1;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.42;
+  background-image:
+    radial-gradient(circle at 12% 18%, rgba(255,255,255,.7) 0 1px, transparent 1.4px),
+    radial-gradient(circle at 76% 10%, rgba(156,121,255,.85) 0 1px, transparent 1.5px),
+    radial-gradient(circle at 91% 68%, rgba(80,180,255,.75) 0 1px, transparent 1.5px);
+  background-size: 190px 170px, 250px 210px, 310px 270px;
+}
+
+.app-shell button,
+.app-shell input,
+.app-shell textarea,
+.app-shell select {
+  accent-color: var(--fz-purple);
+}
+
+.app-shell button:focus-visible,
+.app-shell input:focus-visible,
+.app-shell textarea:focus-visible,
+.app-shell select:focus-visible {
+  outline: 2px solid #b85cff;
+  outline-offset: 2px;
+}
+
+.app-shell .space-rail {
+  border-right: 1px solid rgba(106, 112, 220, 0.18);
+  background: linear-gradient(180deg, rgba(7, 11, 25, .98), rgba(5, 7, 17, .98));
+  box-shadow: 12px 0 42px rgba(0, 0, 0, .2);
+}
+
+.app-shell .rail-action,
+.app-shell .space-button {
+  border: 1px solid rgba(137, 136, 255, .12);
+  background: linear-gradient(145deg, rgba(26, 34, 60, .94), rgba(13, 18, 35, .94));
+  box-shadow: inset 0 1px rgba(255,255,255,.04), 0 8px 22px rgba(0,0,0,.2);
+}
+
+.app-shell .rail-action:hover,
+.app-shell .space-button:hover {
+  border-color: rgba(188, 86, 255, .42);
+  background: linear-gradient(145deg, rgba(61, 43, 112, .88), rgba(22, 29, 55, .94));
+  box-shadow: 0 0 22px rgba(158, 63, 246, .15);
+}
+
+.app-shell .home-action,
+.app-shell .space-button.active {
+  border-color: rgba(220, 91, 255, .58);
+  box-shadow: 0 0 0 1px rgba(113, 89, 255, .32), 0 0 26px rgba(200, 65, 255, .24);
+}
+
+.app-shell .space-button.active::before {
+  width: 4px;
+  background: linear-gradient(#6084ff, #e84cff);
+  box-shadow: 0 0 16px rgba(222, 75, 255, .9);
+}
+
+.app-shell .add-space { color: #c973ff; }
+.app-shell .discover { color: #63a4ff; }
+
+.app-shell .channel-panel {
+  border-right: 1px solid rgba(128, 118, 255, .22);
+  background:
+    radial-gradient(circle at 35% -10%, rgba(92, 60, 211, .13), transparent 34%),
+    linear-gradient(180deg, rgba(11, 17, 34, .97), rgba(7, 12, 25, .98));
+  box-shadow: 16px 0 46px rgba(0,0,0,.16);
+}
+
+.app-shell .discord-server-heading {
+  border-bottom-color: rgba(145, 130, 255, .2);
+  background: rgba(8, 13, 28, .72);
+}
+
+.app-shell .discord-server-heading:hover,
+.app-shell .space-heading.menu-open {
+  background: rgba(91, 58, 161, .2);
+}
+
+.app-shell .server-sidebar-banner {
+  border-bottom-color: rgba(170, 104, 255, .3);
+  box-shadow: inset 0 -56px 50px rgba(4,6,15,.78), 0 10px 35px rgba(0,0,0,.22);
+}
+
+.app-shell .server-banner-avatar {
+  border-color: #0b1020;
+  box-shadow: 0 0 0 1px rgba(208, 101, 255, .52), 0 0 22px rgba(176, 60, 247, .24);
+}
+
+.app-shell .server-banner-superup {
+  border-color: rgba(225, 104, 255, .36);
+  background: rgba(22, 12, 47, .76);
+  color: #f1b2ff;
+  box-shadow: 0 0 18px rgba(216, 72, 255, .14);
+}
+
+.app-shell .channel-panel.has-server-banner > .channel-scroll {
+  border-top-color: #080d1c;
+  background: transparent;
+}
+
+.app-shell .channel-group h2 {
+  color: #747e9f;
+  letter-spacing: .11em;
+}
+
+.app-shell .channel {
+  min-height: 40px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  color: #8f98b7;
+}
+
+.app-shell .channel:hover,
+.app-shell .channel-row:hover {
+  border-color: rgba(125, 132, 239, .12);
+  background: rgba(84, 90, 171, .08);
+  color: #eef0ff;
+}
+
+.app-shell .channel.active,
+.app-shell .channel-row.active {
+  border-color: rgba(155, 100, 255, .24);
+  background: linear-gradient(90deg, rgba(75, 93, 255, .23), rgba(197, 65, 244, .2));
+  box-shadow: inset 3px 0 #d455ff, 0 0 22px rgba(106, 73, 255, .08);
+}
+
+.app-shell .channel.active > span:first-child,
+.app-shell .channel-row.active .channel > span:first-child {
+  color: #55cfff;
+}
+
+.app-shell .live-pill {
+  color: #39f1c1;
+  text-shadow: 0 0 12px rgba(57, 241, 193, .5);
+}
+
+.app-shell .voice-channel-participants button.speaking > span {
+  box-shadow: 0 0 0 2px var(--fz-success), 0 0 15px rgba(49,220,148,.45);
+}
+
+.app-shell .user-dock {
+  border-top-color: rgba(128, 118, 255, .2);
+  background: rgba(7, 11, 24, .92);
+  backdrop-filter: blur(18px);
+}
+
+.app-shell .chat-panel {
+  position: relative;
+  background:
+    radial-gradient(circle at 80% 12%, rgba(80, 58, 184, .08), transparent 32%),
+    linear-gradient(180deg, rgba(10, 15, 30, .96), rgba(7, 11, 23, .98));
+}
+
+.app-shell .chat-header {
+  border-bottom-color: rgba(130, 123, 255, .2);
+  background: rgba(8, 13, 28, .75);
+  box-shadow: 0 8px 30px rgba(0,0,0,.14);
+}
+
+.app-shell .channel-title > svg { color: #7694ff; }
+
+.app-shell .header-actions > button {
+  border: 1px solid transparent;
+  border-radius: 10px;
+  color: #939dbc;
+}
+
+.app-shell .header-actions > button:hover,
+.app-shell .header-actions > button.is-active {
+  border-color: rgba(146, 127, 255, .22);
+  color: #d9d3ff;
+  background: rgba(106, 81, 216, .13);
+}
+
+.app-shell .search-box {
+  border-color: rgba(129, 128, 237, .17);
+  background: rgba(4, 8, 19, .72);
+}
+
+.app-shell .search-box:focus-within {
+  border-color: rgba(194, 78, 255, .5);
+  box-shadow: 0 0 0 3px rgba(173, 64, 247, .08);
+}
+
+.app-shell .message-list {
+  scrollbar-color: rgba(126, 100, 220, .55) transparent;
+}
+
+.app-shell .message:hover {
+  background: linear-gradient(90deg, rgba(85, 92, 178, .07), transparent);
+}
+
+.app-shell .message-body > p { color: #c3c8dd; }
+.app-shell .message-meta time { color: #65708f; }
+
+.app-shell .intro-icon,
+.app-shell .composer .send-button,
+.app-shell .board-view > header button,
+.app-shell .board-create button {
+  color: #fff;
+  background: linear-gradient(135deg, #4c7dff 0%, #8055ff 46%, #ef4edb 100%);
+  box-shadow: 0 10px 30px rgba(111, 77, 255, .24), 0 0 20px rgba(230, 70, 255, .1);
+}
+
+.app-shell .reactions button {
+  border-color: rgba(120, 127, 226, .18);
+  background: rgba(22, 30, 55, .72);
+}
+
+.app-shell .reactions button:hover {
+  border-color: rgba(190, 84, 255, .44);
+  color: #f1d7ff;
+}
+
+.app-shell .composer-wrap {
+  background: linear-gradient(180deg, transparent, rgba(7, 11, 23, .98) 28%);
+}
+
+.app-shell .composer {
+  min-height: 54px;
+  border-color: rgba(132, 126, 242, .22);
+  border-radius: 15px;
+  background: rgba(21, 29, 52, .92);
+  box-shadow: 0 16px 38px rgba(0,0,0,.26), inset 0 1px rgba(255,255,255,.035);
+}
+
+.app-shell .composer:focus-within {
+  border-color: rgba(190, 78, 255, .55);
+  box-shadow: 0 0 0 3px rgba(165, 69, 246, .08), 0 16px 38px rgba(0,0,0,.26);
+}
+
+.app-shell .member-panel {
+  border-left-color: rgba(129, 119, 255, .22);
+  background:
+    radial-gradient(circle at 70% 0, rgba(130, 59, 221, .11), transparent 30%),
+    linear-gradient(180deg, rgba(10, 15, 31, .97), rgba(7, 11, 23, .98));
+}
+
+.app-shell .member {
+  min-height: 46px;
+  color: #eef0ff;
+}
+
+.app-shell .member:hover {
+  background: rgba(91, 91, 176, .1);
+}
+
+.app-shell .member > b {
+  color: #ef82ff;
+  background: rgba(200, 69, 240, .1);
+}
+
+.app-shell .mini-avatar i,
+.app-shell .presence {
+  background: var(--fz-success);
+  box-shadow: 0 0 9px rgba(49, 220, 148, .52);
+}
+
+.app-shell .achievement {
+  border-color: rgba(211, 75, 248, .22);
+  background: linear-gradient(120deg, rgba(95, 43, 138, .18), rgba(20, 28, 52, .75));
+}
+
+.app-shell .platform-workspace {
+  background:
+    radial-gradient(circle at 60% -10%, rgba(155, 55, 235, .18), transparent 38%),
+    linear-gradient(145deg, #070b18, #090d1c 60%, #0b0818);
+}
+
+.app-shell .social-hub-embedded,
+.app-shell .admin-dialog-embedded {
+  border: 1px solid rgba(137, 126, 255, .22);
+  background: rgba(9, 14, 29, .9);
+  box-shadow: 0 22px 80px rgba(0,0,0,.28), 0 0 60px rgba(116, 61, 218, .06);
+}
+
+.dialog-backdrop {
+  background: rgba(2, 4, 12, .8);
+  backdrop-filter: blur(18px) saturate(125%);
+}
+
+.space-dialog {
+  border-color: rgba(169, 105, 255, .3);
+  background:
+    radial-gradient(circle at 100% 0, rgba(203, 66, 241, .14), transparent 34%),
+    linear-gradient(145deg, rgba(18, 25, 49, .98), rgba(8, 13, 28, .99));
+  box-shadow: 0 28px 100px rgba(0,0,0,.58), 0 0 55px rgba(142, 62, 237, .12);
+}
+
+.space-dialog input:not(.color-input),
+.space-dialog textarea,
+.space-dialog select,
+.auth-input {
+  border-color: rgba(128, 127, 231, .2);
+  background: rgba(8, 13, 28, .78);
+}
+
+.space-dialog input:focus,
+.space-dialog textarea:focus,
+.space-dialog select:focus,
+.auth-input:focus-within {
+  border-color: rgba(205, 77, 255, .58);
+  box-shadow: 0 0 0 3px rgba(175, 67, 246, .09);
+}
+
+.auth-submit,
+.dialog-symbol {
+  background: linear-gradient(135deg, #4c7dff 0%, #8551ff 50%, #f14ed9 100%);
+  box-shadow: 0 12px 32px rgba(119, 72, 255, .26);
+}
+
+/* Social, Discovery and management surfaces */
+.app-shell .social-hub,
+.app-shell .admin-dialog,
+.social-hub:not(.social-hub-embedded),
+.admin-dialog:not(.admin-dialog-embedded) {
+  width: min(1180px, calc(100vw - 32px));
+  border-color: rgba(130, 119, 255, .24);
+  background:
+    radial-gradient(circle at 76% -12%, rgba(164, 57, 238, .17), transparent 34%),
+    linear-gradient(145deg, rgba(12, 18, 39, .98), rgba(6, 10, 23, .99));
+}
+
+.social-hub > header,
+.admin-dialog > header,
+.social-hub > nav {
+  border-color: rgba(128, 127, 231, .16);
+}
+
+.social-hub header small,
+.admin-dialog header small {
+  color: #a991ff;
+}
+
+.social-hub > nav button.active {
+  color: #ec8cff;
+  background: linear-gradient(135deg, rgba(91, 111, 255, .16), rgba(211, 61, 236, .13));
+  box-shadow: inset 0 0 0 1px rgba(185, 91, 255, .15);
+}
+
+.direct-layout.has-profile {
+  grid-template-columns: 270px minmax(360px, 1fr) 272px;
+}
+
+.direct-layout > aside:first-child {
+  background: rgba(4, 8, 20, .42);
+  border-color: rgba(128, 127, 231, .13);
+}
+
+.direct-layout > aside:first-child > button {
+  min-height: 58px;
+  transition: background .18s ease, transform .18s ease;
+}
+
+.direct-layout > aside:first-child > button:hover {
+  background: rgba(114, 108, 239, .08);
+  transform: translateX(2px);
+}
+
+.direct-layout > aside:first-child > button.active {
+  background: linear-gradient(100deg, rgba(73, 117, 255, .17), rgba(202, 64, 236, .12));
+  box-shadow: inset 2px 0 #c55bf4;
+}
+
+.direct-title {
+  border-color: rgba(128, 127, 231, .14);
+  background: rgba(8, 13, 29, .5);
+}
+
+.direct-messages {
+  background:
+    radial-gradient(circle at 82% 20%, rgba(95, 75, 223, .07), transparent 28%),
+    transparent;
+}
+
+.direct-messages article {
+  border: 1px solid rgba(142, 137, 218, .13);
+  background: rgba(30, 39, 68, .78);
+}
+
+.direct-messages article.mine {
+  border-color: rgba(218, 82, 245, .24);
+  background: linear-gradient(135deg, #526fea, #8c4be2 54%, #cd4bd5);
+  box-shadow: 0 8px 22px rgba(101, 65, 222, .16);
+}
+
+.direct-composer {
+  border-color: rgba(128, 127, 231, .14);
+  background: rgba(5, 9, 21, .6);
+}
+
+.direct-composer input,
+.friend-search input {
+  border-color: rgba(128, 127, 231, .19);
+  background: rgba(12, 18, 37, .9);
+}
+
+.direct-composer input:focus,
+.friend-search input:focus {
+  border-color: rgba(191, 81, 255, .52);
+  box-shadow: 0 0 0 3px rgba(178, 75, 246, .08);
+}
+
+.direct-composer button,
+.friend-search button,
+.person-row button,
+.superflip-panel > button {
+  background: linear-gradient(135deg, #4c7dff, #8551ff 52%, #e74ad7);
+}
+
+.direct-layout > .direct-profile {
+  overflow-y: auto;
+  padding: 0 16px 18px;
+  border: 0;
+  border-left: 1px solid rgba(128, 127, 231, .14);
+  background: rgba(5, 9, 21, .68);
+}
+
+.direct-profile-cover {
+  height: 84px;
+  margin: 0 -16px;
+  background:
+    radial-gradient(circle at 30% 10%, rgba(70, 169, 255, .55), transparent 38%),
+    linear-gradient(120deg, #1941a2, #6a35c3 58%, #bd3cb2);
+}
+
+.direct-profile-identity {
+  position: relative;
+  padding: 0 2px 17px;
+  border-bottom: 1px solid rgba(128, 127, 231, .14);
+}
+
+.direct-profile-identity .social-avatar {
+  width: 68px;
+  height: 68px;
+  margin-top: -34px;
+  border: 5px solid #080d1d;
+  border-radius: 21px;
+  font-size: .84rem;
+}
+
+.direct-presence {
+  position: absolute;
+  top: 22px;
+  left: 54px;
+  width: 13px;
+  height: 13px;
+  border: 3px solid #080d1d;
+  border-radius: 50%;
+  background: #697184;
+}
+
+.direct-presence.online { background: #35e58b; }
+.direct-profile h3 { margin: 11px 0 2px; font-size: .92rem; }
+.direct-profile-identity p { margin: 0; color: #8e96ac; font-size: .58rem; }
+.direct-profile-identity small { margin-top: 7px; color: #697287; }
+
+.direct-profile-identity button {
+  width: 100%;
+  min-height: 36px;
+  margin-top: 14px;
+  border: 1px solid rgba(150, 123, 255, .23);
+  border-radius: 10px;
+  background: rgba(101, 80, 220, .1);
+  color: #d8d9f3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  cursor: pointer;
+}
+
+.direct-profile > section { display: grid; gap: 7px; padding-top: 17px; }
+.direct-profile > section h4 { margin: 0 0 3px; color: #757f97; font-size: .53rem; letter-spacing: .1em; text-transform: uppercase; }
+.direct-profile > section span { min-height: 34px; border-radius: 9px; background: rgba(117, 105, 221, .06); color: #aeb5ca; padding: 8px 9px; display: flex; align-items: center; gap: 9px; font-size: .56rem; }
+.direct-profile > section span svg { color: #b861f2; }
+.direct-profile-note p { margin: 0; color: #717a90; font-size: .54rem; line-height: 1.55; }
+
+.friends-content,
+.admin-users { scrollbar-color: rgba(154, 91, 238, .35) transparent; }
+.person-row { border-color: rgba(128, 127, 231, .13); }
+
+.superflip-panel {
+  background:
+    radial-gradient(circle at 50% 4%, rgba(229, 57, 221, .2), transparent 35%),
+    radial-gradient(circle at 16% 70%, rgba(67, 120, 255, .13), transparent 30%);
+}
+
+.superflip-icon {
+  background: linear-gradient(135deg, #417fff, #8f4cf0 50%, #f34cc8);
+  box-shadow: 0 18px 55px rgba(166, 65, 235, .3);
+}
+
+.premium-features span,
+.admin-stats span {
+  border-color: rgba(144, 112, 255, .18);
+  background: linear-gradient(145deg, rgba(67, 91, 177, .09), rgba(141, 56, 192, .06));
+}
+
+.admin-dialog > header > span {
+  color: #cc72ff;
+  background: rgba(148, 73, 239, .13);
+}
+
+.admin-users article { border-color: rgba(128, 127, 231, .13); }
+.admin-users article button { border: 1px solid rgba(140, 126, 223, .13); background: rgba(25, 32, 58, .9); }
+
+.discovery-dialog {
+  border-color: rgba(131, 120, 255, .24);
+  background: #080d1c;
+  box-shadow: 0 35px 120px rgba(0,0,0,.72), 0 0 60px rgba(124, 60, 225, .1);
+}
+
+.discovery-nav { background: #060a17; border-color: rgba(128, 127, 231, .14); }
+.discovery-nav-brand { color: #c45bfa; }
+.discovery-nav nav button.active { background: linear-gradient(90deg, rgba(76, 125, 255, .17), rgba(218, 61, 226, .1)); }
+.discovery-nav nav button.active svg,
+.discovery-hero > span,
+.discovery-section-title span,
+.discovery-card-copy h3 svg { color: #c45bfa; }
+.discovery-content { background: #080d1c; }
+.discovery-hero { background: radial-gradient(circle at 85% 10%, rgba(183, 55, 234, .25), transparent 35%), radial-gradient(circle at 20% 0, rgba(54, 124, 255, .18), transparent 38%), #0b1123; }
+.discovery-search { border-color: rgba(128, 127, 231, .18); background: rgba(4, 8, 19, .78); }
+.discovery-search:focus-within { border-color: rgba(202, 78, 255, .52); box-shadow: 0 0 0 3px rgba(186, 70, 245, .08), 0 12px 35px #0005; }
+.discovery-card,
+.discovery-card.featured { border-color: rgba(128, 127, 231, .14); background: linear-gradient(145deg, rgba(21, 30, 59, .9), rgba(19, 15, 43, .94)); }
+.discovery-card-icon { border-color: #10162b; }
+.discovery-card:hover { border-color: rgba(200, 78, 255, .35); box-shadow: 0 18px 44px rgba(20, 5, 47, .48); }
+.discovery-card > button { background: linear-gradient(135deg, #4c7dff, #9c4cee, #dc4bd1); color: #fff; }
+
+@media (max-width: 1180px) and (min-width: 761px) {
+  .app-shell { grid-template-columns: 68px 246px minmax(390px, 1fr); }
+  .app-shell > .member-panel { display: none; }
+}
+
+@media (max-width: 1280px) {
+  .direct-layout.has-profile { grid-template-columns: 270px minmax(0, 1fr); }
+  .direct-layout > .direct-profile { display: none; }
+}
+
+@media (max-width: 760px) {
+  .app-shell.app-shell {
+    background:
+      radial-gradient(circle at 90% -10%, rgba(177, 57, 241, .19), transparent 36%),
+      linear-gradient(180deg, #080c1a, #050812);
+  }
+
+  .app-shell .chat-panel,
+  .app-shell .composer-wrap {
+    background-color: transparent;
+  }
+
+  .app-shell .channel-panel {
+    background: rgba(7, 11, 24, .98);
+  }
+
+  .app-shell .mobile-tab-bar {
+    border-top-color: rgba(139, 126, 255, .22);
+    background: rgba(5, 8, 18, .94);
+  }
+
+  .app-shell .mobile-tab-bar button.active {
+    color: #dd77ff;
+    background: rgba(138, 75, 239, .13);
+  }
+
+  .social-hub:not(.social-hub-embedded),
+  .admin-dialog:not(.admin-dialog-embedded) {
+    width: 100vw;
+  }
+
+  .direct-layout.has-profile { grid-template-columns: 1fr; }
+}
