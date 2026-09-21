@@ -166,18 +166,19 @@ function readPreferences(): Preferences {
 
 type BlockedUser = { id:string; username:string; displayName:string; avatarUrl?:string|null; createdAt:string };
 function PreferencesSection({ kind }: { kind: "privacy" | "notifications" }) {
+  const [preferences, setPreferences] = useState(readPreferences);
+  const [privacyLoading,setPrivacyLoading]=useState(kind==="privacy");
   const [blocked,setBlocked]=useState<BlockedUser[]>([]); const [blockBusy,setBlockBusy]=useState("");
   async function loadBlocked(){if(kind!=="privacy")return;const r=await fetch("/api/blocks");if(r.ok)setBlocked((await r.json()).blocked??[])}
-  useEffect(()=>{void loadBlocked()},[kind]);
-  async function unblock(id:string){setBlockBusy(id);const r=await fetch(`/api/blocks?userId=${encodeURIComponent(id)}`,{method:"DELETE"});if(r.ok)setBlocked(items=>items.filter(item=>item.id!==id));setBlockBusy("")}
-  const [preferences, setPreferences] = useState(readPreferences);
-  function toggle(key: keyof typeof preferenceDefaults) {
-    setPreferences((current) => {
-      const next = { ...current, [key]: !current[key] };
-      localStorage.setItem("flipzero:preferences:v1", JSON.stringify(next));
-      return next;
-    });
+  useEffect(()=>{if(kind!=="privacy")return;void Promise.all([fetch("/api/privacy").then(async r=>{if(r.ok)setPreferences(current=>({...current,...(await r.json()).privacy}))}),loadBlocked()]).finally(()=>setPrivacyLoading(false))},[kind]);
+  async function toggle(key: keyof typeof preferenceDefaults) {
+    const next={...preferences,[key]:!preferences[key]}; setPreferences(next);
+    if(kind==="privacy"&&(key==="directMessages"||key==="friendRequests"||key==="profileDiscovery")){
+      const r=await fetch("/api/privacy",{method:"PATCH",headers:{"content-type":"application/json"},body:JSON.stringify(next)});
+      if(!r.ok){setPreferences(preferences);return}
+    } else localStorage.setItem("flipzero:preferences:v1",JSON.stringify(next));
   }
+  async function unblock(id:string){setBlockBusy(id);const r=await fetch(`/api/blocks?userId=${encodeURIComponent(id)}`,{method:"DELETE"});if(r.ok)setBlocked(items=>items.filter(item=>item.id!==id));setBlockBusy("")}
   const items = kind === "privacy" ? [
     ["directMessages", "Личные сообщения", "Разрешить участникам общих серверов писать вам."],
     ["friendRequests", "Запросы в друзья", "Получать новые запросы в друзья."],
@@ -187,7 +188,7 @@ function PreferencesSection({ kind }: { kind: "privacy" | "notifications" }) {
     ["messageSounds", "Звуки сообщений", "Воспроизводить звук при новом сообщении."],
     ["mentionsOnly", "Только упоминания", "Не отвлекать уведомлениями без упоминания."],
   ] as const;
-  return <><SettingsHeading kicker={kind === "privacy" ? "КОНФИДЕНЦИАЛЬНОСТЬ" : "УВЕДОМЛЕНИЯ"} title={kind === "privacy" ? "Приватность и безопасность" : "Настройки уведомлений"} description={kind === "privacy" ? "Управляйте тем, кто может связаться с вами и видеть профиль." : "Выберите, какие события требуют вашего внимания."} /><div className="settings-list">{items.map(([key, title, description]) => <label key={key} className="settings-row"><span><strong>{title}</strong><small>{description}</small></span><input type="checkbox" checked={preferences[key]} onChange={() => toggle(key)} /><i /></label>)}</div>{kind==="privacy"?<div className="blocked-users-settings"><h3><UserX size={18}/> Заблокированные пользователи</h3><p>Заблокированные пользователи не могут отправлять вам личные сообщения или заявки в друзья.</p>{blocked.length?blocked.map(item=><article key={item.id}><span className="account-profile-avatar">{item.avatarUrl?<MediaImage src={item.avatarUrl}/>:item.displayName.slice(0,2)}</span><div><strong>{item.displayName}</strong><small>@{item.username}</small></div><button type="button" disabled={blockBusy===item.id} onClick={()=>void unblock(item.id)}>{blockBusy===item.id?"Подождите…":"Разблокировать"}</button></article>):<small>У вас нет заблокированных пользователей.</small>}</div>:null}</>;
+  return <><SettingsHeading kicker={kind === "privacy" ? "КОНФИДЕНЦИАЛЬНОСТЬ" : "УВЕДОМЛЕНИЯ"} title={kind === "privacy" ? "Приватность и безопасность" : "Настройки уведомлений"} description={kind === "privacy" ? "Управляйте тем, кто может связаться с вами и видеть профиль." : "Выберите, какие события требуют вашего внимания."} />{privacyLoading?<div className="chat-loading"><LoaderCircle className="spin"/> Загружаем настройки…</div>:<div className="settings-list">{items.map(([key,title,description])=><label key={key} className="settings-row"><span><strong>{title}</strong><small>{description}</small></span><input type="checkbox" checked={preferences[key]} onChange={()=>void toggle(key)}/><i/></label>)}</div>}{kind==="privacy"?<div className="blocked-users-settings"><h3><UserX size={18}/> Заблокированные пользователи</h3><p>Заблокированные пользователи не могут отправлять вам личные сообщения или заявки в друзья.</p>{blocked.length?blocked.map(item=><article key={item.id}><span className="account-profile-avatar">{item.avatarUrl?<MediaImage src={item.avatarUrl}/>:item.displayName.slice(0,2)}</span><div><strong>{item.displayName}</strong><small>@{item.username}</small></div><button type="button" disabled={blockBusy===item.id} onClick={()=>void unblock(item.id)}>{blockBusy===item.id?"Подождите…":"Разблокировать"}</button></article>):<small>У вас нет заблокированных пользователей.</small>}</div>:null}</>;
 }
 
 type AudioDevices = { inputs: MediaDeviceInfo[]; outputs: MediaDeviceInfo[] };
