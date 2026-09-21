@@ -14,12 +14,12 @@ export async function GET(request: Request) {
   const [catalog, joinedRows, blockRows] = await Promise.all([
     database.select({ id: spaces.id, ownerId: spaces.ownerId, name: spaces.name, slug: spaces.slug, description: spaces.description, iconUrl: spaces.iconUrl, bannerUrl: spaces.bannerUrl, accentColor: spaces.accentColor, memberCount: sql<number>`count(${members.userId})::int`, createdAt: spaces.createdAt }).from(spaces).leftJoin(members, eq(members.spaceId, spaces.id)).where(and(...conditions)).groupBy(spaces.id).orderBy(desc(sql`lower(${spaces.name}) = 'flipzero hq'`), desc(sql`count(${members.userId})`), desc(spaces.createdAt)).limit(60),
     database.select({ spaceId: members.spaceId }).from(members).where(eq(members.userId, user.id)),
-    database.select({ blockedId: userBlocks.blockedId }).from(userBlocks).where(eq(userBlocks.blockerId, user.id)),
+    database.select({ blockerId: userBlocks.blockerId, blockedId: userBlocks.blockedId }).from(userBlocks).where(or(eq(userBlocks.blockerId, user.id), eq(userBlocks.blockedId, user.id))),
   ]);
   const joinedIds = new Set(joinedRows.map((row) => row.spaceId));
-  const blockedIds = new Set(blockRows.map((row) => row.blockedId));
-  const visibleCatalog = catalog.filter((space) => !blockedIds.has((space as typeof space & { ownerId?: string }).ownerId ?? ""));
-  return NextResponse.json({ spaces: visibleCatalog.map((space) => ({ ...space, joined: joinedIds.has(space.id) })) });
+  const blockedIds = new Set(blockRows.map((row) => row.blockerId === user.id ? row.blockedId : row.blockerId));
+  const visibleCatalog = catalog.filter((space) => !blockedIds.has(space.ownerId));
+  return NextResponse.json({ spaces: visibleCatalog.map(({ ownerId: _ownerId, ...space }) => ({ ...space, joined: joinedIds.has(space.id) })) });
 }
 
 export async function POST(request: Request) {
