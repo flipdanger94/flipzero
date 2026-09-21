@@ -21,7 +21,10 @@ export async function GET(_request: Request, { params }: { params: Promise<{ use
     const [blocked] = await db.select().from(userBlocks).where(or(and(eq(userBlocks.blockerId, viewer.id), eq(userBlocks.blockedId, userId)), and(eq(userBlocks.blockerId, userId), eq(userBlocks.blockedId, viewer.id)))).limit(1);
     if (blocked) return NextResponse.json({ code: "PROFILE_UNAVAILABLE", message: "Профиль недоступен." }, { status: 403 });
     const [privacy] = await db.select({ profileDiscovery: userPrivacySettings.profileDiscovery }).from(userPrivacySettings).where(eq(userPrivacySettings.userId, userId)).limit(1);
-    if (privacy?.profileDiscovery === false) return NextResponse.json({ code: "PRIVATE_PROFILE", message: "Пользователь ограничил просмотр профиля." }, { status: 403 });
+    if (privacy?.profileDiscovery === false) {
+      const [friend] = await db.select({ friendId: friends.friendId }).from(friends).where(and(eq(friends.userId, viewer.id), eq(friends.friendId, userId))).limit(1);
+      if (!friend) return NextResponse.json({ code: "PRIVATE_PROFILE", message: "Пользователь ограничил просмотр профиля." }, { status: 403 });
+    }
   }
 
   const [[messageCount], [friendCount], [serverCount], serverRows] = await Promise.all([
