@@ -22,8 +22,10 @@ export async function GET() {
 export async function PATCH(request: Request) {
   const access = await requireAdmin(); if ("error" in access) return access.error;
   const body = await request.json().catch(() => null); const targetUserId = String(body?.userId ?? ""); const action = String(body?.action ?? "");
+  const database = getDatabase();
+  if (action === "review_flag") { const flagId = String(body?.flagId ?? ""); const status = body?.status === "resolved" || body?.status === "rejected" ? body.status : ""; if (!flagId || !status) return NextResponse.json({ message: "Некорректное действие модерации." }, { status: 400 }); await database.update(moderationFlags).set({ status, reviewedById: access.user.id, reviewedAt: new Date() }).where(eq(moderationFlags.id, flagId)); await database.insert(adminAuditLogs).values({ id: randomUUID(), adminId: access.user.id, action: `moderation.${status}`, metadata: { flagId } }); return NextResponse.json({ ok: true }); }
   if (!targetUserId || targetUserId === access.user.id) return NextResponse.json({ message: "Нельзя изменить этот аккаунт." }, { status: 400 });
-  const database = getDatabase(); const [target] = await database.select({ id: users.id }).from(users).where(eq(users.id, targetUserId)).limit(1); if (!target) return NextResponse.json({ message: "Пользователь не найден." }, { status: 404 });
+  const [target] = await database.select({ id: users.id }).from(users).where(eq(users.id, targetUserId)).limit(1); if (!target) return NextResponse.json({ message: "Пользователь не найден." }, { status: 404 });
   const result: Record<string, unknown> = { ok: true };
   if (action === "ban") await database.update(users).set({ bannedAt: new Date(), banReason: String(body?.reason ?? "Нарушение правил").slice(0, 500) }).where(eq(users.id, targetUserId));
   else if (action === "unban") await database.update(users).set({ bannedAt: null, banReason: null }).where(eq(users.id, targetUserId));
