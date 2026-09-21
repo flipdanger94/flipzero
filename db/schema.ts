@@ -341,6 +341,20 @@ export const moderationCases = pgTable("moderation_cases", {
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 }, (table) => [index("moderation_space_target_idx").on(table.spaceId, table.targetUserId)]);
 
+export const reports = pgTable("reports", {
+  id: text("id").primaryKey(),
+  reporterId: text("reporter_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  targetType: text("target_type").notNull(),
+  targetId: text("target_id").notNull(),
+  reason: text("reason").notNull(),
+  description: text("description"),
+  status: text("status").default("open").notNull(),
+  assignedModeratorId: text("assigned_moderator_id").references(() => users.id, { onDelete: "set null" }),
+  moderatorNote: text("moderator_note"),
+  resolvedAt: timestamp("resolved_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [index("reports_status_created_idx").on(table.status, table.createdAt), index("reports_target_idx").on(table.targetType, table.targetId)]);
+
 export const moderationFlags = pgTable("moderation_flags", {
   id: text("id").primaryKey(),
   spaceId: text("space_id").notNull().references(() => spaces.id, { onDelete: "cascade" }),
