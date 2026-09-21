@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server";
-const SESSION_COOKIE = "flipzero_session";
+import { SESSION_COOKIE } from "@/lib/auth-constants";
+import { isProtectedRoute, loginPathFor } from "@/lib/route-access";
 
 export function proxy(request: NextRequest) {
   if (request.nextUrl.pathname.startsWith("/api/") && !["GET", "HEAD", "OPTIONS"].includes(request.method)) {
@@ -14,13 +15,25 @@ export function proxy(request: NextRequest) {
     }
     if (!trusted) return NextResponse.json({ code: "UNTRUSTED_ORIGIN", message: "Запрос отклонён." }, { status: 403 });
   }
-  if (!request.nextUrl.pathname.startsWith("/app") && !request.nextUrl.pathname.startsWith("/channels/")) return NextResponse.next();
-  if (!request.cookies.has(SESSION_COOKIE)) {
-    const login = new URL("/login", request.url);
-    login.searchParams.set("next", `${request.nextUrl.pathname}${request.nextUrl.search}`);
-    return NextResponse.redirect(login);
-  }
-  return NextResponse.next();
+
+  if (!isProtectedRoute(request.nextUrl.pathname)) return NextResponse.next();
+  if (request.cookies.get(SESSION_COOKIE)?.value) return NextResponse.next();
+
+  return NextResponse.redirect(
+    new URL(
+      loginPathFor(request.nextUrl.pathname, request.nextUrl.search),
+      request.url,
+    ),
+  );
 }
 
-export const config = { matcher: ["/app", "/channels/:path*", "/api/:path*"] };
+export const config = {
+  matcher: [
+    "/app/:path*",
+    "/channels/:path*",
+    "/communities/:path*",
+    "/invite/:path*",
+    "/setup/:path*",
+    "/api/:path*",
+  ],
+};

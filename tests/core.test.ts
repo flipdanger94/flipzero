@@ -6,6 +6,27 @@ import { normalizeDirectMessage } from "../lib/direct-message";
 import { isCurrentSessionToken, isTrustedMutationRequest, requestFingerprint, verifyCurrentPassword } from "../lib/security-controls";
 import { isSuperFlipActive, subscriptionExpiry } from "../lib/superflip";
 import { createTotpSecret, decryptTotpSecret, encryptTotpSecret, hashBackupCode, verifyTotp } from "../lib/totp";
+import { isProtectedRoute, loginPathFor } from "../lib/route-access";
+
+describe("protected application routes", () => {
+  it("protects application, community, channel, invite, and setup pages", () => {
+    expect(isProtectedRoute("/app")).toBe(true);
+    expect(isProtectedRoute("/communities/flipzero")).toBe(true);
+    expect(isProtectedRoute("/channels/space/channel")).toBe(true);
+    expect(isProtectedRoute("/invite/abc123")).toBe(true);
+    expect(isProtectedRoute("/setup/release-0011")).toBe(true);
+  });
+
+  it("keeps public pages public and preserves the return URL", () => {
+    expect(isProtectedRoute("/")).toBe(false);
+    expect(isProtectedRoute("/login")).toBe(false);
+    expect(isProtectedRoute("/download")).toBe(false);
+    expect(isProtectedRoute("/application-info")).toBe(false);
+    expect(loginPathFor("/communities/flipzero", "?channel=general")).toBe(
+      "/login?next=%2Fcommunities%2Fflipzero%3Fchannel%3Dgeneral",
+    );
+  });
+});
 
 describe("SuperFlip grants", () => {
   it("accepts an unrevoked future grant and rejects an expired grant", () => {

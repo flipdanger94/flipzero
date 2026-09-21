@@ -1,27 +1,28 @@
 import Link from "next/link";
 import { and, asc, eq, sql } from "drizzle-orm";
 import { Hash, ShieldCheck, Sparkles, Users } from "lucide-react";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { CommunityActions } from "@/components/community-actions";
 import { BrandMark } from "@/components/brand-mark";
 import { getDatabase } from "@/db/client";
 import { MediaImage } from "@/components/media-image";
 import { channels, members, spaces } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
+import { loginPathFor } from "@/lib/route-access";
 
 export default async function CommunityPage({ params, searchParams }: { params: Promise<{ slug: string }>; searchParams: Promise<{ channel?: string | string[] }> }) {
   const [{ slug }, query] = await Promise.all([params, searchParams]);
   const requestedChannelId = typeof query.channel === "string" ? query.channel : null;
+  const user = await getCurrentUser();
+  const communityPath = `/communities/${encodeURIComponent(slug)}${requestedChannelId ? `?channel=${encodeURIComponent(requestedChannelId)}` : ""}`;
+  if (!user) redirect(loginPathFor(communityPath));
   const database = getDatabase();
-  const [spaceRows, user] = await Promise.all([
-    database.select({ id: spaces.id, name: spaces.name, slug: spaces.slug, description: spaces.description, iconUrl: spaces.iconUrl, bannerUrl: spaces.bannerUrl, visibility: spaces.visibility, accentColor: spaces.accentColor, memberCount: sql<number>`count(${members.userId})::int` }).from(spaces).leftJoin(members, eq(members.spaceId, spaces.id)).where(eq(spaces.slug, slug)).groupBy(spaces.id).limit(1),
-    getCurrentUser(),
-  ]);
+  const spaceRows = await database.select({ id: spaces.id, name: spaces.name, slug: spaces.slug, description: spaces.description, iconUrl: spaces.iconUrl, bannerUrl: spaces.bannerUrl, visibility: spaces.visibility, accentColor: spaces.accentColor, memberCount: sql<number>`count(${members.userId})::int` }).from(spaces).leftJoin(members, eq(members.spaceId, spaces.id)).where(eq(spaces.slug, slug)).groupBy(spaces.id).limit(1);
   const space = spaceRows[0];
   if (!space) notFound();
 
   const [membershipRows, channelRows, requestedChannelRows] = await Promise.all([
-    user ? database.select({ userId: members.userId }).from(members).where(and(eq(members.spaceId, space.id), eq(members.userId, user.id))).limit(1) : Promise.resolve([]),
+    database.select({ userId: members.userId }).from(members).where(and(eq(members.spaceId, space.id), eq(members.userId, user.id))).limit(1),
     database.select({ id: channels.id }).from(channels).where(eq(channels.spaceId, space.id)).orderBy(asc(channels.position)).limit(1),
     requestedChannelId ? database.select({ id: channels.id }).from(channels).where(and(eq(channels.id, requestedChannelId), eq(channels.spaceId, space.id))).limit(1) : Promise.resolve([]),
   ]);

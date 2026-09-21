@@ -4,8 +4,9 @@ import { cookies, headers } from "next/headers";
 import { and, eq, gt } from "drizzle-orm";
 import { getDatabase } from "@/db/client";
 import { sessions, users } from "@/db/schema";
+import { SESSION_COOKIE } from "@/lib/auth-constants";
 
-export const SESSION_COOKIE = "flipzero_session";
+export { SESSION_COOKIE } from "@/lib/auth-constants";
 const SESSION_MAX_AGE = 60 * 60 * 24 * 30;
 const hashValue = (value: string) => createHash("sha256").update(value).digest("hex");
 
