@@ -1,7 +1,7 @@
 "use client";
 
 import { type FormEvent, useEffect, useState } from "react";
-import { Bell, BookOpen, Check, ChevronDown, CirclePlus, Code2, Compass, Copy, Gem, Gift, Hash, Headphones, HelpCircle, Home as HomeIcon, Image as ImageIcon, LoaderCircle, Menu, MessageCircle, Mic, Plus, Search, SendHorizontal, Settings, Settings2, Share2, ShieldCheck, Smile, Sparkles, Trash2, UserRound, Users, Volume2, X } from "lucide-react";
+import { Bell, BookOpen, Check, ChevronDown, CirclePlus, Code2, Compass, Copy, Gem, Gift, Hash, Headphones, HelpCircle, Home as HomeIcon, Image as ImageIcon, LoaderCircle, Menu, MessageCircle, Mic, MicOff, MonitorUp, Plus, Search, SendHorizontal, Settings, Settings2, Share2, ShieldCheck, Smile, Sparkles, Trash2, UserRound, Users, Video, Volume2, X } from "lucide-react";
 import { CreateSpaceDialog } from "@/components/create-space-dialog";
 import { MediaImage } from "@/components/media-image";
 import { CreateChannelDialog, type CreatedChannel } from "@/components/create-channel-dialog";
@@ -16,7 +16,7 @@ import { GamificationDialog } from "@/components/gamification-dialog";
 import { PersistentChat } from "@/components/persistent-chat";
 import { ChannelBoard } from "@/components/channel-board";
 import { ForumChannel } from "@/components/forum-channel";
-import { VoiceRoom } from "@/components/voice-room";
+import { VoiceRoom, type VoicePresence } from "@/components/voice-room";
 import { DiscoveryDialog } from "@/components/discovery-dialog";
 import { EventsDialog } from "@/components/events-dialog";
 import { WikiDialog } from "@/components/wiki-dialog";
@@ -32,6 +32,7 @@ import { OnboardingWizard } from "@/components/onboarding-wizard";
 type ApiChannel = { id: string; parentId: string | null; name: string; topic: string | null; kind: string; position?: number };
 type ApiCategory = { id: string; spaceId: string; name: string; position: number };
 type ApiSpace = { id: string; ownerId?: string; name: string; slug: string; description: string | null; iconUrl?: string | null; bannerUrl?: string | null; visibility?: string; accentColor: string; categories: ApiCategory[]; channels: ApiChannel[] };
+type SpaceMember = { userId: string; nickname: string | null; username: string | null; displayName: string; avatarUrl: string | null; level: number; };
 type CurrentUser = AccountProfile;
 type Message = { initials: string; name: string; time: string; text: string; accent: string; reactions: string[]; badge?: string; quest?: boolean };
 
@@ -54,17 +55,11 @@ const channelDetails: Record<string, { title: string; description: string }> = {
   "творчество": { title: "Покажите, что вы создаёте", description: "Работы, процессы, идеи и поддержка от сообщества." },
   "игры": { title: "Играем вместе", description: "Ищите команду, договаривайтесь о сессиях и делитесь моментами." },
 };
-const members = [
-  { initials: "AP", name: "Alex Push", status: "Создаёт будущее", level: 12, accent: "avatar-coral" },
-  { initials: "MK", name: "Mira K.", status: "В общем чате", level: 9, accent: "avatar-violet" },
-  { initials: "IL", name: "Ilya", status: "Слушает музыку", level: 7, accent: "avatar-sky" },
-  { initials: "NN", name: "Nana", status: "В игре", level: 5, accent: "avatar-amber" },
-];
-
 export default function Home({ initialSpaceId, initialChannelId }: { initialSpaceId?: string; initialChannelId?: string } = {}) {
   const [channelMessages, setChannelMessages] = useState(initialChannelMessages);
   const [draft, setDraft] = useState("");
   const [activeChannel, setActiveChannel] = useState("общий-чат");
+  const [voicePresence, setVoicePresence] = useState<Record<string, VoicePresence[]>>({});
   const [searchQuery, setSearchQuery] = useState("");
   const [showMembers, setShowMembers] = useState(true);
   const [notifications, setNotifications] = useState(true);
@@ -96,6 +91,8 @@ export default function Home({ initialSpaceId, initialChannelId }: { initialSpac
   const [channelLinkCopied, setChannelLinkCopied] = useState(false);
   const [, setSpaceLinkCopied] = useState(false);
   const [serverMenuOpen, setServerMenuOpen] = useState(false);
+  const [spaceMembers, setSpaceMembers] = useState<SpaceMember[]>([]);
+  const [membersLoading, setMembersLoading] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -150,6 +147,30 @@ export default function Home({ initialSpaceId, initialChannelId }: { initialSpac
 
   const activeMessages = channelMessages[activeChannel] ?? [];
   const activeSpace = userSpaces.find((space) => space.id === activeSpaceId) ?? null;
+  useEffect(() => {
+    if (!activeSpaceId || !showMembers) return;
+    let cancelled = false;
+    queueMicrotask(() => { if (!cancelled) setMembersLoading(true); });
+    fetch(`/api/v1/spaces/${encodeURIComponent(activeSpaceId)}/members`, { cache: "no-store" })
+      .then((response) => response.ok ? response.json() : { members: [] })
+      .then((data) => { if (!cancelled) setSpaceMembers((data.members ?? []) as SpaceMember[]); })
+      .catch(() => { if (!cancelled) setSpaceMembers([]); })
+      .finally(() => { if (!cancelled) setMembersLoading(false); });
+    return () => { cancelled = true; };
+  }, [activeSpaceId, showMembers]);
+  useEffect(() => {
+    if (!activeSpaceId) return;
+    let cancelled = false;
+    const refresh = async () => {
+      const response = await fetch(`/api/v1/spaces/${encodeURIComponent(activeSpaceId)}/voice-presence`, { cache: "no-store" }).catch(() => null);
+      if (!response?.ok || cancelled) return;
+      const data = await response.json();
+      if (!cancelled) setVoicePresence(data.channels ?? {});
+    };
+    void refresh();
+    const interval = window.setInterval(refresh, 5000);
+    return () => { cancelled = true; window.clearInterval(interval); };
+  }, [activeSpaceId]);
   const activeRouteChannel = activeSpace?.channels.find((channel) => channel.name === activeChannel) ?? null;
   const activeApiChannel = activeSpace?.channels.find((channel) => channel.name === activeChannel && ["text", "forum", "announcement"].includes(channel.kind)) ?? null;
   const activeBoardChannel = activeSpace?.channels.find((channel) => channel.name === activeChannel && channel.kind === "board") ?? null;
@@ -304,14 +325,14 @@ export default function Home({ initialSpaceId, initialChannelId }: { initialSpac
         </div>
         {activeSpace ? <div className={`server-sidebar-banner ${activeSpace.bannerUrl ? "has-image" : ""}`} role="img" aria-label={`Баннер сервера ${activeSpace.name}`} style={{ backgroundImage: activeSpace.bannerUrl ? `linear-gradient(180deg, transparent 25%, rgba(8,9,13,.9)), url(${activeSpace.bannerUrl})` : `radial-gradient(circle at 85% 10%, ${activeSpace.accentColor}aa, transparent 46%), linear-gradient(135deg, #181b2b, ${activeSpace.accentColor}55)` }}><span className="server-banner-avatar" style={{ background: `linear-gradient(135deg, ${activeSpace.accentColor}, #b33bd4)` }}>{activeSpace.iconUrl ? <MediaImage src={activeSpace.iconUrl} /> : activeSpace.name.slice(0, 2).toLocaleUpperCase("ru")}</span><span className="server-banner-copy"><strong>{activeSpace.name}</strong><small>{activeSpace.description || "Сообщество FlipZero"}</small></span><span className="server-banner-superup"><Gem size={12} /> SuperUp</span></div> : null}
         <div className="channel-scroll">
-          {activeSpace ? <>{activeSpace.categories.map((category) => <ChannelGroup key={category.id} title={category.name.toLocaleUpperCase("ru")} onAdd={activeSpace.ownerId === user?.id ? () => setCreateChannelTarget({ kind: "text", parentId: category.id }) : undefined} onDelete={activeSpace.ownerId === user?.id ? () => deleteCategory(category) : undefined}>{activeSpace.channels.filter((channel) => channel.parentId === category.id).map((channel) => <Channel key={channel.id} active={activeChannel === channel.name} icon={channel.kind === "voice" ? <Volume2 size={17} /> : channel.name === "добро-пожаловать" ? <BookOpen size={17} /> : <Hash size={17} />} label={channel.name} voice={channel.kind === "voice"} onSelect={() => selectChannel(channel.name, channel.id, activeSpace.id)} onManage={activeSpace.ownerId === user?.id ? () => setPermissionsChannel(channel) : undefined} onDelete={activeSpace.ownerId === user?.id ? () => deleteChannel(channel) : undefined} />)}</ChannelGroup>)}{activeSpace.channels.some((channel) => !channel.parentId) ? <ChannelGroup title="БЕЗ КАТЕГОРИИ" onAdd={activeSpace.ownerId === user?.id ? () => setCreateChannelTarget({ kind: "text", parentId: null }) : undefined}>{activeSpace.channels.filter((channel) => !channel.parentId).map((channel) => <Channel key={channel.id} active={activeChannel === channel.name} icon={channel.kind === "voice" ? <Volume2 size={17} /> : <Hash size={17} />} label={channel.name} voice={channel.kind === "voice"} onSelect={() => selectChannel(channel.name, channel.id, activeSpace.id)} onManage={activeSpace.ownerId === user?.id ? () => setPermissionsChannel(channel) : undefined} onDelete={activeSpace.ownerId === user?.id ? () => deleteChannel(channel) : undefined} />)}</ChannelGroup> : null}{activeSpace.ownerId === user?.id ? <button className="category-add" onClick={() => setShowCreateCategory(true)}><Plus size={14} /> Новая категория</button> : null}</> : <div className="space-empty"><strong>Здесь пока пусто</strong><span>Создайте первое пространство, чтобы открыть каналы и роли.</span><button onClick={() => setShowCreateSpace(true)}>Создать пространство</button></div>}
+          {activeSpace ? <>{activeSpace.categories.map((category) => <ChannelGroup key={category.id} title={category.name.toLocaleUpperCase("ru")} onAdd={activeSpace.ownerId === user?.id ? () => setCreateChannelTarget({ kind: "text", parentId: category.id }) : undefined} onDelete={activeSpace.ownerId === user?.id ? () => deleteCategory(category) : undefined}>{activeSpace.channels.filter((channel) => channel.parentId === category.id).map((channel) => <Channel key={channel.id} active={activeChannel === channel.name} icon={channel.kind === "voice" ? <Volume2 size={17} /> : channel.name === "добро-пожаловать" ? <BookOpen size={17} /> : <Hash size={17} />} label={channel.name} voice={channel.kind === "voice"} participants={voicePresence[channel.id]} onSelect={() => selectChannel(channel.name, channel.id, activeSpace.id)} onManage={activeSpace.ownerId === user?.id ? () => setPermissionsChannel(channel) : undefined} onDelete={activeSpace.ownerId === user?.id ? () => deleteChannel(channel) : undefined} />)}</ChannelGroup>)}{activeSpace.channels.some((channel) => !channel.parentId) ? <ChannelGroup title="БЕЗ КАТЕГОРИИ" onAdd={activeSpace.ownerId === user?.id ? () => setCreateChannelTarget({ kind: "text", parentId: null }) : undefined}>{activeSpace.channels.filter((channel) => !channel.parentId).map((channel) => <Channel key={channel.id} active={activeChannel === channel.name} icon={channel.kind === "voice" ? <Volume2 size={17} /> : <Hash size={17} />} label={channel.name} voice={channel.kind === "voice"} participants={voicePresence[channel.id]} onSelect={() => selectChannel(channel.name, channel.id, activeSpace.id)} onManage={activeSpace.ownerId === user?.id ? () => setPermissionsChannel(channel) : undefined} onDelete={activeSpace.ownerId === user?.id ? () => deleteChannel(channel) : undefined} />)}</ChannelGroup> : null}{activeSpace.ownerId === user?.id ? <button className="category-add" onClick={() => setShowCreateCategory(true)}><Plus size={14} /> Новая категория</button> : null}</> : <div className="space-empty"><strong>Здесь пока пусто</strong><span>Создайте первое пространство, чтобы открыть каналы и роли.</span><button onClick={() => setShowCreateSpace(true)}>Создать пространство</button></div>}
         </div>
         <div className="user-dock"><button className="dock-profile" onClick={() => { setAccountSettingsSection("profile"); setMobileChannelsOpen(false); setShowAccountSettings(true); }}><span className="avatar avatar-coral">{user?.avatarUrl ? <MediaImage src={user.avatarUrl} /> : user?.displayName.split(/\s+/).map((part) => part[0]).join("").slice(0, 2).toLocaleUpperCase("ru") ?? "AP"}<span className="presence" /></span><span className="dock-copy"><strong>{user?.displayName ?? "Профиль"}</strong><small>Уровень {user?.globalLevel ?? 1}</small></span></button><button aria-label="Выбрать микрофон" title="Выбрать микрофон" onClick={() => { setAccountSettingsSection("voice"); setMobileChannelsOpen(false); setShowAccountSettings(true); }}><Mic size={17} /></button><button aria-label="Выбрать наушники" title="Выбрать наушники" onClick={() => { setAccountSettingsSection("voice"); setMobileChannelsOpen(false); setShowAccountSettings(true); }}><Headphones size={17} /></button><button aria-label="Настройки аккаунта" onClick={() => { setAccountSettingsSection("profile"); setMobileChannelsOpen(false); setShowAccountSettings(true); }}><Settings size={17} /></button></div>
       </aside>
 
       <section className="chat-panel">
         <header className="chat-header"><button className="mobile-menu-button" aria-label="Открыть сообщества и каналы" onClick={() => setMobileChannelsOpen(true)}><Menu size={20} /></button><div className="channel-title"><Hash size={21} /><strong>{activeChannel}</strong><span>Разговоры обо всём</span></div><div className="header-actions"><button className={`channel-share-action ${channelLinkCopied ? "is-active link-copied" : ""}`} aria-label={channelLinkCopied ? "Ссылка на канал скопирована" : "Поделиться ссылкой на канал"} title={channelLinkCopied ? "Скопировано" : "Поделиться ссылкой на канал"} onClick={shareChannelLink} disabled={!activeRouteChannel}>{channelLinkCopied ? <Check size={18} /> : <><Copy className="desktop-copy-icon" size={18} /><Share2 className="mobile-share-icon" size={18} /></>}</button><button className={notifications ? "is-active" : ""} aria-label={notifications ? "Выключить уведомления" : "Включить уведомления"} aria-pressed={notifications} onClick={() => setNotifications((value) => !value)}><Bell size={19} /></button><button className={showMembers ? "is-active" : ""} aria-label={showMembers ? "Скрыть участников" : "Показать участников"} aria-pressed={showMembers} onClick={() => setShowMembers((value) => !value)}><Users size={19} /></button><label className="search-box"><Search size={16} /><input aria-label="Поиск" placeholder="Поиск" value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} /></label></div></header>
-        {activeBoardChannel ? <ChannelBoard channelId={activeBoardChannel.id} channelName={activeBoardChannel.name} /> : activeForumChannel ? <ForumChannel channelId={activeForumChannel.id} channelName={activeForumChannel.name} /> : activeVoiceChannel ? <VoiceRoom key={activeVoiceChannel.id} channelId={activeVoiceChannel.id} channelName={activeVoiceChannel.name} /> : activeApiChannel && user ? <PersistentChat key={activeApiChannel.id} channelId={activeApiChannel.id} channelName={activeApiChannel.name} spaceId={activeSpace!.id} currentUserId={user.id} ownerId={activeSpace?.ownerId} searchQuery={searchQuery} /> : <><div className="message-list">
+        {activeBoardChannel ? <ChannelBoard channelId={activeBoardChannel.id} channelName={activeBoardChannel.name} /> : activeForumChannel ? <ForumChannel channelId={activeForumChannel.id} channelName={activeForumChannel.name} /> : activeVoiceChannel ? <VoiceRoom key={activeVoiceChannel.id} channelId={activeVoiceChannel.id} channelName={activeVoiceChannel.name} autoJoin onPresenceChange={(participants) => setVoicePresence((current) => ({ ...current, [activeVoiceChannel.id]: participants }))} /> : activeApiChannel && user ? <PersistentChat key={activeApiChannel.id} channelId={activeApiChannel.id} channelName={activeApiChannel.name} spaceId={activeSpace!.id} currentUserId={user.id} ownerId={activeSpace?.ownerId} searchQuery={searchQuery} /> : <><div className="message-list">
           <div className="channel-intro"><div className="intro-icon"><Hash size={31} /></div><h1>{activeDetails.title}</h1><p>Это начало канала <strong>#{activeChannel}</strong>. {activeDetails.description}</p></div>
           <div className="day-divider"><span>17 сентября 2026</span></div>
           {visibleMessages.map((message) => (
@@ -329,8 +350,7 @@ export default function Home({ initialSpaceId, initialChannelId }: { initialSpac
       </section>
 
       <aside className="member-panel">
-        <div className="profile-card"><div className="profile-art"><span>FLIP<br />ZERO</span></div><div className="profile-avatar avatar-coral">AP<span className="presence" /></div><div className="profile-copy"><strong>Alex Push</strong><span>@flipdanger · Основатель</span></div><div className="level-row"><span>Уровень 12</span><b>2 840 / 3 200 XP</b></div><div className="profile-progress"><i /></div><div className="profile-stats"><span><b>24</b><small>дня подряд</small></span><span><b>18</b><small>достижений</small></span><span><b>4</b><small>пути</small></span></div></div>
-        <div className="member-section"><h2>В СЕТИ — 4</h2>{members.map((member) => <button className="member" key={member.name}><span className={`mini-avatar ${member.accent}`}>{member.initials}<i /></span><span><strong>{member.name}</strong><small>{member.status}</small></span><b>{member.level}</b></button>)}</div>
+        <div className="member-section real-member-list"><h2>УЧАСТНИКИ — {spaceMembers.length}</h2>{membersLoading ? <div className="members-loading">Загрузка участников…</div> : spaceMembers.length ? spaceMembers.map((member) => <button className="member" key={member.userId}><span className="mini-avatar avatar-coral">{member.avatarUrl ? <MediaImage src={member.avatarUrl} /> : (member.displayName || member.username || "?").slice(0, 2).toLocaleUpperCase("ru")}<i /></span><span><strong>{member.nickname || member.displayName}</strong><small>@{member.username || "участник"}</small></span><b>{member.level}</b></button>) : <div className="members-loading">В этом сервере пока нет участников.</div>}</div>
         <div className="achievement"><div className="achievement-icon">✦</div><div><small>ПОЧТИ ПОЛУЧЕНО</small><strong>Ранний участник</strong><span>92% выполнено</span></div></div>
       </aside>
       <button className="mobile-drawer-backdrop" aria-label="Закрыть меню каналов" onClick={() => setMobileChannelsOpen(false)} />
@@ -343,6 +363,6 @@ export default function Home({ initialSpaceId, initialChannelId }: { initialSpac
 function ChannelGroup({ title, onAdd, onDelete, children }: { title: string; onAdd?: () => void; onDelete?: () => void; children: React.ReactNode }) {
   return <section className="channel-group"><h2><span>{title}</span><span className="category-actions">{onAdd ? <button aria-label={`Добавить в ${title}`} onClick={onAdd}><Plus size={15} /></button> : null}{onDelete ? <button aria-label={`Удалить категорию ${title}`} onClick={onDelete}><Trash2 size={13} /></button> : null}</span></h2>{children}</section>;
 }
-function Channel({ icon, label, active = false, badge, voice = false, onSelect, onManage, onDelete }: { icon: React.ReactNode; label: string; active?: boolean; badge?: string; voice?: boolean; onSelect?: () => void; onManage?: () => void; onDelete?: () => void }) {
-  return <div className={`channel-row ${active ? "active" : ""}`}><button className="channel" onClick={() => { if (onSelect) onSelect(); else if (!voice) window.dispatchEvent(new CustomEvent("flipzero:select-channel", { detail: label })); }}><span>{icon}</span><strong>{label}</strong>{voice ? <span className="live-pill">LIVE</span> : null}{badge ? <b>{badge}</b> : null}</button>{onManage ? <button className="channel-manage" aria-label={`Настроить права канала ${label}`} onClick={onManage}><Settings2 size={14} /></button> : null}{onDelete ? <button className="channel-delete" aria-label={`Удалить канал ${label}`} onClick={onDelete}><Trash2 size={14} /></button> : null}</div>;
+function Channel({ icon, label, active = false, badge, voice = false, participants = [], onSelect, onManage, onDelete }: { icon: React.ReactNode; label: string; active?: boolean; badge?: string; voice?: boolean; participants?: VoicePresence[]; onSelect?: () => void; onManage?: () => void; onDelete?: () => void }) {
+  return <div className={`channel-row ${active ? "active" : ""}`}><button className="channel" onClick={() => { if (onSelect) onSelect(); else if (!voice) window.dispatchEvent(new CustomEvent("flipzero:select-channel", { detail: label })); }}><span>{icon}</span><strong>{label}</strong>{voice ? <span className="live-pill">{participants.length || "LIVE"}</span> : null}{badge ? <b>{badge}</b> : null}</button>{onManage ? <button className="channel-manage" aria-label={`Настроить права канала ${label}`} onClick={onManage}><Settings2 size={14} /></button> : null}{onDelete ? <button className="channel-delete" aria-label={`Удалить канал ${label}`} onClick={onDelete}><Trash2 size={14} /></button> : null}{voice && participants.length ? <div className="voice-channel-participants">{participants.map((participant) => <button key={participant.id} onClick={onSelect} className={participant.speaking ? "speaking" : ""}><span>{participant.name.slice(0, 2).toLocaleUpperCase("ru")}</span><strong>{participant.name}</strong>{participant.sharing ? <MonitorUp size={12} /> : participant.camera ? <Video size={12} /> : participant.muted ? <MicOff size={12} /> : <Mic size={12} />}</button>)}</div> : null}</div>;
 }
