@@ -3,7 +3,9 @@ import { getDatabase } from "@/db/client";
 import { channelOverrides, channels, memberRoles, members, roles, spaces } from "@/db/schema";
 import { Permission, hasPermission } from "@/lib/permissions";
 
-export const SpacePermission = Permission;\n\nexport async function getChannelPermissions(channelId: string, userId: string) {
+export const SpacePermission = Permission;
+
+export async function getChannelPermissions(channelId: string, userId: string) {
   const db = getDatabase();
   const [base] = await db.select({ spaceId: channels.spaceId, ownerId: spaces.ownerId })
     .from(channels).innerJoin(spaces, eq(spaces.id, channels.spaceId))
@@ -30,4 +32,4 @@ export const SpacePermission = Permission;\n\nexport async function getChannelPe
   return { spaceId: base.spaceId, owner: false, permissions };
 }
 
-export { hasPermission };\n
+export { hasPermission };
