@@ -1,8 +1,8 @@
 import { createHash, randomUUID } from "node:crypto";
-import { and, asc, desc, eq, isNull, ne, sql } from "drizzle-orm";
+import { and, asc, desc, eq, isNull, ne, or, sql } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { getDatabase } from "@/db/client";
-import { directConversationMembers, directConversations, directMessages, users } from "@/db/schema";
+import { directConversationMembers, directConversations, directMessages, userBlocks, users } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
 import { normalizeDirectMessage } from "@/lib/direct-message";
 import { getSuperFlipCapabilities } from "@/lib/superflip";
@@ -37,6 +37,7 @@ export async function POST(request: Request) {
   const body = await request.json().catch(() => null); const receiverId = String(body?.receiverId ?? ""); const text = normalizeDirectMessage(body?.text, access.capabilities.directMessageLimit);
   if (!receiverId || receiverId === user.id || !text) return NextResponse.json({ message: "Получатель или сообщение указаны неверно." }, { status: 400 });
   const database = getDatabase(); const [receiver] = await database.select({ id: users.id }).from(users).where(eq(users.id, receiverId)).limit(1); if (!receiver) return NextResponse.json({ message: "Получатель не найден." }, { status: 404 });
+  const [blocked] = await database.select().from(userBlocks).where(or(and(eq(userBlocks.blockerId, user.id), eq(userBlocks.blockedId, receiverId)), and(eq(userBlocks.blockerId, receiverId), eq(userBlocks.blockedId, user.id)))).limit(1); if (blocked) return NextResponse.json({ message: "Личные сообщения недоступны из-за блокировки." }, { status: 403 });
   const conversationId = conversationIdFor(user.id, receiverId); const id = randomUUID();
   await database.transaction(async (tx) => {
     await tx.insert(directConversations).values({ id: conversationId }).onConflictDoUpdate({ target: directConversations.id, set: { updatedAt: new Date() } });
