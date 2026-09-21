@@ -46,7 +46,9 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ sp
   if (!body || typeof body.userId !== "string" || !Array.isArray(body.roleIds) || body.roleIds.some((id: unknown) => typeof id !== "string")) return NextResponse.json({ code: "INVALID_INPUT", message: "Проверьте список ролей." }, { status: 400 });
   if (body.userId === access.space.ownerId) return NextResponse.json({ code: "OWNER_PROTECTED", message: "Роли владельца защищены." }, { status: 409 });
   const requested = [...new Set(body.roleIds as string[])];
-  const available = requested.length ? await access.database.select({ id: roles.id, position: roles.position }).from(roles).where(and(eq(roles.spaceId, spaceId), eq(roles.isManaged, false), inArray(roles.id, requested))) : [];\n  if (!access.owner && available.some((role) => role.position >= access.topPosition)) return NextResponse.json({ code: "ROLE_HIERARCHY", message: "Нельзя назначать роль на уровне вашей высшей роли или выше." }, { status: 403 });\n  if (available.length !== requested.length) return NextResponse.json({ code: "INVALID_ROLE", message: "Одна из ролей недоступна." }, { status: 400 });
+  const available = requested.length ? await access.database.select({ id: roles.id, position: roles.position }).from(roles).where(and(eq(roles.spaceId, spaceId), eq(roles.isManaged, false), inArray(roles.id, requested))) : [];
+  if (!access.owner && available.some((role) => role.position >= access.topPosition)) return NextResponse.json({ code: "ROLE_HIERARCHY", message: "Нельзя назначать роль на уровне вашей высшей роли или выше." }, { status: 403 });
+  if (available.length !== requested.length) return NextResponse.json({ code: "INVALID_ROLE", message: "Одна из ролей недоступна." }, { status: 400 });
   const [memberRole] = await access.database.select({ id: roles.id }).from(roles).where(and(eq(roles.spaceId, spaceId), eq(roles.name, "Участник"))).limit(1);
   await access.database.transaction(async (tx) => {
     await tx.delete(memberRoles).where(and(eq(memberRoles.userId, body.userId), eq(memberRoles.spaceId, spaceId)));
@@ -62,7 +64,11 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ s
   if ("error" in access) return access.error;
   const userId = new URL(request.url).searchParams.get("userId");
   if (!userId) return NextResponse.json({ code: "INVALID_INPUT", message: "Не указан участник." }, { status: 400 });
-  if (userId === access.space.ownerId) return NextResponse.json({ code: "OWNER_PROTECTED", message: "Владельца нельзя исключить." }, { status: 409 });\n  const targetRoles = await access.database.select({ position: roles.position }).from(memberRoles).innerJoin(roles, eq(roles.id, memberRoles.roleId)).where(and(eq(memberRoles.spaceId, spaceId), eq(memberRoles.userId, userId)));\n  const targetTop = Math.max(0, ...targetRoles.map((role) => role.position));\n  if (!access.owner && targetTop >= access.topPosition) return NextResponse.json({ code: "ROLE_HIERARCHY", message: "Нельзя исключить участника с равной или более высокой ролью." }, { status: 403 });\n  await access.database.transaction(async (tx) => {
+  if (userId === access.space.ownerId) return NextResponse.json({ code: "OWNER_PROTECTED", message: "Владельца нельзя исключить." }, { status: 409 });
+  const targetRoles = await access.database.select({ position: roles.position }).from(memberRoles).innerJoin(roles, eq(roles.id, memberRoles.roleId)).where(and(eq(memberRoles.spaceId, spaceId), eq(memberRoles.userId, userId)));
+  const targetTop = Math.max(0, ...targetRoles.map((role) => role.position));
+  if (!access.owner && targetTop >= access.topPosition) return NextResponse.json({ code: "ROLE_HIERARCHY", message: "Нельзя исключить участника с равной или более высокой ролью." }, { status: 403 });
+  await access.database.transaction(async (tx) => {
     await tx.delete(memberRoles).where(and(eq(memberRoles.userId, userId), eq(memberRoles.spaceId, spaceId)));
     await tx.delete(members).where(and(eq(members.userId, userId), eq(members.spaceId, spaceId)));
   });
