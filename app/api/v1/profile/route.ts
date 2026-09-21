@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import { NextResponse } from "next/server";
 import { getDatabase } from "@/db/client";
@@ -21,7 +21,9 @@ export async function PATCH(request: Request) {
   if (!current) return NextResponse.json({ code: "UNAUTHENTICATED", message: "Требуется вход." }, { status: 401 });
   const parsed = schema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ code: "INVALID_INPUT", message: "Проверьте данные профиля." }, { status: 400 });
-  const [profile] = await getDatabase().update(users).set({
+  const db = getDatabase();
+  await db.execute(sql\`ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "profile_location" text; ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "profile_status" text; ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "profile_links" jsonb DEFAULT '[]'::jsonb NOT NULL;\`);
+  const [profile] = await db.update(users).set({
     ...parsed.data,
     avatarUrl: parsed.data.avatarUrl || null, bannerUrl: parsed.data.bannerUrl || null,
     bio: parsed.data.bio || null, profileLocation: parsed.data.profileLocation || null,
