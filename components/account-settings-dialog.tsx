@@ -2,7 +2,7 @@
 
 import { type FormEvent, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { AtSign, Check, KeyRound, LoaderCircle, LogOut, ShieldCheck, UserRound, X } from "lucide-react";
+import { AtSign, Bell, Check, Crown, Gem, Headphones, KeyRound, LoaderCircle, LogOut, Mic, Palette, RefreshCw, ShieldCheck, UserRound, Volume2, X } from "lucide-react";
 import { BrandMark } from "./brand-mark";
 import { ImageUpload } from "./image-upload";
 import { SecurityCenter } from "./security-center";
@@ -24,11 +24,11 @@ export type AccountProfile = {
   totpEnabled?: boolean;
 };
 
-type Section = "profile" | "security";
+export type AccountSettingsSection = "profile" | "security" | "privacy" | "notifications" | "voice" | "appearance" | "superflip" | "superup";
 
-export function AccountSettingsDialog({ user, onClose, onSaved }: { user: AccountProfile; onClose: () => void; onSaved: (user: AccountProfile) => void }) {
+export function AccountSettingsDialog({ user, initialSection = "profile", onClose, onSaved }: { user: AccountProfile; initialSection?: AccountSettingsSection; onClose: () => void; onSaved: (user: AccountProfile) => void }) {
   const router = useRouter();
-  const [section, setSection] = useState<Section>("profile");
+  const [section, setSection] = useState<AccountSettingsSection>(initialSection);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -45,7 +45,7 @@ export function AccountSettingsDialog({ user, onClose, onSaved }: { user: Accoun
     return () => window.removeEventListener("keydown", onEscape);
   }, [onClose]);
 
-  function openSection(next: Section) { setSection(next); setError(""); setSuccess(""); }
+  function openSection(next: AccountSettingsSection) { setSection(next); setError(""); setSuccess(""); }
 
   async function saveProfile(event: FormEvent<HTMLFormElement>) {
     event.preventDefault(); setBusy(true); setError(""); setSuccess("");
@@ -95,6 +95,14 @@ export function AccountSettingsDialog({ user, onClose, onSaved }: { user: Accoun
         <small className="account-nav-label">НАСТРОЙКИ ПОЛЬЗОВАТЕЛЯ</small>
         <button type="button" className={section === "profile" ? "active" : ""} onClick={() => openSection("profile")}><UserRound size={18} /> Мой профиль</button>
         <button type="button" className={section === "security" ? "active" : ""} onClick={() => openSection("security")}><ShieldCheck size={18} /> Аккаунт и безопасность</button>
+        <button type="button" className={section === "privacy" ? "active" : ""} onClick={() => openSection("privacy")}><ShieldCheck size={18} /> Приватность</button>
+        <button type="button" className={section === "notifications" ? "active" : ""} onClick={() => openSection("notifications")}><Bell size={18} /> Уведомления</button>
+        <small className="account-nav-label account-nav-group">НАСТРОЙКИ ПРИЛОЖЕНИЯ</small>
+        <button type="button" className={section === "voice" ? "active" : ""} onClick={() => openSection("voice")}><Headphones size={18} /> Голос и видео</button>
+        <button type="button" className={section === "appearance" ? "active" : ""} onClick={() => openSection("appearance")}><Palette size={18} /> Внешний вид</button>
+        <small className="account-nav-label account-nav-group">FLIPZERO</small>
+        <button type="button" className={`account-premium-nav ${section === "superflip" ? "active" : ""}`} onClick={() => openSection("superflip")}><Crown size={18} /> SuperFlip</button>
+        <button type="button" className={`account-superup-nav ${section === "superup" ? "active" : ""}`} onClick={() => openSection("superup")}><Gem size={18} /> SuperUp сервера</button>
         <div className="account-nav-spacer" />
         <button type="button" className="account-logout" onClick={signOut} disabled={busy}><LogOut size={18} /> Выйти из аккаунта</button>
         <div className="account-nav-user"><span>{media.avatarUrl ? <MediaImage src={media.avatarUrl} /> : initials}</span><div><strong>{user.displayName}</strong><small>@{user.username}</small></div></div>
@@ -115,7 +123,7 @@ export function AccountSettingsDialog({ user, onClose, onSaved }: { user: Accoun
             <button className="account-primary" disabled={busy}>{busy ? <><LoaderCircle size={17} className="spin" /> Сохраняем…</> : "Сохранить профиль"}</button>
           </form>
           <button className="account-signout-mobile" type="button" onClick={signOut} disabled={busy}><LogOut size={18} /> Выйти из аккаунта</button>
-        </> : <>
+        </> : section === "security" ? <>
           <div className="account-settings-heading"><span>БЕЗОПАСНОСТЬ</span><h2 id="account-settings-title">Аккаунт и безопасность</h2><p>Ваш адрес для входа и пароль.</p></div>
           <div className="account-email-card"><strong>Электронная почта</strong><span>{user.email}</span><small>Этот адрес используется для входа в FlipZero.</small></div>
           <form className="account-settings-form" onSubmit={changePassword}>
@@ -129,8 +137,100 @@ export function AccountSettingsDialog({ user, onClose, onSaved }: { user: Accoun
           </form>
           <SecurityCenter />
           <button className="account-signout-mobile" type="button" onClick={signOut} disabled={busy}><LogOut size={18} /> Выйти из аккаунта</button>
-        </>}
+        </> : section === "privacy" ? <PreferencesSection kind="privacy" />
+          : section === "notifications" ? <PreferencesSection kind="notifications" />
+          : section === "voice" ? <VoiceDeviceSettings />
+          : section === "appearance" ? <AppearanceSettings />
+          : section === "superflip" ? <SuperFlipSettings />
+          : <SuperUpSettings />}
       </div>
     </section>
   </div>;
+}
+
+const preferenceDefaults = {
+  friendRequests: true,
+  directMessages: true,
+  profileDiscovery: true,
+  messageSounds: true,
+  desktopNotifications: true,
+  mentionsOnly: false,
+};
+type Preferences = typeof preferenceDefaults;
+
+function readPreferences(): Preferences {
+  if (typeof window === "undefined") return preferenceDefaults;
+  try { return { ...preferenceDefaults, ...JSON.parse(localStorage.getItem("flipzero:preferences:v1") ?? "{}") }; }
+  catch { return preferenceDefaults; }
+}
+
+function PreferencesSection({ kind }: { kind: "privacy" | "notifications" }) {
+  const [preferences, setPreferences] = useState(readPreferences);
+  function toggle(key: keyof typeof preferenceDefaults) {
+    setPreferences((current) => {
+      const next = { ...current, [key]: !current[key] };
+      localStorage.setItem("flipzero:preferences:v1", JSON.stringify(next));
+      return next;
+    });
+  }
+  const items = kind === "privacy" ? [
+    ["directMessages", "Личные сообщения", "Разрешить участникам общих серверов писать вам."],
+    ["friendRequests", "Запросы в друзья", "Получать новые запросы в друзья."],
+    ["profileDiscovery", "Публичный профиль", "Показывать профиль участникам FlipZero."],
+  ] as const : [
+    ["desktopNotifications", "Push-уведомления", "Получать уведомления о новых событиях."],
+    ["messageSounds", "Звуки сообщений", "Воспроизводить звук при новом сообщении."],
+    ["mentionsOnly", "Только упоминания", "Не отвлекать уведомлениями без упоминания."],
+  ] as const;
+  return <><SettingsHeading kicker={kind === "privacy" ? "КОНФИДЕНЦИАЛЬНОСТЬ" : "УВЕДОМЛЕНИЯ"} title={kind === "privacy" ? "Приватность и безопасность" : "Настройки уведомлений"} description={kind === "privacy" ? "Управляйте тем, кто может связаться с вами и видеть профиль." : "Выберите, какие события требуют вашего внимания."} /><div className="settings-list">{items.map(([key, title, description]) => <label key={key} className="settings-row"><span><strong>{title}</strong><small>{description}</small></span><input type="checkbox" checked={preferences[key]} onChange={() => toggle(key)} /><i /></label>)}</div></>;
+}
+
+type AudioDevices = { inputs: MediaDeviceInfo[]; outputs: MediaDeviceInfo[] };
+
+function VoiceDeviceSettings() {
+  const [devices, setDevices] = useState<AudioDevices>({ inputs: [], outputs: [] });
+  const [inputId, setInputId] = useState("");
+  const [outputId, setOutputId] = useState("");
+  const [notice, setNotice] = useState("");
+  async function refresh(askPermission = false) {
+    try {
+      if (askPermission) { const stream = await navigator.mediaDevices.getUserMedia({ audio: true }); stream.getTracks().forEach((track) => track.stop()); }
+      const all = await navigator.mediaDevices.enumerateDevices();
+      const inputs = all.filter((item) => item.kind === "audioinput");
+      const outputs = all.filter((item) => item.kind === "audiooutput");
+      const stored = JSON.parse(localStorage.getItem("flipzero:audio-devices:v1") ?? "{}");
+      setDevices({ inputs, outputs });
+      setInputId(stored.inputId && inputs.some((item) => item.deviceId === stored.inputId) ? stored.inputId : inputs[0]?.deviceId ?? "");
+      setOutputId(stored.outputId && outputs.some((item) => item.deviceId === stored.outputId) ? stored.outputId : outputs[0]?.deviceId ?? "");
+      setNotice(inputs.length ? "Устройства обнаружены." : "Разрешите доступ к микрофону, чтобы увидеть устройства.");
+    } catch { setNotice("Браузер не предоставил доступ к аудиоустройствам."); }
+  }
+  useEffect(() => {
+    const timer = window.setTimeout(() => { void refresh(false); }, 0);
+    return () => window.clearTimeout(timer);
+  }, []);
+  function save(nextInput = inputId, nextOutput = outputId) { localStorage.setItem("flipzero:audio-devices:v1", JSON.stringify({ inputId: nextInput, outputId: nextOutput })); setNotice("Выбор сохранён и будет применён в голосовой комнате."); }
+  return <><SettingsHeading kicker="ГОЛОС И ВИДЕО" title="Аудиоустройства" description="Выберите микрофон и устройство вывода. Настройка сохраняется для следующих подключений." /><div className="audio-device-card"><label><span><Mic size={17} /> Устройство ввода</span><select value={inputId} onChange={(event) => { setInputId(event.target.value); save(event.target.value, outputId); }}>{devices.inputs.length ? devices.inputs.map((item, index) => <option key={item.deviceId} value={item.deviceId}>{item.label || `Микрофон ${index + 1}`}</option>) : <option>Микрофон не найден</option>}</select></label><label><span><Headphones size={17} /> Устройство вывода</span><select value={outputId} onChange={(event) => { setOutputId(event.target.value); save(inputId, event.target.value); }}>{devices.outputs.length ? devices.outputs.map((item, index) => <option key={item.deviceId} value={item.deviceId}>{item.label || `Наушники / динамики ${index + 1}`}</option>) : <option>Системное устройство</option>}</select></label><button type="button" className="security-action" onClick={() => void refresh(true)}><RefreshCw size={16} /> Обновить устройства</button>{notice ? <p>{notice}</p> : null}</div><div className="settings-callout"><Volume2 size={20} /><span><strong>Проверка звука</strong><small>Откройте голосовую комнату — сохранённые устройства подключатся автоматически.</small></span></div></>;
+}
+
+function AppearanceSettings() {
+  const [compact, setCompact] = useState(() => typeof window !== "undefined" && localStorage.getItem("flipzero:compact") === "1");
+  const [motion, setMotion] = useState(() => typeof window === "undefined" || localStorage.getItem("flipzero:motion") !== "0");
+  function update(key: "compact" | "motion", value: boolean) { localStorage.setItem(`flipzero:${key}`, value ? "1" : "0"); document.documentElement.dataset[key] = value ? "on" : "off"; }
+  return <><SettingsHeading kicker="ВНЕШНИЙ ВИД" title="Персонализация интерфейса" description="Настройте плотность и движение интерфейса под себя." /><div className="settings-list"><label className="settings-row"><span><strong>Компактный режим</strong><small>Показывать больше каналов и сообщений на экране.</small></span><input type="checkbox" checked={compact} onChange={(event) => { setCompact(event.target.checked); update("compact", event.target.checked); }} /><i /></label><label className="settings-row"><span><strong>Анимации интерфейса</strong><small>Плавные переходы, появления и визуальные эффекты.</small></span><input type="checkbox" checked={motion} onChange={(event) => { setMotion(event.target.checked); update("motion", event.target.checked); }} /><i /></label></div></>;
+}
+
+function SuperFlipSettings() {
+  const [status, setStatus] = useState<{ active?: boolean; waitlisted?: boolean; expiresAt?: string | null } | null>(null);
+  useEffect(() => { void fetch("/api/superflip/status").then((response) => response.json()).then(setStatus).catch(() => setStatus({})); }, []);
+  async function waitlist() { const response = await fetch("/api/superflip/purchase", { method: "POST" }); if (response.ok) setStatus((current) => ({ ...current, waitlisted: true })); }
+  return <><SettingsHeading kicker="SUPERFLIP" title="Раскройте возможности FlipZero" description="Премиум-профиль, увеличенные загрузки и расширенные возможности общения." /><div className="premium-hero"><Crown size={38} /><div><strong>{status?.active ? "SuperFlip активен" : "SuperFlip — скоро"}</strong><span>{status?.active && status.expiresAt ? `Доступ до ${new Date(status.expiresAt).toLocaleDateString("ru-RU")}` : "$4.99 в месяц после запуска"}</span></div></div><div className="premium-settings-grid"><span>Профиль до 500 символов</span><span>Баннер до 16 МБ</span><span>Сообщения до 8000 символов</span><span>Анимированные медиа</span></div>{status?.active ? <button className="account-primary" disabled>SuperFlip подключён</button> : <button className="account-primary" onClick={() => void waitlist()} disabled={status?.waitlisted}>{status?.waitlisted ? "Вы в листе ожидания" : "Сообщить о запуске"}</button>}</>;
+}
+
+function SuperUpSettings() {
+  return <><SettingsHeading kicker="SUPERUP" title="Поднимите сервер на новый уровень" description="SuperUp — система поддержки серверов FlipZero с общими бонусами для всех участников." /><div className="superup-levels"><article><b>1</b><strong>Старт</strong><span>2 SuperUp</span><small>Больше эмодзи и улучшенное качество звука</small></article><article><b>2</b><strong>Рост</strong><span>7 SuperUp</span><small>Баннер сервера, больше загрузки и 1440p</small></article><article><b>3</b><strong>Максимум</strong><span>14 SuperUp</span><small>Максимальные лимиты и уникальный стиль</small></article></div><div className="settings-callout superup-callout"><Gem size={22} /><span><strong>SuperUp скоро</strong><small>Поддержка сервера станет доступна вместе с запуском SuperFlip.</small></span></div></>;
+}
+
+function SettingsHeading({ kicker, title, description }: { kicker: string; title: string; description: string }) {
+  return <div className="account-settings-heading"><span>{kicker}</span><h2 id="account-settings-title">{title}</h2><p>{description}</p></div>;
 }
