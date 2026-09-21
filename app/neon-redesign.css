@@ -652,3 +652,21 @@
 @media (min-width: 1181px) {
   .app-shell .member-panel { width: 286px; }
 }
+
+/* Expanded profile reference */
+.profile-reference { overflow:auto; }
+.profile-reference .direct-profile-cover { height:112px; position:relative; background:radial-gradient(circle at 75% 25%,rgba(213,65,255,.7),transparent 22%),radial-gradient(circle at 30% 15%,rgba(72,69,255,.65),transparent 30%),linear-gradient(135deg,#080b2a,#311067 52%,#071329); }
+.profile-reference .direct-profile-cover span { position:absolute; right:14px; bottom:12px; font-size:10px; letter-spacing:.12em; color:#f2a8ff; transform:rotate(-4deg); }
+.profile-reference .direct-profile-identity { margin-top:-38px; }
+.profile-reference .direct-profile-identity h3 b { font-size:14px; }
+.profile-reference-actions { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:12px; }
+.profile-reference-actions button:first-child { background:linear-gradient(135deg,#5570ff,#df3de8); color:white; }
+.profile-reference-tabs { display:flex; gap:8px; padding:10px 12px; border-top:1px solid rgba(126,126,255,.15); border-bottom:1px solid rgba(126,126,255,.15); overflow-x:auto; }
+.profile-reference-tabs span,.profile-reference-tabs b { white-space:nowrap; font-size:11px; padding:7px 9px; border-radius:9px; }
+.profile-reference-tabs b { background:linear-gradient(135deg,rgba(93,84,255,.4),rgba(222,50,236,.35)); color:#fff; }
+.profile-reference-about p { margin:4px 0; color:#dce2ff; font-size:12px; }
+.profile-reference-stats div { display:grid; grid-template-columns:repeat(3,1fr); gap:6px; }
+.profile-reference-stats div span { display:grid; justify-items:center; gap:3px; padding:9px 4px; border:1px solid rgba(121,113,255,.18); border-radius:10px; background:rgba(35,43,79,.45); }
+.profile-reference-stats div b { font-size:14px; color:#fff; }
+.profile-reference-stats div small { font-size:9px; color:#929cc2; }
+@media (max-width:1100px){.direct-layout.has-profile{grid-template-columns:220px minmax(0,1fr)}.direct-profile.profile-reference{display:none}}
