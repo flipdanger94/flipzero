@@ -5,20 +5,21 @@ import { getDatabase } from "@/db/client";
 import { roles, spaces } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
 import { roleSchema } from "@/lib/role-validation";
+import { memberRoles, members } from "@/db/schema";
+import { hasPermission, Permission } from "@/lib/permissions";
 
-async function requireOwner(spaceId: string) {
+async function requireRoleManager(spaceId: string) {
   const user = await getCurrentUser();
   if (!user) return { error: NextResponse.json({ code: "UNAUTHENTICATED", message: "Требуется вход." }, { status: 401 }) };
   const database = getDatabase();
   const [space] = await database.select({ ownerId: spaces.ownerId }).from(spaces).where(eq(spaces.id, spaceId)).limit(1);
   if (!space) return { error: NextResponse.json({ code: "NOT_FOUND", message: "Пространство не найдено." }, { status: 404 }) };
-  if (space.ownerId !== user.id) return { error: NextResponse.json({ code: "FORBIDDEN", message: "Управлять ролями может только владелец." }, { status: 403 }) };
-  return { database };
+  if (space.ownerId !== user.id) {\n    const [membership] = await database.select({ userId: members.userId }).from(members).where(and(eq(members.spaceId, spaceId), eq(members.userId, user.id))).limit(1);\n    if (!membership) return { error: NextResponse.json({ code: "FORBIDDEN", message: "Вы не состоите в этом сообществе." }, { status: 403 }) };\n    const assigned = await database.select({ permissions: roles.permissions }).from(memberRoles).innerJoin(roles, eq(roles.id, memberRoles.roleId)).where(and(eq(memberRoles.spaceId, spaceId), eq(memberRoles.userId, user.id)));\n    const permissions = assigned.reduce((value, role) => value | Number(role.permissions), 0);\n    if (!hasPermission(permissions, Permission.ManageRoles)) return { error: NextResponse.json({ code: "FORBIDDEN", message: "Недостаточно прав для управления ролями." }, { status: 403 }) };\n  }\n  return { database, user, space };
 }
 
 export async function GET(_: Request, { params }: { params: Promise<{ spaceId: string }> }) {
   const { spaceId } = await params;
-  const access = await requireOwner(spaceId);
+  const access = await requireRoleManager(spaceId);
   if ("error" in access) return access.error;
   const items = await access.database.select().from(roles).where(eq(roles.spaceId, spaceId)).orderBy(asc(roles.position));
   return NextResponse.json({ roles: items });
@@ -26,7 +27,7 @@ export async function GET(_: Request, { params }: { params: Promise<{ spaceId: s
 
 export async function POST(request: Request, { params }: { params: Promise<{ spaceId: string }> }) {
   const { spaceId } = await params;
-  const access = await requireOwner(spaceId);
+  const access = await requireRoleManager(spaceId);
   if ("error" in access) return access.error;
   const parsed = roleSchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ code: "INVALID_INPUT", message: "Проверьте название, цвет и права роли." }, { status: 400 });
@@ -37,7 +38,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ spa
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ spaceId: string }> }) {
   const { spaceId } = await params;
-  const access = await requireOwner(spaceId);
+  const access = await requireRoleManager(spaceId);
   if ("error" in access) return access.error;
   const body = await request.json().catch(() => null);
   const parsed = roleSchema.safeParse(body);
@@ -51,7 +52,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ sp
 
 export async function DELETE(request: Request, { params }: { params: Promise<{ spaceId: string }> }) {
   const { spaceId } = await params;
-  const access = await requireOwner(spaceId);
+  const access = await requireRoleManager(spaceId);
   if ("error" in access) return access.error;
   const roleId = new URL(request.url).searchParams.get("roleId");
   if (!roleId) return NextResponse.json({ code: "INVALID_INPUT", message: "Не указана роль." }, { status: 400 });
