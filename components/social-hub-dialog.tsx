@@ -63,22 +63,19 @@ function Avatar({ person }: { person: Person }) { return <i className="social-av
 function DirectProfile({ person, onOpenFriends }: { person: Person; onOpenFriends: () => void }) {
   const isOnline = person.presence === "online";
   return <aside className="direct-profile profile-reference" aria-label={`Профиль ${person.displayName}`}>
-    <div className="direct-profile-cover"><span>CREATE · CONNECT · BELONG</span></div>
+    <div className="direct-profile-cover"><span>FLIPZERO</span></div>
     <div className="direct-profile-identity">
       <Avatar person={person} />
       <span className={`direct-presence ${isOnline ? "online" : ""}`} />
-      <h3>{person.displayName} <b>💜</b></h3>
+      <h3>{person.displayName}</h3>
       <p>@{person.username}</p>
       <small>{isOnline ? "● В сети" : "Не в сети"}</small>
       <div className="profile-reference-actions"><button><MessageCircle size={15}/> Сообщение</button><button onClick={onOpenFriends}><Users size={15}/> Друзья</button></div>
     </div>
-    <div className="profile-reference-tabs"><b>Профиль</b><span>Общие серверы</span><span>Медиа</span></div>
+    <div className="profile-reference-tabs"><b>Профиль</b></div>
     <section className="profile-reference-about">
-      <h4>О себе</h4><p>Дизайн • Технологии • Кофе • Космос 💜</p><p>Верю, что комьюнити меняют мир.</p>
-      <span><MapPin size={15}/> Казахстан</span><span><Link2 size={15}/> Социальные сети и ссылки</span>
+      <h4>О пользователе</h4>
+      <p>Дополнительная информация появится здесь, когда пользователь заполнит профиль.</p>
     </section>
-    <section className="profile-reference-stats"><h4>Статистика</h4><div><span><Star size={16}/><b>32</b><small>Уровень</small></span><span><MessageCircle size={16}/><b>12.4K</b><small>Сообщений</small></span><span><Users size={16}/><b>246</b><small>Друзей</small></span></div></section>
-    <section><h4>Последняя активность</h4><span><Gamepad2 size={16}/> Играет в VALORANT</span><span><Sparkles size={16}/> Активен в сообществах</span></section>
-    <section><h4>Роли и награды</h4><span><ShieldCheck size={16}/> Администратор</span><span><Award size={16}/> Ранний участник</span></section>
   </aside>;
 }
