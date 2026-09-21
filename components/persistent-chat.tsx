@@ -58,30 +58,28 @@ export function PersistentChat({ channelId, channelName, spaceId, currentUserId,
 }
 
 
+type UserProfile = { id:string; username:string; displayName:string; avatarUrl?:string|null; bannerUrl?:string|null; bio?:string|null; accentColor:string; presence:string; globalXp:number; globalLevel:number; createdAt:string; profileLocation?:string|null; profileStatus?:string|null; profileLinks:string[]; isOwnProfile:boolean; isFriend:boolean; stats:{messages:number;friends:number;servers:number}; servers:Array<{id:string;name:string;iconUrl?:string|null}> };
+
 function ProfileModal({ message, onClose }: { message: ChatMessage; onClose: () => void }) {
+  const [profile,setProfile]=useState<UserProfile|null>(null); const [editing,setEditing]=useState(false); const [form,setForm]=useState<any>(null); const [saving,setSaving]=useState(false);
+  useEffect(()=>{let live=true; fetch(`/api/v1/users/${message.authorId}/profile`).then(r=>r.json()).then(d=>{if(live&&d.profile){setProfile(d.profile);setForm(d.profile)}}); return()=>{live=false}},[message.authorId]);
+  async function save(){if(!form)return;setSaving(true);const r=await fetch("/api/v1/profile",{method:"PATCH",headers:{"content-type":"application/json"},body:JSON.stringify({displayName:form.displayName,bio:form.bio??"",avatarUrl:form.avatarUrl??null,bannerUrl:form.bannerUrl??null,profileLocation:form.profileLocation??"",profileStatus:form.profileStatus??"",profileLinks:form.profileLinks??[],accentColor:form.accentColor??"#8b5cf6"})});const d=await r.json();if(r.ok){setProfile(p=>p?{...p,...d.profile}:p);setEditing(false)}setSaving(false)}
+  const p=profile;
   return <div className="fz-profile-backdrop" role="presentation" onMouseDown={(e)=>{if(e.target===e.currentTarget)onClose();}}>
-    <section className="fz-profile-modal" role="dialog" aria-modal="true" aria-label={`Профиль ${message.displayName}`}>
+    <section className="fz-profile-modal" role="dialog" aria-modal="true" style={{"--profile-accent":p?.accentColor??"#a855f7"} as any}>
       <button className="fz-profile-close" onClick={onClose}><X size={20}/></button>
-      <header className="fz-profile-hero">
-        <div className="fz-profile-avatar">{message.avatarUrl?<MediaImage src={message.avatarUrl}/>:message.displayName.split(/\s+/).map(p=>p[0]).join("").slice(0,2)}<i/></div>
-        <div className="fz-profile-title"><h2>{message.displayName} 💜</h2><p>@{message.username}</p><span><ShieldCheck size={14}/> Проверенный пользователь</span><small>● В сети</small><em>✨ Маленькие идеи создают большие миры ✨</em></div>
-        <div className="fz-profile-actions"><button><MessageCircle size={16}/> Отправить сообщение</button><button><Users size={16}/></button><button>•••</button></div>
+      {!p?<div className="chat-loading"><LoaderCircle className="spin"/> Загружаем профиль...</div>:<>
+      <header className="fz-profile-hero" style={p.bannerUrl?{backgroundImage:`linear-gradient(180deg,transparent,#07101d),url("${p.bannerUrl}")`}:undefined}>
+        <div className="fz-profile-avatar">{p.avatarUrl?<MediaImage src={p.avatarUrl}/>:p.displayName.slice(0,2)}<i/></div>
+        <div className="fz-profile-title"><h2>{p.displayName}</h2><p>@{p.username}</p><small>● {p.presence==="offline"?"Не в сети":"В сети"}</small><em>{p.profileStatus||"✨ Создаю свой мир в FlipZero"}</em></div>
+        <div className="fz-profile-actions">{p.isOwnProfile?<button onClick={()=>setEditing(true)}>Редактировать профиль</button>:<><button><MessageCircle size={16}/> Отправить сообщение</button><button><Users size={16}/></button></>}</div>
       </header>
       <nav className="fz-profile-tabs"><b>Профиль</b><span>Общие серверы</span><span>Общие друзья</span><span>Медиа</span><span>Активность</span></nav>
-      <div className="fz-profile-grid">
-        <aside>
-          <section><h3>О себе</h3><p>Дизайн • Технологии • Кофе • Космос 💜</p><p>Верю, что комьюнити меняют мир.</p><hr/><span><MapPin/> Алматы, Казахстан</span><span><Sparkles/> Присоединилась 12 янв. 2024</span><span><Link2/> ID: {message.authorId}</span></section>
-          <section><h3>Социальные сети</h3><div className="fz-socials">◎ 𝕏 ▶ ◉ 🔗</div></section>
-          <section><h3>Роли</h3><div className="fz-role-list"><b>👑 Администратор</b><b>🎨 Дизайнер</b><b>▣ Event Team</b><b>💎 Ранний доступ</b></div></section>
-          <section><h3>Награды</h3><div className="fz-awards"><Award/><ShieldCheck/><Star/><Award/></div></section>
-        </aside>
-        <main>
-          <section><h3>Статистика</h3><div className="fz-stat-grid"><span><Star/><small>Уровень</small><b>32</b><i>2 340 / 5 000 XP</i></span><span><MessageCircle/><small>Сообщений</small><b>12 430</b></span><span><Users/><small>На серверах</small><b>18</b></span><span><Users/><small>В друзьях</small><b>246</b></span></div></section>
-          <section><h3>Последняя активность</h3><div className="fz-activity"><Gamepad2/><span><b>Играет в VALORANT</b><small>Уже 2 часа</small></span><button>Присоединиться</button></div></section>
-          <section><h3>Сейчас на серверах · 3</h3><div className="fz-server-row"><span>🌌 <b>Pixel Craft</b><small>В голосовом канале</small></span><span>🎮 <b>GameHub</b><small>Смотрит стрим</small></span><span>🎨 <b>Creative Space</b><small>Печатает...</small></span></div></section>
-          <section><h3>Медиа</h3><div className="fz-media-tabs">Все　 Изображения　 Видео　 Файлы　 Ссылки</div><div className="fz-media-grid"><i/><i/><i/><i/><i/><b>+12</b></div></section>
-        </main>
-      </div>
+      <div className="fz-profile-grid"><aside><section><h3>О себе</h3><p>{p.bio||"Пользователь пока ничего о себе не рассказал."}</p><hr/><span><MapPin/> {p.profileLocation||"Местоположение не указано"}</span><span><Sparkles/> В FlipZero с {new Date(p.createdAt).toLocaleDateString("ru-RU")}</span><span><Link2/> ID: {p.id}</span></section>{p.profileLinks?.length?<section><h3>Ссылки</h3>{p.profileLinks.map(link=><a key={link} href={link} target="_blank" rel="noreferrer">{link}</a>)}</section>:null}</aside>
+      <main><section><h3>Статистика</h3><div className="fz-stat-grid"><span><Star/><small>Уровень</small><b>{p.globalLevel}</b><i>{p.globalXp} XP</i></span><span><MessageCircle/><small>Сообщений</small><b>{p.stats.messages}</b></span><span><Users/><small>На серверах</small><b>{p.stats.servers}</b></span><span><Users/><small>В друзьях</small><b>{p.stats.friends}</b></span></div></section>
+      <section><h3>Серверы</h3><div className="fz-server-row">{p.servers.length?p.servers.map(s=><span key={s.id}>{s.iconUrl?<MediaImage src={s.iconUrl}/>:<>🌌</>} <b>{s.name}</b></span>):<p>Нет доступных серверов.</p>}</div></section></main></div>
+      {editing&&form?<div className="fz-profile-editor"><div><h3>Редактировать профиль</h3><button onClick={()=>setEditing(false)}><X/></button></div><label>Имя<input value={form.displayName} onChange={e=>setForm({...form,displayName:e.target.value})}/></label><label>О себе<textarea value={form.bio??""} onChange={e=>setForm({...form,bio:e.target.value})}/></label><label>Статус<input value={form.profileStatus??""} onChange={e=>setForm({...form,profileStatus:e.target.value})}/></label><label>Местоположение<input value={form.profileLocation??""} onChange={e=>setForm({...form,profileLocation:e.target.value})}/></label><label>Аватар URL<input value={form.avatarUrl??""} onChange={e=>setForm({...form,avatarUrl:e.target.value})}/></label><label>Баннер URL<input value={form.bannerUrl??""} onChange={e=>setForm({...form,bannerUrl:e.target.value})}/></label><label>Цвет профиля<input type="color" value={form.accentColor??"#8b5cf6"} onChange={e=>setForm({...form,accentColor:e.target.value})}/></label><button className="fz-profile-save" disabled={saving} onClick={save}>{saving?"Сохраняем...":"Сохранить профиль"}</button></div>:null}
+      </>}
     </section>
   </div>
 }
