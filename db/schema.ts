@@ -105,6 +105,14 @@ export const friends = pgTable("friends", {
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 }, (table) => [primaryKey({ columns: [table.userId, table.friendId] }), index("friends_friend_idx").on(table.friendId)]);
 
+export const userPrivacySettings = pgTable("user_privacy_settings", {
+  userId: text("user_id").primaryKey().references(() => users.id, { onDelete: "cascade" }),
+  directMessages: boolean("direct_messages").default(true).notNull(),
+  friendRequests: boolean("friend_requests").default(true).notNull(),
+  profileDiscovery: boolean("profile_discovery").default(true).notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
 export const adminAuditLogs = pgTable("admin_audit_logs", {
   id: text("id").primaryKey(),
   adminId: text("admin_id").notNull().references(() => users.id, { onDelete: "restrict" }),
