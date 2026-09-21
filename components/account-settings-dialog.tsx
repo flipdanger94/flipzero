@@ -169,7 +169,7 @@ function PreferencesSection({ kind }: { kind: "privacy" | "notifications" }) {
   const [preferences, setPreferences] = useState(readPreferences);
   const [privacyLoading,setPrivacyLoading]=useState(kind==="privacy");
   const [blocked,setBlocked]=useState<BlockedUser[]>([]); const [blockBusy,setBlockBusy]=useState("");
-  useEffect(()=>{if(kind!=="privacy")return;void Promise.all([fetch("/api/privacy").then(async r=>{if(r.ok)setPreferences(current=>({...current,...(await r.json()).privacy}))}),fetch("/api/blocks").then(async r=>{if(r.ok)setBlocked((await r.json()).blocked??[])})]).finally(()=>setPrivacyLoading(false))},[kind]);
+  useEffect(()=>{if(kind!=="privacy")return;let cancelled=false;void Promise.all([fetch("/api/privacy").then(r=>r.ok?r.json():null),fetch("/api/blocks").then(r=>r.ok?r.json():null)]).then(([privacyData,blocksData])=>{if(cancelled)return;if(privacyData?.privacy)setPreferences(current=>({...current,...privacyData.privacy}));if(blocksData?.blocked)setBlocked(blocksData.blocked)}).finally(()=>{if(!cancelled)setPrivacyLoading(false)});return()=>{cancelled=true}},[kind]);
   async function toggle(key: keyof typeof preferenceDefaults) {
     const next={...preferences,[key]:!preferences[key]}; setPreferences(next);
     if(kind==="privacy"&&(key==="directMessages"||key==="friendRequests"||key==="profileDiscovery")){
