@@ -246,6 +246,16 @@ export const messages = pgTable("messages", {
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 }, (table) => [index("messages_channel_created_idx").on(table.channelId, table.createdAt), index("messages_author_idx").on(table.authorId)]);
 
+export const voiceStates = pgTable("voice_states", {
+  userId: text("user_id").primaryKey().references(() => users.id, { onDelete: "cascade" }),
+  channelId: text("channel_id").notNull().references(() => channels.id, { onDelete: "cascade" }),
+  selfMuted: boolean("self_muted").default(false).notNull(),
+  selfDeafened: boolean("self_deafened").default(false).notNull(),
+  streaming: boolean("streaming").default(false).notNull(),
+  joinedAt: timestamp("joined_at", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [index("voice_states_channel_idx").on(table.channelId)]);
+
 export const channelNotificationSettings = pgTable("channel_notification_settings", {
   userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   channelId: text("channel_id").notNull().references(() => channels.id, { onDelete: "cascade" }),
