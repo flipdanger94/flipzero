@@ -1,7 +1,7 @@
 "use client";
 
 import { type FormEvent, useEffect, useState } from "react";
-import { Bell, BookOpen, Check, ChevronDown, CirclePlus, Code2, Compass, Copy, Gem, Gift, Hash, Headphones, HelpCircle, Home as HomeIcon, Image as ImageIcon, LoaderCircle, Menu, MessageCircle, Mic, MicOff, MonitorUp, Plus, Search, SendHorizontal, Settings, Settings2, Share2, ShieldCheck, Smile, Sparkles, Trash2, UserRound, Users, Video, Volume2, X } from "lucide-react";
+import { BookOpen, Check, ChevronDown, CirclePlus, Code2, Compass, Copy, Gem, Gift, Hash, Headphones, HelpCircle, Home as HomeIcon, Image as ImageIcon, LoaderCircle, Menu, MessageCircle, Mic, MicOff, MonitorUp, Plus, Search, SendHorizontal, Settings, Settings2, Share2, ShieldCheck, Smile, Sparkles, Trash2, UserRound, Users, Video, Volume2, X } from "lucide-react";
 import { CreateSpaceDialog } from "@/components/create-space-dialog";
 import { MediaImage } from "@/components/media-image";
 import { CreateChannelDialog, type CreatedChannel } from "@/components/create-channel-dialog";
