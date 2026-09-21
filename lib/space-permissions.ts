@@ -1,18 +1,9 @@
 import { and, eq, inArray } from "drizzle-orm";
 import { getDatabase } from "@/db/client";
 import { channelOverrides, channels, memberRoles, members, roles, spaces } from "@/db/schema";
+import { Permission, hasPermission } from "@/lib/permissions";
 
-export const SpacePermission = {
-  VIEW_CHANNEL: 1 << 0,
-  SEND_MESSAGES: 1 << 1,
-  MANAGE_MESSAGES: 1 << 2,
-  MANAGE_CHANNELS: 1 << 3,
-  MANAGE_ROLES: 1 << 4,
-  MANAGE_MEMBERS: 1 << 5,
-  ADMINISTRATOR: 1 << 30,
-} as const;
-
-export async function getChannelPermissions(channelId: string, userId: string) {
+export const SpacePermission = Permission;\n\nexport async function getChannelPermissions(channelId: string, userId: string) {
   const db = getDatabase();
   const [base] = await db.select({ spaceId: channels.spaceId, ownerId: spaces.ownerId })
     .from(channels).innerJoin(spaces, eq(spaces.id, channels.spaceId))
@@ -39,6 +30,4 @@ export async function getChannelPermissions(channelId: string, userId: string) {
   return { spaceId: base.spaceId, owner: false, permissions };
 }
 
-export function hasPermission(permissions: number, permission: number) {
-  return (permissions & SpacePermission.ADMINISTRATOR) !== 0 || (permissions & permission) !== 0;
-}
+export { hasPermission };\n
