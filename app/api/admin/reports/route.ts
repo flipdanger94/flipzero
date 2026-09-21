@@ -5,6 +5,9 @@ import { getDatabase } from "@/db/client";
 import { adminAuditLogs, reports } from "@/db/schema";
 import { requireAdmin } from "@/lib/admin";
 
+const targetTypes=new Set(["user","message","server","channel","profile","media"]);
+const transitions:Record<string,Set<string>>={open:new Set(["reviewing","resolved","rejected"]),reviewing:new Set(["open","resolved","rejected"]),resolved:new Set(["open"]),rejected:new Set(["open"])};
+
 export async function GET() {
   const access = await requireAdmin(); if ("error" in access) return access.error;
   const rows = await getDatabase().select().from(reports).orderBy(desc(reports.createdAt)).limit(200);
@@ -20,7 +23,9 @@ export async function PATCH(request: Request) {
   const db=getDatabase();
   const [existing]=await db.select().from(reports).where(eq(reports.id,id)).limit(1);
   if(!existing)return NextResponse.json({message:"Жалоба не найдена."},{status:404});
-  const moderatorNote=body?.moderatorNote ? String(body.moderatorNote).slice(0,1000) : null;
+  if(existing.status!==status&&!transitions[existing.status]?.has(status))return NextResponse.json({message:"Недопустимый переход статуса жалобы."},{status:409});
+  if(existing.status===status)return NextResponse.json({ok:true,unchanged:true});
+  const moderatorNote=body?.moderatorNote ? String(body.moderatorNote).trim().slice(0,1000) : null;
   await db.transaction(async tx=>{
     await tx.update(reports).set({ status, assignedModeratorId: access.user.id, moderatorNote, resolvedAt: status === "resolved" || status === "rejected" ? new Date() : null }).where(eq(reports.id,id));
     await tx.insert(adminAuditLogs).values({id:randomUUID(),adminId:access.user.id,action:`report.${status}`,metadata:{reportId:id,previousStatus:existing.status,targetType:existing.targetType,targetId:existing.targetId,moderatorNote}});
@@ -34,8 +39,8 @@ export async function POST(request: Request) {
   const targetType = String(body?.targetType ?? "");
   const targetId = String(body?.targetId ?? "");
   const reason = String(body?.reason ?? "");
-  if (!targetType || !targetId || !reason) return NextResponse.json({ message: "Заполните обязательные поля." }, { status: 400 });
+  if (!targetTypes.has(targetType) || !targetId || !reason.trim()) return NextResponse.json({ message: "Некорректные данные жалобы." }, { status: 400 });
   const id = randomUUID();
-  await getDatabase().insert(reports).values({ id, reporterId: access.user.id, targetType, targetId, reason: reason.slice(0,120), description: body?.description ? String(body.description).slice(0,2000) : null });
+  await getDatabase().insert(reports).values({ id, reporterId: access.user.id, targetType, targetId, reason: reason.trim().slice(0,120), description: body?.description ? String(body.description).trim().slice(0,2000) : null });
   return NextResponse.json({ id }, { status: 201 });
 }
