@@ -34,6 +34,7 @@ type ApiCategory = { id: string; spaceId: string; name: string; position: number
 type ApiSpace = { id: string; ownerId?: string; name: string; slug: string; description: string | null; iconUrl?: string | null; bannerUrl?: string | null; visibility?: string; accentColor: string; categories: ApiCategory[]; channels: ApiChannel[] };
 type SpaceMember = { userId: string; nickname: string | null; username: string | null; displayName: string; avatarUrl: string | null; level: number; };
 type CurrentUser = AccountProfile;
+type AppNotice = { message: string; tone: "error" | "success" };
 type Message = { initials: string; name: string; time: string; text: string; accent: string; reactions: string[]; badge?: string; quest?: boolean };
 
 const generalMessages: Message[] = [
@@ -93,6 +94,13 @@ export default function Home({ initialSpaceId, initialChannelId }: { initialSpac
   const [serverMenuOpen, setServerMenuOpen] = useState(false);
   const [spaceMembers, setSpaceMembers] = useState<SpaceMember[]>([]);
   const [membersLoading, setMembersLoading] = useState(false);
+  const [appNotice, setAppNotice] = useState<AppNotice | null>(null);
+
+  useEffect(() => {
+    if (!appNotice) return;
+    const timeout = window.setTimeout(() => setAppNotice(null), 5000);
+    return () => window.clearTimeout(timeout);
+  }, [appNotice]);
 
   useEffect(() => {
     let cancelled = false;
@@ -249,7 +257,7 @@ export default function Home({ initialSpaceId, initialChannelId }: { initialSpac
     if (!activeSpace || !window.confirm(`Удалить канал «${channel.name}»?`)) return;
     const response = await fetch(`/api/v1/spaces/${activeSpace.id}/channels?channelId=${channel.id}`, { method: "DELETE" });
     const result = await response.json();
-    if (!response.ok) { window.alert(result.message ?? "Не удалось удалить канал."); return; }
+    if (!response.ok) { setAppNotice({ message: result.message ?? "Не удалось удалить канал.", tone: "error" }); return; }
     const nextChannels = activeSpace.channels.filter((item) => item.id !== channel.id);
     setUserSpaces((current) => current.map((space) => space.id === activeSpace.id ? { ...space, channels: nextChannels } : space));
     if (activeChannel === channel.name) { const next = nextChannels.find((item) => item.kind === "text") ?? nextChannels[0]; if (next) selectChannel(next.name, next.id, activeSpace.id); }
@@ -264,7 +272,7 @@ export default function Home({ initialSpaceId, initialChannelId }: { initialSpac
     if (!activeSpace || !window.confirm(`Удалить категорию «${category.name}»? Каналы останутся без категории.`)) return;
     const response = await fetch(`/api/v1/spaces/${activeSpace.id}/categories?categoryId=${category.id}`, { method: "DELETE" });
     const result = await response.json();
-    if (!response.ok) { window.alert(result.message ?? "Не удалось удалить категорию."); return; }
+    if (!response.ok) { setAppNotice({ message: result.message ?? "Не удалось удалить категорию.", tone: "error" }); return; }
     setUserSpaces((current) => current.map((space) => space.id === activeSpace.id ? { ...space, categories: space.categories.filter((item) => item.id !== category.id), channels: space.channels.map((channel) => channel.parentId === category.id ? { ...channel, parentId: null } : channel) } : space));
   }
 
@@ -291,14 +299,14 @@ export default function Home({ initialSpaceId, initialChannelId }: { initialSpac
   async function leaveActiveSpace() {
     if (!activeSpace || !window.confirm(`Выйти из сообщества «${activeSpace.name}»?`)) return;
     const response = await fetch(`/api/v1/spaces/${activeSpace.id}`, { method: "DELETE", headers: { "content-type": "application/json" }, body: JSON.stringify({ action: "leave" }) });
-    const result = await response.json().catch(() => null); if (!response.ok) return window.alert(result?.message ?? "Не удалось выйти.");
+    const result = await response.json().catch(() => null); if (!response.ok) { setAppNotice({ message: result?.message ?? "Не удалось выйти.", tone: "error" }); return; }
     const next = userSpaces.filter((space) => space.id !== activeSpace.id); setUserSpaces(next); setActiveSpaceId(next[0]?.id ?? null);
   }
 
   async function deleteActiveSpace() {
     if (!activeSpace) return; const name = window.prompt(`Для удаления введите название сервера: ${activeSpace.name}`); if (name !== activeSpace.name) return;
     const response = await fetch(`/api/v1/spaces/${activeSpace.id}`, { method: "DELETE", headers: { "content-type": "application/json" }, body: JSON.stringify({ action: "delete", name }) });
-    const result = await response.json().catch(() => null); if (!response.ok) return window.alert(result?.message ?? "Не удалось удалить сервер.");
+    const result = await response.json().catch(() => null); if (!response.ok) { setAppNotice({ message: result?.message ?? "Не удалось удалить сервер.", tone: "error" }); return; }
     const next = userSpaces.filter((space) => space.id !== activeSpace.id); setUserSpaces(next); setActiveSpaceId(next[0]?.id ?? null);
   }
 
@@ -356,7 +364,7 @@ export default function Home({ initialSpaceId, initialChannelId }: { initialSpac
       <button className="mobile-drawer-backdrop" aria-label="Закрыть меню каналов" onClick={() => setMobileChannelsOpen(false)} />
       <nav className="mobile-tab-bar" aria-label="Основная навигация"><button className={platformView === "social" ? "active" : ""} onClick={() => { setPlatformView("social"); setMobileChannelsOpen(false); }}><MessageCircle size={20} /><span>Личное</span></button><button onClick={() => setShowDiscovery(true)}><Compass size={20} /><span>Обзор</span></button><button className={mobileChannelsOpen ? "active" : ""} onClick={() => { setPlatformView(null); setMobileChannelsOpen(true); }}><HomeIcon size={20} /><span>Серверы</span></button><button className={!platformView && !mobileChannelsOpen ? "active" : ""} onClick={() => { setPlatformView(null); setMobileChannelsOpen(false); }}><Hash size={20} /><span>Чат</span></button><button onClick={() => { setAccountSettingsSection("profile"); setMobileChannelsOpen(false); setShowAccountSettings(true); }}><UserRound size={20} /><span>Профиль</span></button></nav>
       {user && user.onboardingCompleted === false ? <OnboardingWizard initialStep={user.onboardingStep} onComplete={() => setUser((current) => current ? { ...current, onboardingCompleted: true, onboardingStep: 4 } : current)} /> : null}
-    </main>{user && showAccountSettings ? <AccountSettingsDialog user={user} initialSection={accountSettingsSection} onClose={() => setShowAccountSettings(false)} onSaved={setUser} /> : null}{showSystemStatus ? <SystemStatusDialog onClose={() => setShowSystemStatus(false)} /> : null}{showDeveloper ? <DeveloperDialog onClose={() => setShowDeveloper(false)} /> : null}{activeSpace && showWiki ? <WikiDialog spaceId={activeSpace.id} onClose={() => setShowWiki(false)} /> : null}{activeSpace && showEvents ? <EventsDialog spaceId={activeSpace.id} onClose={() => setShowEvents(false)} /> : null}{showDiscovery ? <DiscoveryDialog onClose={() => setShowDiscovery(false)} onJoined={openJoinedSpace} /> : null}{levelUp ? <div className="level-up-toast"><Sparkles size={22} /><div><small>НОВЫЙ УРОВЕНЬ</small><strong>Вы достигли уровня {levelUp}!</strong></div></div> : null}{showCreateSpace ? <CreateSpaceDialog onClose={() => setShowCreateSpace(false)} onCreated={(space) => { setUserSpaces((current) => [...current, space]); setActiveSpaceId(space.id); const first = space.channels.find((channel) => channel.kind === "text"); if (first) selectChannel(first.name, first.id, space.id); setShowCreateSpace(false); }} /> : null}{activeSpace && createChannelTarget ? <CreateChannelDialog spaceId={activeSpace.id} categories={activeSpace.categories} initialKind={createChannelTarget.kind} initialParentId={createChannelTarget.parentId} onClose={() => setCreateChannelTarget(null)} onCreated={addChannel} /> : null}{activeSpace && showCreateCategory ? <CreateCategoryDialog spaceId={activeSpace.id} onClose={() => setShowCreateCategory(false)} onCreated={addCategory} /> : null}{activeSpace && showSpaceSettings ? <SpaceSettingsDialog space={activeSpace} onClose={() => setShowSpaceSettings(false)} onSaved={saveSpaceSettings} /> : null}{activeSpace && showRoleManager ? <RoleManagerDialog spaceId={activeSpace.id} onClose={() => setShowRoleManager(false)} /> : null}{activeSpace && showInviteManager ? <InviteManagerDialog spaceId={activeSpace.id} onClose={() => setShowInviteManager(false)} /> : null}{activeSpace && showMemberManager ? <MemberManagerDialog spaceId={activeSpace.id} onClose={() => setShowMemberManager(false)} /> : null}{activeSpace && permissionsChannel ? <ChannelPermissionsDialog spaceId={activeSpace.id} channel={permissionsChannel} onClose={() => setPermissionsChannel(null)} /> : null}{activeSpace && showModeration ? <ModerationDialog spaceId={activeSpace.id} onClose={() => setShowModeration(false)} /> : null}{activeSpace && showGamification ? <GamificationDialog spaceId={activeSpace.id} isOwner={activeSpace.ownerId === user?.id} onClose={() => setShowGamification(false)} /> : null}</>
+    </main>{appNotice ? <div className={`app-toast app-toast-${appNotice.tone}`} role={appNotice.tone === "error" ? "alert" : "status"} aria-live="polite"><span>{appNotice.message}</span><button type="button" aria-label="Закрыть уведомление" onClick={() => setAppNotice(null)}><X size={16} /></button></div> : null}{user && showAccountSettings ? <AccountSettingsDialog user={user} initialSection={accountSettingsSection} onClose={() => setShowAccountSettings(false)} onSaved={setUser} /> : null}{showSystemStatus ? <SystemStatusDialog onClose={() => setShowSystemStatus(false)} /> : null}{showDeveloper ? <DeveloperDialog onClose={() => setShowDeveloper(false)} /> : null}{activeSpace && showWiki ? <WikiDialog spaceId={activeSpace.id} onClose={() => setShowWiki(false)} /> : null}{activeSpace && showEvents ? <EventsDialog spaceId={activeSpace.id} onClose={() => setShowEvents(false)} /> : null}{showDiscovery ? <DiscoveryDialog onClose={() => setShowDiscovery(false)} onJoined={openJoinedSpace} /> : null}{levelUp ? <div className="level-up-toast"><Sparkles size={22} /><div><small>НОВЫЙ УРОВЕНЬ</small><strong>Вы достигли уровня {levelUp}!</strong></div></div> : null}{showCreateSpace ? <CreateSpaceDialog onClose={() => setShowCreateSpace(false)} onCreated={(space) => { setUserSpaces((current) => [...current, space]); setActiveSpaceId(space.id); const first = space.channels.find((channel) => channel.kind === "text"); if (first) selectChannel(first.name, first.id, space.id); setShowCreateSpace(false); }} /> : null}{activeSpace && createChannelTarget ? <CreateChannelDialog spaceId={activeSpace.id} categories={activeSpace.categories} initialKind={createChannelTarget.kind} initialParentId={createChannelTarget.parentId} onClose={() => setCreateChannelTarget(null)} onCreated={addChannel} /> : null}{activeSpace && showCreateCategory ? <CreateCategoryDialog spaceId={activeSpace.id} onClose={() => setShowCreateCategory(false)} onCreated={addCategory} /> : null}{activeSpace && showSpaceSettings ? <SpaceSettingsDialog space={activeSpace} onClose={() => setShowSpaceSettings(false)} onSaved={saveSpaceSettings} /> : null}{activeSpace && showRoleManager ? <RoleManagerDialog spaceId={activeSpace.id} onClose={() => setShowRoleManager(false)} /> : null}{activeSpace && showInviteManager ? <InviteManagerDialog spaceId={activeSpace.id} onClose={() => setShowInviteManager(false)} /> : null}{activeSpace && showMemberManager ? <MemberManagerDialog spaceId={activeSpace.id} onClose={() => setShowMemberManager(false)} /> : null}{activeSpace && permissionsChannel ? <ChannelPermissionsDialog spaceId={activeSpace.id} channel={permissionsChannel} onClose={() => setPermissionsChannel(null)} /> : null}{activeSpace && showModeration ? <ModerationDialog spaceId={activeSpace.id} onClose={() => setShowModeration(false)} /> : null}{activeSpace && showGamification ? <GamificationDialog spaceId={activeSpace.id} isOwner={activeSpace.ownerId === user?.id} onClose={() => setShowGamification(false)} /> : null}</>
   );
 }
 
