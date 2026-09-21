@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { and, desc, eq, or } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { getDatabase } from "@/db/client";
-import { friendRequests, friends, users } from "@/db/schema";
+import { friendRequests, friends, userBlocks, users } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
 
 export async function GET() {
@@ -21,6 +21,7 @@ export async function POST(request: Request) {
   if (!toId || toId === user.id) return NextResponse.json({ message: "Некорректный пользователь." }, { status: 400 });
   const database = getDatabase();
   const [target] = await database.select({ id: users.id }).from(users).where(eq(users.id, toId)).limit(1); if (!target) return NextResponse.json({ message: "Пользователь не найден." }, { status: 404 });
+  const [blocked] = await database.select().from(userBlocks).where(or(and(eq(userBlocks.blockerId, user.id), eq(userBlocks.blockedId, toId)), and(eq(userBlocks.blockerId, toId), eq(userBlocks.blockedId, user.id)))).limit(1); if (blocked) return NextResponse.json({ message: "Заявка в друзья недоступна из-за блокировки." }, { status: 403 });
   const [existingFriend] = await database.select().from(friends).where(and(eq(friends.userId, user.id), eq(friends.friendId, toId))).limit(1); if (existingFriend) return NextResponse.json({ message: "Пользователь уже в друзьях." }, { status: 409 });
   const reverse = await database.select().from(friendRequests).where(and(eq(friendRequests.fromId, toId), eq(friendRequests.toId, user.id), eq(friendRequests.status, "pending"))).limit(1);
   if (reverse[0]) return acceptRequest(database, reverse[0].id, user.id, toId);
