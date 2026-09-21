@@ -3,20 +3,21 @@ import bcrypt from "bcryptjs";
 import { desc, eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { getDatabase } from "@/db/client";
-import { adminAuditLogs, directMessages, moderationFlags, sessions, superflipPurchases, users } from "@/db/schema";
+import { adminAuditLogs, directMessages, moderationCases, moderationFlags, sessions, superflipPurchases, users } from "@/db/schema";
 import { requireAdmin } from "@/lib/admin";
 
 export async function GET() {
   const access = await requireAdmin(); if ("error" in access) return access.error;
   const database = getDatabase();
-  const [userRows, grants, logs, reports, recentMessages] = await Promise.all([
+  const [userRows, grants, logs, reports, recentMessages, cases] = await Promise.all([
     database.select({ id: users.id, email: users.email, username: users.username, displayName: users.displayName, platformRole: users.platformRole, bannedAt: users.bannedAt, createdAt: users.createdAt }).from(users).orderBy(desc(users.createdAt)),
     database.select().from(superflipPurchases).orderBy(desc(superflipPurchases.grantedAt)).limit(100),
     database.select().from(adminAuditLogs).orderBy(desc(adminAuditLogs.createdAt)).limit(100),
     database.select().from(moderationFlags).orderBy(desc(moderationFlags.createdAt)).limit(100),
     database.select({ id: directMessages.id, senderId: directMessages.senderId, receiverId: directMessages.receiverId, text: directMessages.text, createdAt: directMessages.createdAt }).from(directMessages).orderBy(desc(directMessages.createdAt)).limit(100),
+    database.select({ id: moderationCases.id, targetUserId: moderationCases.targetUserId, moderatorId: moderationCases.moderatorId, action: moderationCases.action, reason: moderationCases.reason, expiresAt: moderationCases.expiresAt, createdAt: moderationCases.createdAt }).from(moderationCases).orderBy(desc(moderationCases.createdAt)).limit(100),
   ]);
-  return NextResponse.json({ users: userRows, superflip: grants, auditLogs: logs, moderationFlags: reports, directMessages: recentMessages });
+  return NextResponse.json({ users: userRows, superflip: grants, auditLogs: logs, moderationFlags: reports, directMessages: recentMessages, moderationCases: cases });
 }
 
 export async function PATCH(request: Request) {
