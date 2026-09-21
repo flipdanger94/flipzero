@@ -2,7 +2,7 @@ import { createHash, randomUUID } from "node:crypto";
 import { and, asc, desc, eq, isNull, ne, or, sql } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { getDatabase } from "@/db/client";
-import { directConversationMembers, directConversations, directMessages, userBlocks, userPrivacySettings, users } from "@/db/schema";
+import { directConversationMembers, directConversations, directMessages, notifications, userBlocks, userPrivacySettings, users } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
 import { normalizeDirectMessage } from "@/lib/direct-message";
 import { getSuperFlipCapabilities } from "@/lib/superflip";
@@ -44,6 +44,7 @@ export async function POST(request: Request) {
     await tx.insert(directConversations).values({ id: conversationId }).onConflictDoUpdate({ target: directConversations.id, set: { updatedAt: new Date() } });
     await tx.insert(directConversationMembers).values([{ conversationId, userId: user.id }, { conversationId, userId: receiverId }]).onConflictDoNothing();
     await tx.insert(directMessages).values({ id, conversationId, senderId: user.id, receiverId, text });
+    await tx.insert(notifications).values({ id: randomUUID(), userId: receiverId, actorId: user.id, type: "direct_message", title: "Новое сообщение", body: text.slice(0, 180), entityType: "conversation", entityId: conversationId });
   });
   return NextResponse.json({ message: { id, conversationId, senderId: user.id, receiverId, text, createdAt: new Date().toISOString(), readAt: null } }, { status: 201 });
 }
