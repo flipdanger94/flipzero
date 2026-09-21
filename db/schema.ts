@@ -113,6 +113,19 @@ export const userPrivacySettings = pgTable("user_privacy_settings", {
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
+export const notifications = pgTable("notifications", {
+  id: text("id").primaryKey(),
+  userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  actorId: text("actor_id").references(() => users.id, { onDelete: "set null" }),
+  type: text("type").notNull(),
+  title: text("title").notNull(),
+  body: text("body"),
+  entityType: text("entity_type"),
+  entityId: text("entity_id"),
+  readAt: timestamp("read_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [index("notifications_user_created_idx").on(table.userId, table.createdAt), index("notifications_user_read_idx").on(table.userId, table.readAt)]);
+
 export const adminAuditLogs = pgTable("admin_audit_logs", {
   id: text("id").primaryKey(),
   adminId: text("admin_id").notNull().references(() => users.id, { onDelete: "restrict" }),
