@@ -231,10 +231,16 @@ export function VoiceRoom({
       setAudioBlocked(!room.canPlaybackAudio);
       const [microphones, speakers] = await Promise.all([Room.getLocalDevices("audioinput").catch(() => []), Room.getLocalDevices("audiooutput").catch(() => [])]);
       if (attempt !== joinAttemptRef.current) { void room.disconnect(); return; }
+      let preferred: { inputId?: string; outputId?: string } = {};
+      try { preferred = JSON.parse(localStorage.getItem("flipzero:audio-devices:v1") ?? "{}"); } catch { preferred = {}; }
+      const preferredInput = microphones.some((item) => item.deviceId === preferred.inputId) ? preferred.inputId : undefined;
+      const preferredOutput = speakers.some((item) => item.deviceId === preferred.outputId) ? preferred.outputId : undefined;
+      if (preferredInput) await room.switchActiveDevice("audioinput", preferredInput).catch(() => {});
+      if (preferredOutput) await room.switchActiveDevice("audiooutput", preferredOutput).catch(() => {});
       setDevices(microphones);
-      setDeviceId(room.getActiveDevice("audioinput") ?? microphones[0]?.deviceId ?? "");
+      setDeviceId(room.getActiveDevice("audioinput") ?? preferredInput ?? microphones[0]?.deviceId ?? "");
       setOutputDevices(speakers);
-      setOutputDeviceId(room.getActiveDevice("audiooutput") ?? speakers[0]?.deviceId ?? "");
+      setOutputDeviceId(room.getActiveDevice("audiooutput") ?? preferredOutput ?? speakers[0]?.deviceId ?? "");
       refresh();
       setStatus("connected");
     } catch (cause) {
@@ -252,13 +258,16 @@ export function VoiceRoom({
 
   async function chooseDevice(next: string) {
     if (!roomRef.current) return;
-    try { await roomRef.current.switchActiveDevice("audioinput", next); setDeviceId(next); setError(""); }
+    try { await roomRef.current.switchActiveDevice("audioinput", next); setDeviceId(next); saveDevicePreference("inputId", next); setError(""); }
     catch { setError("Не удалось переключить микрофон."); }
   }
   async function chooseOutput(next: string) {
     if (!roomRef.current) return;
-    try { await roomRef.current.switchActiveDevice("audiooutput", next); setOutputDeviceId(next); setError(""); }
+    try { await roomRef.current.switchActiveDevice("audiooutput", next); setOutputDeviceId(next); saveDevicePreference("outputId", next); setError(""); }
     catch { setError("Не удалось переключить динамик. Выберите устройство в настройках телефона или браузера."); }
+  }
+  function saveDevicePreference(key: "inputId" | "outputId", value: string) {
+    try { const current = JSON.parse(localStorage.getItem("flipzero:audio-devices:v1") ?? "{}"); localStorage.setItem("flipzero:audio-devices:v1", JSON.stringify({ ...current, [key]: value })); } catch {}
   }
   function toggleDeafen() {
     const next = !deafenedRef.current;
