@@ -17,7 +17,7 @@ function RegisterForm() {
     const data = new FormData(event.currentTarget);
     if (data.get("password") !== data.get("confirmPassword")) { setError("Пароли не совпадают."); return; }
     setLoading(true);
-    const response = await fetch("/api/v1/auth/register", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email: data.get("email"), username: data.get("username"), displayName: data.get("displayName"), password: data.get("password") }) });
+    const response = await fetch("/api/v1/auth/register", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email: data.get("email"), username: data.get("username"), displayName: data.get("displayName"), password: data.get("password"), acceptedTerms: data.get("acceptedTerms") === "on", acceptedPrivacy: data.get("acceptedPrivacy") === "on" }) });
     const result = await response.json();
     if (!response.ok) { setError(result.message ?? "Не удалось создать аккаунт."); setLoading(false); return; }
     router.push(safeNext ?? "/app");
@@ -31,6 +31,8 @@ function RegisterForm() {
       <label><span>Email</span><div className="auth-input"><Mail size={17} /><input name="email" type="email" autoComplete="email" placeholder="you@example.com" required /></div></label>
       <label><span>Пароль</span><div className="auth-input"><LockKeyhole size={17} /><input name="password" type={showPassword ? "text" : "password"} autoComplete="new-password" placeholder="Минимум 10 символов" minLength={10} required /><button type="button" onClick={() => setShowPassword((value) => !value)} aria-label={showPassword ? "Скрыть пароль" : "Показать пароль"}>{showPassword ? <EyeOff size={17} /> : <Eye size={17} />}</button></div></label>
       <label><span>Повторите пароль</span><div className="auth-input"><LockKeyhole size={17} /><input name="confirmPassword" type={showPassword ? "text" : "password"} autoComplete="new-password" placeholder="Повторите пароль" minLength={10} required /></div></label>
+      <label className="auth-consent"><input name="acceptedTerms" type="checkbox" required /><span>Я принимаю <a href="/terms" target="_blank">правила сервиса</a>.</span></label>
+      <label className="auth-consent"><input name="acceptedPrivacy" type="checkbox" required /><span>Я согласен с <a href="/privacy" target="_blank">политикой конфиденциальности</a>.</span></label>
       <button className="auth-submit" disabled={loading}>{loading ? <><LoaderCircle className="spin" size={18} /> Создаём...</> : "Создать аккаунт"}</button>
     </form>
   </AuthShell>;

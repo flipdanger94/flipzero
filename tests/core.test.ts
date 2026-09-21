@@ -3,7 +3,7 @@ import { createHash, createHmac } from "node:crypto";
 import { hash } from "bcryptjs";
 import { hasAdminRole } from "../lib/access";
 import { normalizeDirectMessage } from "../lib/direct-message";
-import { isCurrentSessionToken, verifyCurrentPassword } from "../lib/security-controls";
+import { isCurrentSessionToken, isTrustedMutationRequest, requestFingerprint, verifyCurrentPassword } from "../lib/security-controls";
 import { isSuperFlipActive, subscriptionExpiry } from "../lib/superflip";
 import { createTotpSecret, decryptTotpSecret, encryptTotpSecret, hashBackupCode, verifyTotp } from "../lib/totp";
 
@@ -33,6 +33,17 @@ describe("direct message sending", () => {
 });
 
 describe("account security", () => {
+  it("rejects cross-site mutations and accepts requests from the application origin", () => {
+    expect(isTrustedMutationRequest(new Request("https://flipzero.app/api/v1/auth/login", { headers: { origin: "https://flipzero.app", "sec-fetch-site": "same-origin" } }))).toBe(true);
+    expect(isTrustedMutationRequest(new Request("https://flipzero.app/api/v1/auth/login", { headers: { origin: "https://attacker.example", "sec-fetch-site": "cross-site" } }))).toBe(false);
+  });
+
+  it("hashes network addresses before persistence", () => {
+    const request = new Request("https://flipzero.app/api", { headers: { "x-forwarded-for": "203.0.113.7, 10.0.0.1" } });
+    expect(requestFingerprint(request)).toBe(createHash("sha256").update("203.0.113.7").digest("hex"));
+    expect(requestFingerprint(request)).not.toContain("203.0.113.7");
+  });
+
   it("encrypts TOTP secrets and verifies a valid time-based code", () => {
     process.env.TOTP_ENCRYPTION_KEY = "test-only-key-that-is-long-enough-for-encryption";
     const secret = createTotpSecret();

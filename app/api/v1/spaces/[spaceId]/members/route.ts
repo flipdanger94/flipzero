@@ -16,14 +16,19 @@ async function requireOwner(spaceId: string) {
 
 export async function GET(_: Request, { params }: { params: Promise<{ spaceId: string }> }) {
   const { spaceId } = await params;
-  const access = await requireOwner(spaceId);
-  if ("error" in access) return access.error;
+  const viewer = await getCurrentUser();
+  if (!viewer) return NextResponse.json({ code: "UNAUTHENTICATED", message: "Требуется вход." }, { status: 401 });
+  const database = getDatabase();
+  const [space] = await database.select({ ownerId: spaces.ownerId }).from(spaces).where(eq(spaces.id, spaceId)).limit(1);
+  if (!space) return NextResponse.json({ code: "NOT_FOUND", message: "Пространство не найдено." }, { status: 404 });
+  const [viewerMembership] = await database.select({ userId: members.userId }).from(members).where(and(eq(members.spaceId, spaceId), eq(members.userId, viewer.id))).limit(1);
+  if (space.ownerId !== viewer.id && !viewerMembership) return NextResponse.json({ code: "FORBIDDEN", message: "Вы не состоите в этом сообществе." }, { status: 403 });
   const [spaceMembers, spaceRoles, assignments] = await Promise.all([
-    access.database.select({ userId: members.userId, nickname: members.nickname, level: members.level, joinedAt: members.joinedAt, username: users.username, displayName: users.displayName, avatarUrl: users.avatarUrl }).from(members).innerJoin(users, eq(members.userId, users.id)).where(eq(members.spaceId, spaceId)).orderBy(asc(members.joinedAt)),
-    access.database.select().from(roles).where(eq(roles.spaceId, spaceId)).orderBy(asc(roles.position)),
-    access.database.select().from(memberRoles).where(eq(memberRoles.spaceId, spaceId)),
+    database.select({ userId: members.userId, nickname: members.nickname, level: members.level, joinedAt: members.joinedAt, username: users.username, displayName: users.displayName, avatarUrl: users.avatarUrl }).from(members).innerJoin(users, eq(members.userId, users.id)).where(eq(members.spaceId, spaceId)).orderBy(asc(members.joinedAt)),
+    database.select().from(roles).where(eq(roles.spaceId, spaceId)).orderBy(asc(roles.position)),
+    database.select().from(memberRoles).where(eq(memberRoles.spaceId, spaceId)),
   ]);
-  return NextResponse.json({ ownerId: access.space.ownerId, roles: spaceRoles, members: spaceMembers.map((member) => ({ ...member, roleIds: assignments.filter((item) => item.userId === member.userId).map((item) => item.roleId) })) });
+  return NextResponse.json({ ownerId: space.ownerId, roles: spaceRoles, members: spaceMembers.map((member) => ({ ...member, roleIds: assignments.filter((item) => item.userId === member.userId).map((item) => item.roleId) })) });
 }
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ spaceId: string }> }) {

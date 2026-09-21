@@ -1,14 +1,16 @@
 import { and, eq } from "drizzle-orm";
-import { AccessToken } from "livekit-server-sdk";
+import { AccessToken, RoomServiceClient } from "livekit-server-sdk";
 import { NextResponse } from "next/server";
 import { getDatabase } from "@/db/client";
 import { channels, members } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
+import { isTrustedMutationRequest } from "@/lib/security-controls";
 
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ channelId: string }> },
 ) {
+  if (!isTrustedMutationRequest(request)) return NextResponse.json({ message: "Запрос отклонён." }, { status: 403 });
   const user = await getCurrentUser();
   if (!user)
     return NextResponse.json({ message: "Требуется вход." }, { status: 401 });
@@ -43,6 +45,14 @@ export async function POST(
     ? body.breakout
     : "main";
   const room = `${channel.spaceId}:${channel.id}:${breakout}`;
+  try {
+    const serviceUrl = new URL(url); serviceUrl.protocol = "https:";
+    const service = new RoomServiceClient(serviceUrl.origin, apiKey, apiSecret, { requestTimeout: 5, failover: false });
+    const rooms = await service.listRooms([]);
+    await Promise.all(rooms.filter((item) => item.name.startsWith(`${channel.spaceId}:`) && item.name !== room).map((item) => service.removeParticipant(item.name, user.id).catch(() => undefined)));
+  } catch {
+    return NextResponse.json({ code: "VOICE_SERVICE_UNAVAILABLE", message: "Голосовой сервер временно недоступен." }, { status: 503 });
+  }
   const accessToken = new AccessToken(apiKey, apiSecret, {
     identity: user.id,
     name: user.displayName,

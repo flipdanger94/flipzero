@@ -4,7 +4,6 @@ import { useEffect, useRef, useState } from "react";
 import {
   Headphones,
   LoaderCircle,
-  Layers3,
   Mic,
   MicOff,
   MonitorUp,
@@ -21,6 +20,7 @@ import {
 import { ConnectionQuality, Room, RoomEvent, Track } from "livekit-client";
 
 type VoiceStatus = "idle" | "connecting" | "connected" | "reconnecting";
+export type VoicePresence = { id: string; name: string; muted: boolean; camera: boolean; sharing: boolean; speaking: boolean };
 const qualityLabels = {
   [ConnectionQuality.Excellent]: "Отличная",
   [ConnectionQuality.Good]: "Хорошая",
@@ -32,9 +32,13 @@ const qualityLabels = {
 export function VoiceRoom({
   channelId,
   channelName,
+  autoJoin = false,
+  onPresenceChange,
 }: {
   channelId: string;
   channelName: string;
+  autoJoin?: boolean;
+  onPresenceChange?: (participants: VoicePresence[]) => void;
 }) {
   const [status, setStatus] = useState<VoiceStatus>("idle");
   const [voiceAvailable, setVoiceAvailable] = useState<boolean | null>(null);
@@ -55,7 +59,7 @@ export function VoiceRoom({
   const [outputDevices, setOutputDevices] = useState<MediaDeviceInfo[]>([]);
   const [outputDeviceId, setOutputDeviceId] = useState("");
   const [settings, setSettings] = useState(false);
-  const [breakout, setBreakout] = useState("main");
+  const breakout = "main";
   const [soundboard, setSoundboard] = useState(false);
   const [soundPlaying, setSoundPlaying] = useState(false);
   const screenSupported = typeof navigator === "undefined" || Boolean(navigator.mediaDevices?.getDisplayMedia);
@@ -77,6 +81,7 @@ export function VoiceRoom({
   const deafenedRef = useRef(false);
   const joinAttemptRef = useRef(0);
   const soundPlayingRef = useRef(false);
+  const joinRef = useRef<() => Promise<void>>(async () => {});
 
   useEffect(
     () => () => {
@@ -92,15 +97,17 @@ export function VoiceRoom({
       .then((response) => { if (!response.ok) throw new Error("Voice status failed"); return response.json(); })
       .then((data) => {
         if (controller.signal.aborted) return;
-        setVoiceAvailable(Boolean(data.available) && data.connection === "ok");
+        const available = Boolean(data.available) && data.connection === "ok";
+        setVoiceAvailable(available);
         setVoiceChecked(data.connection === "ok");
         setVoiceMessage(data.connection === "invalid_url" ? "Адрес голосового сервера указан неверно. Проверьте LIVEKIT_URL в Vercel."
           : data.connection === "unreachable" ? "Сервер голосовой связи не отвечает или ключи неверны. Проверьте настройки LiveKit в Vercel."
           : "Голосовые комнаты пока недоступны. Попробуйте позже.");
+        if (available && autoJoin) void joinRef.current();
       })
       .catch(() => { if (!controller.signal.aborted) { setVoiceAvailable(true); setVoiceChecked(false); } });
     return () => controller.abort();
-  }, [voiceCheckNonce]);
+  }, [autoJoin, voiceCheckNonce]);
   function clearMedia(container: HTMLDivElement | null) {
     container?.replaceChildren();
   }
@@ -131,13 +138,28 @@ export function VoiceRoom({
       room = new Room({ adaptiveStream: true, dynacast: true });
       const connectedRoom = room;
       roomRef.current = room;
-      const refresh = () =>
-        setParticipantCount(connectedRoom.remoteParticipants.size + 1);
+      const refresh = () => {
+        const participants = [connectedRoom.localParticipant, ...connectedRoom.remoteParticipants.values()];
+        setParticipantCount(participants.length);
+        onPresenceChange?.(participants.map((participant) => ({
+          id: participant.identity,
+          name: participant.name || participant.identity,
+          muted: !participant.isMicrophoneEnabled,
+          camera: participant.isCameraEnabled,
+          sharing: participant.isScreenShareEnabled,
+          speaking: participant.isSpeaking,
+        })));
+      };
       room.on(RoomEvent.ParticipantConnected, refresh);
       room.on(RoomEvent.ParticipantDisconnected, refresh);
-      room.on(RoomEvent.ActiveSpeakersChanged, (speakers) =>
-        setActiveSpeaker(speakers[0]?.name || speakers[0]?.identity || ""),
-      );
+      room.on(RoomEvent.ActiveSpeakersChanged, (speakers) => {
+        setActiveSpeaker(speakers[0]?.name || speakers[0]?.identity || "");
+        refresh();
+      });
+      room.on(RoomEvent.TrackMuted, refresh);
+      room.on(RoomEvent.TrackUnmuted, refresh);
+      room.on(RoomEvent.TrackPublished, refresh);
+      room.on(RoomEvent.TrackUnpublished, refresh);
       room.on(RoomEvent.ConnectionQualityChanged, (next, participant) => {
         if (participant.isLocal) setQuality(next);
       });
@@ -215,6 +237,7 @@ export function VoiceRoom({
         setSharing(false);
         setRemoteVideo(false);
         setActiveSpeaker("");
+        onPresenceChange?.([]);
       });
       room.on(RoomEvent.AudioPlaybackStatusChanged, () => setAudioBlocked(!connectedRoom.canPlaybackAudio));
       await Promise.race([
@@ -255,6 +278,7 @@ export function VoiceRoom({
       window.clearTimeout(connectTimeout);
     }
   }
+  useEffect(() => { joinRef.current = join; });
 
   async function chooseDevice(next: string) {
     if (!roomRef.current) return;
@@ -425,6 +449,7 @@ export function VoiceRoom({
     setConsentPanel(false);
     setIncomingConsent(null);
     setConsents({});
+    onPresenceChange?.([]);
   }
 
   const showingVideo = camera || sharing || remoteVideo;
@@ -475,24 +500,9 @@ export function VoiceRoom({
         {connected && audioBlocked ? <button className="voice-enable-audio" onClick={enableAudio}><Headphones size={18} /> Включить звук</button> : null}
         {error ? <div className="voice-error">{error}</div> : null}
         {status === "idle" ? (
-          <label className="breakout-picker">
-            <span>
-              <Layers3 size={14} /> Комната
-            </span>
-            <select
-              value={breakout}
-              onChange={(event) => setBreakout(event.target.value)}
-            >
-              <option value="main">Главная</option>
-              <option value="focus">Фокус-комната</option>
-              <option value="social">Общение</option>
-            </select>
-          </label>
-        ) : null}
-        {status === "idle" ? (
           voiceAvailable === false ? <div className="voice-unavailable" role="status">{voiceMessage}<button type="button" onClick={() => { setVoiceAvailable(null); setVoiceCheckNonce((value) => value + 1); }}>Проверить ещё раз</button></div> :
           <button className="voice-join" onClick={join} disabled={voiceAvailable === null}>
-            {voiceAvailable === null ? <><LoaderCircle className="spin" size={19} /> Проверяем голос…</> : <><Headphones size={19} /> Подключиться</>}
+            {voiceAvailable === null ? <><LoaderCircle className="spin" size={19} /> Подключаем к комнате…</> : <><Headphones size={19} /> Переподключиться</>}
           </button>
         ) : status === "connecting" ? (
           <button className="voice-join" disabled>
