@@ -1,9 +1,6 @@
 name: Deploy Vercel Production
 
 on:
-  push:
-    branches:
-      - main
   workflow_dispatch:
 
 jobs:
@@ -37,5 +34,3 @@ jobs:
             echo "Deployment ID missing"
             exit 1
           fi
-
-          echo "deployment_id=$DEPLOYMENT_ID" >> "$GITHUB_OUTPUT"
