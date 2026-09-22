@@ -48,7 +48,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ spa
   if (!parsed.success) return NextResponse.json({ code: "INVALID_INPUT", message: "Проверьте название, цвет и права роли." }, { status: 400 });
   if (!access.owner && (hasPermission(parsed.data.permissions, Permission.Administrator) || (parsed.data.permissions & ~access.permissions) !== 0)) return NextResponse.json({ code: "ROLE_ESCALATION", message: "Нельзя создать роль с правами, которых нет у вас." }, { status: 403 });
   const [position] = await access.database.select({ value: max(roles.position) }).from(roles).where(eq(roles.spaceId, spaceId));
-  const nextPosition = access.owner ? Math.max(1, (position.value ?? 0) + 1) : Math.max(1, access.topPosition - 1);
+  if (!access.owner && access.topPosition <= 0) return NextResponse.json({ code: "ROLE_HIERARCHY", message: "Нет доступного уровня ниже вашей роли для создания новой роли." }, { status: 403 });
+  const nextPosition = access.owner ? Math.max(1, (position.value ?? 0) + 1) : access.topPosition - 1;
   const [created] = await access.database.insert(roles).values({ id: randomUUID(), spaceId, ...parsed.data, position: nextPosition, isManaged: false }).returning();
   return NextResponse.json({ role: created }, { status: 201 });
 }
