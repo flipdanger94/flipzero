@@ -21,10 +21,21 @@ export async function POST() {
   )).limit(1);
   if (!account || account.email.toLowerCase() !== expectedEmail) return NextResponse.json({ message: "Этот аккаунт не может выполнить установку." }, { status: 403 });
 
-  const migration = await readFile(fileURLToPath(new URL("../../../../drizzle/0016_space_notification_settings.sql", import.meta.url)), "utf8");
+  const migrationFiles = [
+    "0014_space_join_requests.sql",
+    "0015_space_audit_logs.sql",
+    "0016_space_notification_settings.sql",
+  ];
+  const migrations = await Promise.all(migrationFiles.map((name) => readFile(fileURLToPath(new URL(`../../../../drizzle/${name}`, import.meta.url)), "utf8")));
   const { default: postgres } = await import("postgres");
   const client = postgres(process.env.DATABASE_URL, { max: 1, prepare: false });
-  try { await client.unsafe(migration); } finally { await client.end(); }
+  try {
+    await client.begin(async (tx) => {
+      for (const migration of migrations) await tx.unsafe(migration);
+    });
+  } finally {
+    await client.end();
+  }
 
-  return NextResponse.json({ ok: true, message: "Настройки уведомлений серверов установлены." });
+  return NextResponse.json({ ok: true, message: "Пакет миграций 0014–0016 применён." });
 }
