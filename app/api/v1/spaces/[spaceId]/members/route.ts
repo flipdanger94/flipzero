@@ -81,6 +81,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ sp
   const available = requested.length ? await access.database.select({ id: roles.id, position: roles.position, permissions: roles.permissions }).from(roles).where(and(eq(roles.spaceId, spaceId), eq(roles.isManaged, false), inArray(roles.id, requested))) : [];
   if (!access.owner && targetAssigned.some((role) => hasPermission(Number(role.permissions), Permission.Administrator))) return NextResponse.json({ code: "ROLE_HIERARCHY", message: "Нельзя изменять роли участника с правами администратора." }, { status: 403 });
   const existingCustomRoleIds = new Set(targetAssigned.filter((role) => !role.isManaged).map((role) => role.id));
+  const rolesChanged = requested.length !== existingCustomRoleIds.size || requested.some((roleId) => !existingCustomRoleIds.has(roleId));
   const newlyAssigned = available.filter((role) => !existingCustomRoleIds.has(role.id));
   if (!access.owner && newlyAssigned.some((role) => hasPermission(Number(role.permissions), Permission.Administrator) || (Number(role.permissions) & ~access.permissions) !== 0)) return NextResponse.json({ code: "ROLE_ESCALATION", message: "Нельзя назначать роль с правами, которых нет у вас." }, { status: 403 });
   if (!access.owner && newlyAssigned.some((role) => role.position >= access.topPosition)) return NextResponse.json({ code: "ROLE_HIERARCHY", message: "Нельзя назначать роль на уровне вашей высшей роли или выше." }, { status: 403 });
@@ -91,6 +92,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ sp
     const roleIds = [...(memberRole ? [memberRole.id] : []), ...requested];
     if (roleIds.length) await tx.insert(memberRoles).values(roleIds.map((roleId) => ({ userId: body.userId, spaceId, roleId })));
   });
+  if (rolesChanged) await evictParticipantFromSpaceVoice(spaceId, body.userId);
   return NextResponse.json({ roleIds: [...(memberRole ? [memberRole.id] : []), ...requested] });
 }
 
