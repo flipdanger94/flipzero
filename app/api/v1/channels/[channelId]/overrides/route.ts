@@ -4,9 +4,7 @@ import { getDatabase } from "@/db/client";
 import { channelOverrides, channels, members, roles, spaces } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
 import { getSpacePermissions } from "@/lib/space-permissions";
-import { hasPermission, Permission } from "@/lib/permissions";
-
-const channelPermissionMask = Permission.ViewChannels | Permission.SendMessages | Permission.ManageMessages | Permission.ManageChannels | Permission.ConnectVoice | Permission.SpeakVoice | Permission.Stream;
+import { CHANNEL_PERMISSION_MASK, hasPermission, Permission } from "@/lib/permissions";
 
 async function requireManager(channelId: string) {
   const user = await getCurrentUser();
@@ -36,7 +34,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ chan
   const targetId = String(body?.targetId ?? "");
   const targetType = String(body?.targetType ?? "");
   const allow = Number(body?.allow ?? 0), deny = Number(body?.deny ?? 0);
-  if (!targetId || !["role", "member"].includes(targetType) || !Number.isSafeInteger(allow) || !Number.isSafeInteger(deny) || allow < 0 || deny < 0 || (allow & ~channelPermissionMask) !== 0 || (deny & ~channelPermissionMask) !== 0 || (allow & deny) !== 0) {
+  if (!targetId || !["role", "member"].includes(targetType) || !Number.isSafeInteger(allow) || !Number.isSafeInteger(deny) || allow < 0 || deny < 0 || (allow & ~CHANNEL_PERMISSION_MASK) !== 0 || (deny & ~CHANNEL_PERMISSION_MASK) !== 0 || (allow & deny) !== 0) {
     return NextResponse.json({ code: "INVALID_OVERRIDE", message: "Некорректные права канала." }, { status: 400 });
   }
   if (targetType === "role") {
