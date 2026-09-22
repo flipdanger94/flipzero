@@ -52,7 +52,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ sp
 
   if (body?.action === "reorder") {
     const parentId = typeof body.parentId === "string" && body.parentId ? body.parentId : null;
-    const orderedIds = Array.isArray(body.orderedIds) ? [...new Set(body.orderedIds.filter((id: unknown): id is string => typeof id === "string"))] : [];
+    const orderedIds: string[] = Array.isArray(body.orderedIds) ? Array.from(new Set((body.orderedIds as unknown[]).filter((id): id is string => typeof id === "string"))) : [];
     if (!orderedIds.length || orderedIds.length > 200) return NextResponse.json({ code: "INVALID_INPUT", message: "Некорректный порядок каналов." }, { status: 400 });
     const parentCondition = parentId ? eq(channels.parentId, parentId) : isNull(channels.parentId);
     if (parentId) {
