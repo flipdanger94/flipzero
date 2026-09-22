@@ -14,17 +14,25 @@ Migration: `/setup/release-0015`
 - Preproduction Release CI is green.
 - Vercel preview provisioning errors are treated separately from application build validation.
 - Production runtime errors are checked before release.
+- Production deploy workflow must be triggered from `main` only.
+- Production environment preflight must pass before deployment creation:
+  - `DATABASE_URL` is present for production.
+  - `SESSION_SECRET` is present for production.
+  - `ADMIN_EMAIL` is present for production.
+  - `DEVELOPER_SECRET_KEY` is preferred; absence produces a warning because code can fall back to `SESSION_SECRET`.
+- Environment values are never decrypted or printed by the workflow.
 
 ## Release sequence
 
 1. Re-check that `main` has not moved and PR #30 is still mergeable.
 2. Merge PR #30 into `main`.
 3. Trigger the manual Vercel production deployment workflow from `main`.
-4. Confirm the deployment reaches READY and points at the expected merge commit.
-5. Sign in with the configured admin account and apply `/setup/release-0015`.
-6. Confirm all developer integration tables are reported as applied.
-7. Run GitHub Actions workflow `Post-deploy Smoke` against the production base URL.
-8. Verify manually:
+4. Confirm the production environment preflight passes before a deployment is created.
+5. Confirm the deployment reaches READY and points at the expected merge commit.
+6. Sign in with the configured admin account and apply `/setup/release-0015`.
+7. Confirm all developer integration tables are reported as applied.
+8. Run GitHub Actions workflow `Post-deploy Smoke` against the production base URL.
+9. Verify manually:
    - OAuth authorize flow.
    - OAuth token exchange.
    - Bot/app install flow.
@@ -32,7 +40,7 @@ Migration: `/setup/release-0015`
    - Direct-message pagination.
    - Space member pagination.
    - Mobile/tablet navigation and modal keyboard behavior.
-9. Check Vercel runtime errors after release.
+10. Check Vercel runtime errors after release.
 
 ## Required smoke results
 
