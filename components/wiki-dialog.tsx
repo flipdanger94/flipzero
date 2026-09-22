@@ -27,7 +27,7 @@ export function WikiDialog({ spaceId, onClose }: { spaceId: string; onClose: () 
   async function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault(); setSaving(true); setError("");
     const form = new FormData(event.currentTarget);
-    const response = await fetch(`/api/v1/spaces/${spaceId}/wiki`, { method: mode === "edit" ? "PATCH" : "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ id: selected?.id, title: form.get("title"), summary: form.get("summary"), content: form.get("content") }) });
+    const response = await fetch(`/api/v1/spaces/${spaceId}/wiki`, { method: mode === "edit" ? "PATCH" : "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ id: selected?.id, revision: selected?.revision, title: form.get("title"), summary: form.get("summary"), content: form.get("content") }) });
     const data = await response.json().catch(() => null); setSaving(false);
     if (!response.ok) return setError(data?.message ?? "Не удалось сохранить статью.");
     setPages((current) => mode === "edit" ? current.map((page) => page.id === data.page.id ? data.page : page) : [data.page, ...current]);
