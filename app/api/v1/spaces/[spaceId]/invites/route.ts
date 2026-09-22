@@ -6,6 +6,7 @@ import { invites, spaces } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
 import { getSpacePermissions } from "@/lib/space-permissions";
 import { hasPermission, Permission } from "@/lib/permissions";
+import { writeSpaceAuditLog } from "@/lib/space-audit";
 
 async function requireInviteManager(spaceId: string) {
   const user = await getCurrentUser();
@@ -36,6 +37,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ spa
   const maxUses = Number.isInteger(body.maxUses) ? Math.min(Math.max(body.maxUses, 1), 100) : 25;
   const days = Number.isInteger(body.days) ? Math.min(Math.max(body.days, 1), 30) : 7;
   const [created] = await access.database.insert(invites).values({ code: randomBytes(9).toString("base64url"), spaceId, creatorId: access.user.id, maxUses, expiresAt: new Date(Date.now() + days * 86400000) }).returning();
+  await writeSpaceAuditLog({ spaceId, actorId: access.user.id, action: "invite.create", targetType: "invite", targetId: created.code, metadata: { maxUses, days } });
   return NextResponse.json({ invite: created }, { status: 201 });
 }
 
@@ -50,5 +52,6 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ s
   const canManageAll = access.owner || hasPermission(access.permissions, Permission.ManageSpace);
   if (!canManageAll && invite.creatorId !== access.user.id) return NextResponse.json({ code: "FORBIDDEN", message: "Можно удалить только созданное вами приглашение." }, { status: 403 });
   await access.database.delete(invites).where(and(eq(invites.code, code), eq(invites.spaceId, spaceId)));
+  await writeSpaceAuditLog({ spaceId, actorId: access.user.id, action: "invite.delete", targetType: "invite", targetId: code });
   return NextResponse.json({ ok: true });
 }
