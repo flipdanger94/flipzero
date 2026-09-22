@@ -65,3 +65,19 @@ CREATE TABLE IF NOT EXISTS "developer_app_installations" (
 );
 CREATE UNIQUE INDEX IF NOT EXISTS "developer_app_installation_unique" ON "developer_app_installations" ("app_id", "space_id");
 CREATE INDEX IF NOT EXISTS "developer_app_installations_space_idx" ON "developer_app_installations" ("space_id");
+
+CREATE TABLE IF NOT EXISTS "developer_webhook_deliveries" (
+  "id" text PRIMARY KEY NOT NULL,
+  "webhook_id" text NOT NULL REFERENCES "developer_webhooks"("id") ON DELETE cascade,
+  "event_id" text NOT NULL,
+  "event_type" text NOT NULL,
+  "status" text DEFAULT 'pending' NOT NULL,
+  "attempt" integer DEFAULT 1 NOT NULL,
+  "response_status" integer,
+  "duration_ms" integer,
+  "error" text,
+  "completed_at" timestamp with time zone,
+  "created_at" timestamp with time zone DEFAULT now() NOT NULL
+);
+CREATE INDEX IF NOT EXISTS "developer_webhook_deliveries_webhook_created_idx" ON "developer_webhook_deliveries" ("webhook_id", "created_at");
+CREATE INDEX IF NOT EXISTS "developer_webhook_deliveries_event_idx" ON "developer_webhook_deliveries" ("event_id");
