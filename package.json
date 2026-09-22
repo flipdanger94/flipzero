@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint .",
     "test": "vitest run",
+    "smoke:release": "node scripts/release-smoke.mjs",
     "desktop:dev": "tauri dev",
     "desktop:build": "tauri build",
     "db:seed-admin": "node scripts/seed-admin.mjs"
