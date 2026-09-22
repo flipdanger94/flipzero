@@ -263,23 +263,73 @@ a {
   }
 
   .direct-layout {
-    grid-template-rows: minmax(108px, 34%) minmax(0, 1fr);
+    position: relative;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr);
+    min-width: 0;
     overflow: hidden;
   }
 
   .direct-layout > aside {
+    width: 100%;
     max-height: none;
     min-height: 0;
-    padding: 7px;
+    padding: 8px 10px;
+    overflow-y: auto;
+    border-right: 0;
+    border-bottom: 0;
   }
 
   .direct-layout > aside > button {
-    min-height: 50px;
+    min-height: 60px;
+  }
+
+  .direct-layout > section {
+    width: 100%;
+    min-width: 0;
+    min-height: 0;
+  }
+
+  .direct-layout.has-profile > aside {
+    display: none;
+  }
+
+  .direct-layout:not(.has-profile) > section,
+  .direct-layout:not(.has-profile) > .direct-profile {
+    display: none;
+  }
+
+  .direct-layout.has-profile > .direct-profile {
+    display: none;
   }
 
   .direct-title {
-    height: 54px;
-    padding-inline: 10px;
+    height: 58px;
+    padding: 7px 10px;
+    grid-template-columns: 44px 38px minmax(0, auto) minmax(0, 1fr);
+    gap: 8px;
+  }
+
+  .direct-title strong,
+  .direct-title span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .direct-mobile-back {
+    width: 44px;
+    min-width: 44px;
+    min-height: 44px;
+    padding: 0;
+    border: 0;
+    border-radius: 12px;
+    background: rgba(255,255,255,.055);
+    color: #d9d4df;
+    display: grid;
+    place-items: center;
   }
 
   .direct-messages {
@@ -585,7 +635,7 @@ a {
   }
 
   .direct-layout {
-    grid-template-rows: minmax(96px, 31%) minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr);
   }
 
   .community-content h1,
@@ -830,4 +880,41 @@ html[data-motion="off"] *::after {
   animation-duration: 0.01ms !important;
   animation-iteration-count: 1 !important;
   transition-duration: 0.01ms !important;
+}
+
+
+@media (min-width: 768px) {
+  .direct-mobile-back {
+    display: none;
+  }
+}
+
+@media (max-width: 767px) {
+  .social-hub-embedded > nav {
+    gap: 6px;
+    padding-inline: 8px;
+    scroll-snap-type: x proximity;
+  }
+
+  .social-hub-embedded > nav button {
+    scroll-snap-align: start;
+    padding-inline: 10px;
+  }
+
+  .social-hub-embedded > header {
+    min-height: 82px;
+  }
+
+  .direct-composer {
+    padding: 8px 10px calc(8px + env(safe-area-inset-bottom));
+    background: #17161c;
+  }
+
+  .direct-composer input {
+    width: 100%;
+  }
+
+  .direct-messages {
+    -webkit-overflow-scrolling: touch;
+  }
 }
