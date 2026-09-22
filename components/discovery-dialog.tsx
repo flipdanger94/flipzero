@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Check, Compass, Gamepad2, GraduationCap, Headphones, LayoutGrid, LoaderCircle, Search, ShieldCheck, Sparkles, Users, X } from "lucide-react";
 import { MediaImage } from "./media-image";
+import { useModalA11y } from "@/hooks/use-modal-a11y";
 
 type Community = { id: string; name: string; slug: string; description: string | null; iconUrl: string | null; bannerUrl: string | null; accentColor: string; memberCount: number; joined: boolean };
 type Category = "all" | "gaming" | "music" | "education" | "technology";
@@ -28,7 +29,8 @@ function matchesCategory(item: Community, category: Category) {
   return words[category].some((word) => text.includes(word));
 }
 
-export function DiscoveryDialog({ onClose, onJoined }: { onClose: () => void; onJoined: (spaceId: string) => void | Promise<void> }) {
+export function DiscoveryDialog({
+  const dialogRef = useModalA11y(onClose); onClose, onJoined }: { onClose: () => void; onJoined: (spaceId: string) => void | Promise<void> }) {
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState<Category>("all");
   const [items, setItems] = useState<Community[]>([]);
@@ -60,7 +62,7 @@ export function DiscoveryDialog({ onClose, onJoined }: { onClose: () => void; on
     <div className="discovery-card-copy"><h3><Link href={`/communities/${encodeURIComponent(item.slug)}`}>{item.name}</Link>{featured ? <ShieldCheck size={16} aria-label="Официальный сервер" /> : null}</h3><p>{item.description || "Открытое сообщество FlipZero"}</p><small><i /> {item.memberCount.toLocaleString("ru-RU")} участников</small></div>
     <button className={item.joined ? "joined" : ""} onClick={() => item.joined ? onJoined(item.id) : join(item.id)} disabled={joiningId === item.id}>{joiningId === item.id ? <LoaderCircle className="spin" size={16} /> : item.joined ? <><Check size={16} /> Открыть</> : "Вступить"}</button>
   </article>;
-  return <div className="dialog-backdrop discovery-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}><section className="discovery-dialog" role="dialog" aria-modal="true" aria-labelledby="discovery-title">
+  return <div className="dialog-backdrop discovery-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}><section ref={dialogRef} tabIndex={-1} className="discovery-dialog" role="dialog" aria-modal="true" aria-labelledby="discovery-title">
     <button className="discovery-close" onClick={onClose} aria-label="Закрыть"><X size={21} /></button>
     <aside className="discovery-nav"><div className="discovery-nav-brand"><Compass size={23} /><span><strong>Обзор</strong><small>Публичные серверы</small></span></div><nav>{categories.map((item) => <button key={item.id} className={category === item.id ? "active" : ""} onClick={() => setCategory(item.id)}>{item.icon}<span>{item.label}</span></button>)}</nav><p>Находите людей по интересам и присоединяйтесь к открытым сообществам.</p></aside>
     <main className="discovery-content"><header className="discovery-hero"><span>ОТКРЫВАЙ НОВЫЕ МИРЫ</span><h2 id="discovery-title">Сообщества<br/>для <b>твоих идей</b></h2><p>Игры, творчество, технологии, обучение и многое другое — найди своё комьюнити в FlipZero.</p><label className="discovery-search"><Search size={19} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Поиск серверов..." autoFocus /></label></header><div className="discovery-chips">{categories.map((item)=><button key={item.id} className={category===item.id?"active":""} onClick={()=>setCategory(item.id)}>{item.icon}{item.label}</button>)}</div>
