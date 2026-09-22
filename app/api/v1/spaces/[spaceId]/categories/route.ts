@@ -5,20 +5,25 @@ import { getDatabase } from "@/db/client";
 import { channelCategories, channels, spaces } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
 import { createCategorySchema } from "@/lib/space-validation";
+import { getSpacePermissions } from "@/lib/space-permissions";
+import { hasPermission, Permission } from "@/lib/permissions";
 
-async function ownerAccess(spaceId: string) {
+async function managerAccess(spaceId: string) {
   const user = await getCurrentUser();
   if (!user) return { error: NextResponse.json({ code: "UNAUTHENTICATED", message: "Требуется вход." }, { status: 401 }) };
   const database = getDatabase();
   const [space] = await database.select({ ownerId: spaces.ownerId }).from(spaces).where(eq(spaces.id, spaceId)).limit(1);
   if (!space) return { error: NextResponse.json({ code: "NOT_FOUND", message: "Пространство не найдено." }, { status: 404 }) };
-  if (space.ownerId !== user.id) return { error: NextResponse.json({ code: "FORBIDDEN", message: "Управлять категориями может только владелец." }, { status: 403 }) };
+  if (space.ownerId !== user.id) {
+    const state = await getSpacePermissions(spaceId, user.id);
+    if (!state.spaceId || !hasPermission(state.permissions, Permission.ManageChannels)) return { error: NextResponse.json({ code: "FORBIDDEN", message: "Недостаточно прав для управления категориями." }, { status: 403 }) };
+  }
   return { database };
 }
 
 export async function POST(request: Request, { params }: { params: Promise<{ spaceId: string }> }) {
   const { spaceId } = await params;
-  const access = await ownerAccess(spaceId);
+  const access = await managerAccess(spaceId);
   if ("error" in access) return access.error;
   const parsed = createCategorySchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ code: "INVALID_INPUT", message: "Проверьте название категории." }, { status: 400 });
@@ -32,7 +37,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ spa
 
 export async function DELETE(request: Request, { params }: { params: Promise<{ spaceId: string }> }) {
   const { spaceId } = await params;
-  const access = await ownerAccess(spaceId);
+  const access = await managerAccess(spaceId);
   if ("error" in access) return access.error;
   const categoryId = new URL(request.url).searchParams.get("categoryId");
   if (!categoryId) return NextResponse.json({ code: "INVALID_INPUT", message: "Не указана категория." }, { status: 400 });
