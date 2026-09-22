@@ -2,12 +2,14 @@
 
 import { type FormEvent, useState } from "react";
 import { Bell, Columns3, Hash, LoaderCircle, MessagesSquare, Volume2, X } from "lucide-react";
+import { useModalA11y } from "@/hooks/use-modal-a11y";
 
 type ChannelKind = "text" | "forum" | "voice" | "announcement" | "board";
 export type CreatedChannel = { id: string; spaceId: string; parentId: string | null; name: string; topic: string | null; kind: ChannelKind; position: number };
 type CategoryOption = { id: string; name: string };
 
-export function CreateChannelDialog({ spaceId, categories, initialKind, initialParentId, onClose, onCreated }: { spaceId: string; categories: CategoryOption[]; initialKind: "text" | "voice"; initialParentId?: string | null; onClose: () => void; onCreated: (channel: CreatedChannel) => void }) {
+export function CreateChannelDialog({
+  const dialogRef = useModalA11y(onClose); spaceId, categories, initialKind, initialParentId, onClose, onCreated }: { spaceId: string; categories: CategoryOption[]; initialKind: "text" | "voice"; initialParentId?: string | null; onClose: () => void; onCreated: (channel: CreatedChannel) => void }) {
   const [kind, setKind] = useState<ChannelKind>(initialKind);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -25,7 +27,7 @@ export function CreateChannelDialog({ spaceId, categories, initialKind, initialP
   }
 
   return <div className="dialog-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
-    <section className="space-dialog channel-dialog" role="dialog" aria-modal="true" aria-labelledby="create-channel-title">
+    <section ref={dialogRef} tabIndex={-1} className="space-dialog channel-dialog" role="dialog" aria-modal="true" aria-labelledby="create-channel-title">
       <button className="dialog-close" onClick={onClose} aria-label="Закрыть"><X size={19} /></button>
       <h2 id="create-channel-title">Создать канал</h2><p>Выберите формат и задайте понятное название.</p>
       <div className="channel-kind-picker">
