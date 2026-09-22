@@ -1357,3 +1357,142 @@ html[data-motion="off"] *::after {
     grid-template-columns: 100% !important;
   }
 }
+
+
+/* FINAL DM MOBILE CONTRACT — keep this last.
+   One layout only: title / scrollable messages / composer. */
+@media (max-width: 767px) {
+  .platform-workspace.platform-workspace {
+    display: block !important;
+    height: calc(100dvh - var(--mobile-bottom-nav)) !important;
+    max-height: calc(100dvh - var(--mobile-bottom-nav)) !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
+  }
+
+  .platform-workspace .social-hub.social-hub-embedded {
+    display: grid !important;
+    grid-template-rows: auto auto minmax(0, 1fr) !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    height: 100% !important;
+    max-height: 100% !important;
+    min-height: 0 !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+  }
+
+  .platform-workspace .social-hub.social-hub-embedded .direct-layout.has-profile {
+    position: relative !important;
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    grid-template-rows: minmax(0, 1fr) !important;
+    width: 100% !important;
+    height: 100% !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
+  }
+
+  .platform-workspace .social-hub.social-hub-embedded .direct-layout.has-profile > aside,
+  .platform-workspace .social-hub.social-hub-embedded .direct-layout.has-profile > .direct-profile {
+    display: none !important;
+  }
+
+  .platform-workspace .social-hub.social-hub-embedded .direct-layout.has-profile > section {
+    position: static !important;
+    inset: auto !important;
+    display: grid !important;
+    grid-template-rows: 58px minmax(0, 1fr) 64px !important;
+    grid-column: 1 !important;
+    grid-row: 1 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    height: 100% !important;
+    max-height: 100% !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+  }
+
+  .platform-workspace .social-hub.social-hub-embedded .direct-layout.has-profile .direct-title {
+    grid-row: 1 !important;
+    position: relative !important;
+    width: 100% !important;
+    height: 58px !important;
+    min-height: 58px !important;
+    margin: 0 !important;
+  }
+
+  .platform-workspace .social-hub.social-hub-embedded .direct-layout.has-profile .direct-messages {
+    grid-row: 2 !important;
+    position: relative !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 12px 10px !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .platform-workspace .social-hub.social-hub-embedded .direct-layout.has-profile .direct-composer {
+    grid-row: 3 !important;
+    position: static !important;
+    inset: auto !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    transform: none !important;
+    box-sizing: border-box !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    height: 64px !important;
+    min-height: 64px !important;
+    margin: 0 !important;
+    padding: 8px 10px !important;
+    border-top: 1px solid var(--border) !important;
+    background: #17161c !important;
+    box-shadow: 0 -8px 22px rgba(0,0,0,.2) !important;
+    z-index: 10 !important;
+  }
+
+  .platform-workspace .social-hub.social-hub-embedded .direct-layout.has-profile .direct-composer input {
+    display: block !important;
+    flex: 1 1 auto !important;
+    width: auto !important;
+    min-width: 0 !important;
+    height: 46px !important;
+    min-height: 46px !important;
+    padding: 10px 12px !important;
+    font-size: 16px !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+  }
+
+  .platform-workspace .social-hub.social-hub-embedded .direct-layout.has-profile .direct-composer button {
+    display: flex !important;
+    flex: 0 0 46px !important;
+    width: 46px !important;
+    min-width: 46px !important;
+    height: 46px !important;
+    min-height: 46px !important;
+    align-items: center !important;
+    justify-content: center !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+  }
+
+  .platform-workspace .social-hub.social-hub-embedded .direct-layout.has-profile .direct-notice {
+    position: absolute !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 64px !important;
+    z-index: 11 !important;
+  }
+}
