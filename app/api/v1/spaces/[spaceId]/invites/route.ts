@@ -4,20 +4,25 @@ import { NextResponse } from "next/server";
 import { getDatabase } from "@/db/client";
 import { invites, spaces } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
+import { getSpacePermissions } from "@/lib/space-permissions";
+import { hasPermission, Permission } from "@/lib/permissions";
 
-async function requireOwner(spaceId: string) {
+async function requireInviteManager(spaceId: string) {
   const user = await getCurrentUser();
   if (!user) return { error: NextResponse.json({ code: "UNAUTHENTICATED", message: "Требуется вход." }, { status: 401 }) };
   const database = getDatabase();
   const [space] = await database.select({ ownerId: spaces.ownerId }).from(spaces).where(eq(spaces.id, spaceId)).limit(1);
   if (!space) return { error: NextResponse.json({ code: "NOT_FOUND", message: "Пространство не найдено." }, { status: 404 }) };
-  if (space.ownerId !== user.id) return { error: NextResponse.json({ code: "FORBIDDEN", message: "Приглашения доступны только владельцу." }, { status: 403 }) };
+  if (space.ownerId !== user.id) {
+    const state = await getSpacePermissions(spaceId, user.id);
+    if (!state.spaceId || !hasPermission(state.permissions, Permission.CreateInvites)) return { error: NextResponse.json({ code: "FORBIDDEN", message: "Недостаточно прав для управления приглашениями." }, { status: 403 }) };
+  }
   return { database, user };
 }
 
 export async function GET(_: Request, { params }: { params: Promise<{ spaceId: string }> }) {
   const { spaceId } = await params;
-  const access = await requireOwner(spaceId);
+  const access = await requireInviteManager(spaceId);
   if ("error" in access) return access.error;
   const items = await access.database.select().from(invites).where(eq(invites.spaceId, spaceId)).orderBy(desc(invites.createdAt));
   return NextResponse.json({ invites: items });
@@ -25,7 +30,7 @@ export async function GET(_: Request, { params }: { params: Promise<{ spaceId: s
 
 export async function POST(request: Request, { params }: { params: Promise<{ spaceId: string }> }) {
   const { spaceId } = await params;
-  const access = await requireOwner(spaceId);
+  const access = await requireInviteManager(spaceId);
   if ("error" in access) return access.error;
   const body = await request.json().catch(() => ({}));
   const maxUses = Number.isInteger(body.maxUses) ? Math.min(Math.max(body.maxUses, 1), 100) : 25;
@@ -36,7 +41,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ spa
 
 export async function DELETE(request: Request, { params }: { params: Promise<{ spaceId: string }> }) {
   const { spaceId } = await params;
-  const access = await requireOwner(spaceId);
+  const access = await requireInviteManager(spaceId);
   if ("error" in access) return access.error;
   const code = new URL(request.url).searchParams.get("code");
   if (!code) return NextResponse.json({ code: "INVALID_INPUT", message: "Не указан код приглашения." }, { status: 400 });
