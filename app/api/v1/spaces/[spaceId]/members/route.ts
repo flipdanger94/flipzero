@@ -5,6 +5,7 @@ import { memberRoles, members, roles, spaces, users } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
 import { expandPermissions, hasPermission, Permission } from "@/lib/permissions";
 import { evictParticipantFromSpaceVoice } from "@/lib/livekit-admin";
+import { writeSpaceAuditLog } from "@/lib/space-audit";
 
 async function requireMemberManager(spaceId: string, requiredPermission: number) {
   const user = await getCurrentUser();
@@ -92,7 +93,10 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ sp
     const roleIds = [...(memberRole ? [memberRole.id] : []), ...requested];
     if (roleIds.length) await tx.insert(memberRoles).values(roleIds.map((roleId) => ({ userId: body.userId, spaceId, roleId })));
   });
-  if (rolesChanged) await evictParticipantFromSpaceVoice(spaceId, body.userId);
+  if (rolesChanged) {
+    await evictParticipantFromSpaceVoice(spaceId, body.userId);
+    await writeSpaceAuditLog({ spaceId, actorId: access.user.id, action: "member.roles.update", targetType: "user", targetId: body.userId, metadata: { roleIds: requested } });
+  }
   return NextResponse.json({ roleIds: [...(memberRole ? [memberRole.id] : []), ...requested] });
 }
 
@@ -115,5 +119,6 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ s
     await tx.delete(members).where(and(eq(members.userId, userId), eq(members.spaceId, spaceId)));
   });
   await evictParticipantFromSpaceVoice(spaceId, userId);
+  await writeSpaceAuditLog({ spaceId, actorId: access.user.id, action: "member.kick", targetType: "user", targetId: userId });
   return NextResponse.json({ ok: true });
 }
