@@ -23,7 +23,7 @@ export async function POST(_: Request, { params }: { params: Promise<{ code: str
   if (latestBanAction?.action === "ban") return NextResponse.json({ code: "BANNED", message: "Вы заблокированы в этом пространстве." }, { status: 403 });
   const [existing] = await database.select({ userId: members.userId }).from(members).where(and(eq(members.userId, user.id), eq(members.spaceId, invite.spaceId))).limit(1);
   if (existing) return NextResponse.json({ spaceId: invite.spaceId, joined: false });
-  const [memberRole] = await database.select({ id: roles.id }).from(roles).where(and(eq(roles.spaceId, invite.spaceId), eq(roles.name, "Участник"))).limit(1);
+  const [memberRole] = await database.select({ id: roles.id }).from(roles).where(and(eq(roles.spaceId, invite.spaceId), eq(roles.name, "Участник"), eq(roles.isManaged, true))).limit(1);
   let joined = false;
   try {
     await database.transaction(async (tx) => {
