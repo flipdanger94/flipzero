@@ -1,8 +1,8 @@
 import { randomUUID } from "node:crypto";
-import { and, asc, desc, eq, ilike, inArray, isNull, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, ilike, inArray, isNull, notInArray, or, sql } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { getDatabase } from "@/db/client";
-import { channels, channelNotificationSettings, members, messages, moderationFlags, reactions, spaces, users } from "@/db/schema";
+import { channels, channelNotificationSettings, members, messages, moderationFlags, reactions, spaces, userBlocks, users } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
 import { assessMessageSafety } from "@/lib/trust-safety";
 import { getChannelPermissions, hasPermission, SpacePermission } from "@/lib/space-permissions";
@@ -24,7 +24,10 @@ async function accessChannel(channelId: string) {
 export async function GET(request: Request, { params }: { params: Promise<{ channelId: string }> }) {
   const { channelId } = await params; const access = await accessChannel(channelId); if ("error" in access) return access.error;
   const url = new URL(request.url); const query = url.searchParams.get("q")?.trim(); const pinned = url.searchParams.get("pinned") === "1"; const threadRootId = url.searchParams.get("threadRootId");
+  const blockedRows = await access.database.select({ blockedId: userBlocks.blockedId }).from(userBlocks).where(eq(userBlocks.blockerId, access.user.id));
+  const blockedIds = blockedRows.map((row) => row.blockedId);
   const conditions = [eq(messages.channelId, channelId), isNull(messages.deletedAt)];
+  if (blockedIds.length) conditions.push(notInArray(messages.authorId, blockedIds));
   if (query) conditions.push(or(ilike(messages.content, `%${query}%`), ilike(users.displayName, `%${query}%`))!);
   if (pinned) conditions.push(sql`${messages.pinnedAt} IS NOT NULL`);
   if (threadRootId) conditions.push(eq(messages.threadRootId, threadRootId)); else conditions.push(isNull(messages.threadRootId));
