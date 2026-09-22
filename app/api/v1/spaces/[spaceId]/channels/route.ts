@@ -8,6 +8,7 @@ import { createChannelSchema, updateChannelSchema } from "@/lib/space-validation
 import { getSpacePermissions } from "@/lib/space-permissions";
 import { hasPermission, Permission } from "@/lib/permissions";
 import { resetChannelVoiceRooms } from "@/lib/livekit-admin";
+import { writeSpaceAuditLog } from "@/lib/space-audit";
 
 export async function POST(request: Request, { params }: { params: Promise<{ spaceId: string }> }) {
   const [user, { spaceId }] = await Promise.all([getCurrentUser(), params]);
@@ -34,6 +35,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ spa
   const [positionResult] = await database.select({ value: max(channels.position) }).from(channels).where(and(eq(channels.spaceId, spaceId), parentPositionCondition));
   const channel = { id: randomUUID(), spaceId, parentId: parsed.data.parentId, name: parsed.data.name, topic: parsed.data.topic || null, kind: parsed.data.kind, position: (positionResult?.value ?? -1) + 1 };
   await database.insert(channels).values(channel);
+  await writeSpaceAuditLog({ spaceId, actorId: user.id, action: "channel.create", targetType: "channel", targetId: channel.id, metadata: { name: channel.name, kind: channel.kind, parentId: channel.parentId } });
   return NextResponse.json({ channel }, { status: 201 });
 }
 
@@ -108,6 +110,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ sp
     isNsfw: channels.isNsfw,
   });
   if (!channel) return NextResponse.json({ code: "NOT_FOUND", message: "Канал не найден." }, { status: 404 });
+  await writeSpaceAuditLog({ spaceId, actorId: user.id, action: "channel.update", targetType: "channel", targetId: channel.id, metadata: { name: channel.name, parentId: channel.parentId, slowmodeSeconds: channel.slowmodeSeconds, isNsfw: channel.isNsfw } });
   return NextResponse.json({ channel });
 }
 
@@ -129,5 +132,6 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ s
   }
   if (["voice", "stage"].includes(channel.kind)) await resetChannelVoiceRooms(spaceId, channelId);
   await database.delete(channels).where(eq(channels.id, channelId));
+  await writeSpaceAuditLog({ spaceId, actorId: user.id, action: "channel.delete", targetType: "channel", targetId: channelId, metadata: { kind: channel.kind } });
   return NextResponse.json({ success: true });
 }
