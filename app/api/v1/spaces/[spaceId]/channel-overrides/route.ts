@@ -27,7 +27,7 @@ async function requireOwner(spaceId: string, channelId: string) {
     const state = await getSpacePermissions(spaceId, user.id);
     if (!state.spaceId || !hasPermission(state.permissions, Permission.ManageChannels)) return { error: NextResponse.json({ code: "FORBIDDEN", message: "Недостаточно прав для настройки доступа канала." }, { status: 403 }) };
   }
-  const [channel] = await database.select({ id: channels.id, name: channels.name, kind: channels.kind }).from(channels).where(and(eq(channels.id, channelId), eq(channels.spaceId, spaceId))).limit(1);
+  const [channel] = await database.select({ id: channels.id, name: channels.name, kind: channels.kind, topic: channels.topic, slowmodeSeconds: channels.slowmodeSeconds, isNsfw: channels.isNsfw }).from(channels).where(and(eq(channels.id, channelId), eq(channels.spaceId, spaceId))).limit(1);
   if (!channel) return { error: NextResponse.json({ code: "NOT_FOUND", message: "Канал не найден." }, { status: 404 }) };
   return { database, channel, owner: space.ownerId === user.id };
 }
