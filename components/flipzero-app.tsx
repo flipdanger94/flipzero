@@ -37,27 +37,6 @@ type ApiSpace = { id: string; ownerId?: string; permissions?: number; name: stri
 type SpaceMember = { userId: string; nickname: string | null; username: string | null; displayName: string; avatarUrl: string | null; level: number; };
 type CurrentUser = AccountProfile;
 type AppNotice = { message: string; tone: "error" | "success" };
-/* Legacy demo chat data removed: all real text/forum/announcement channels render API-backed components. */
-/*
-  { initials: "AP", name: "Alex Push", time: "Сегодня, 10:42", text: "Добро пожаловать в FlipZero! Здесь мы собираем первые идеи продукта и вместе решаем, каким станет наше сообщество.", accent: "avatar-coral", reactions: ["🔥  12", "✨  8"] },
-  { initials: "MK", name: "Mira K.", time: "Сегодня, 10:46", text: "Новый профиль выглядит мощно. Особенно нравится, что уровень отражает реальную активность, а не просто количество сообщений.", accent: "avatar-violet", reactions: ["💜  6"] },
-  { initials: "ZS", name: "Zero System", time: "Сегодня, 10:48", text: "Еженедельный челлендж открыт: проведите 30 минут в голосовых комнатах и получите значок «На одной волне».", accent: "avatar-lime", badge: "БОТ", quest: true, reactions: [] },
-];
-const initialChannelMessages: Record<string, Message[]> = {
-  "общий-чат": generalMessages,
-  "добро-пожаловать": [{ initials: "ZS", name: "Zero System", time: "Сегодня, 09:00", text: "Рады видеть вас в FlipZero. Выберите каналы по интересам, настройте профиль и познакомьтесь с участниками пространства.", accent: "avatar-lime", badge: "БОТ", reactions: ["👋  18"] }],
-  "правила": [{ initials: "AP", name: "Alex Push", time: "Сегодня, 09:05", text: "Уважайте друг друга, не публикуйте спам и используйте подходящие каналы. Наша цель — создать пространство, куда хочется возвращаться.", accent: "avatar-coral", reactions: ["✅  21"] }],
-  "творчество": [{ initials: "MK", name: "Mira K.", time: "Сегодня, 11:02", text: "Делитесь здесь дизайнами, музыкой, иллюстрациями и всем, что создаёте. Незавершённые идеи тоже приветствуются.", accent: "avatar-violet", reactions: ["🎨  9"] }],
-  "игры": [{ initials: "NN", name: "Nana", time: "Сегодня, 11:18", text: "Кто сегодня вечером в кооператив? Собираем команду из четырёх человек.", accent: "avatar-amber", reactions: ["🎮  4"] }],
-};
-const channelDetails: Record<string, { title: string; description: string }> = {
-  "общий-чат": { title: "Добро пожаловать в общий чат", description: "Знакомьтесь, делитесь идеями и создавайте что-то новое вместе." },
-  "добро-пожаловать": { title: "Начните знакомство с FlipZero", description: "Всё необходимое, чтобы быстро освоиться в пространстве." },
-  "правила": { title: "Правила пространства", description: "Простые принципы комфортного и безопасного общения." },
-  "творчество": { title: "Покажите, что вы создаёте", description: "Работы, процессы, идеи и поддержка от сообщества." },
-  "игры": { title: "Играем вместе", description: "Ищите команду, договаривайтесь о сессиях и делитесь моментами." },
-};
-*/
 export default function Home({ initialSpaceId, initialChannelId }: { initialSpaceId?: string; initialChannelId?: string } = {}) {
   const [activeChannel, setActiveChannel] = useState("общий-чат");
   const [voicePresence, setVoicePresence] = useState<Record<string, VoicePresence[]>>({});
