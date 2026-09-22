@@ -11,13 +11,13 @@ async function requireMemberManager(spaceId: string, requiredPermission: number)
   const database = getDatabase();
   const [space] = await database.select({ ownerId: spaces.ownerId }).from(spaces).where(eq(spaces.id, spaceId)).limit(1);
   if (!space) return { error: NextResponse.json({ code: "NOT_FOUND", message: "Пространство не найдено." }, { status: 404 }) };
-  if (space.ownerId === user.id) return { database, space, user, owner: true, topPosition: Number.MAX_SAFE_INTEGER };
+  if (space.ownerId === user.id) return { database, space, user, owner: true, topPosition: Number.MAX_SAFE_INTEGER, permissions: Permission.Administrator };
   const assigned = await database.select({ position: roles.position, permissions: roles.permissions }).from(memberRoles)
     .innerJoin(roles, eq(roles.id, memberRoles.roleId))
     .where(and(eq(memberRoles.spaceId, spaceId), eq(memberRoles.userId, user.id)));
   const permissions = assigned.reduce((value, role) => value | Number(role.permissions), 0);
   if (!hasPermission(permissions, requiredPermission)) return { error: NextResponse.json({ code: "FORBIDDEN", message: "Недостаточно прав." }, { status: 403 }) };
-  return { database, space, user, owner: false, topPosition: Math.max(0, ...assigned.map((role) => role.position)) };
+  return { database, space, user, owner: false, topPosition: Math.max(0, ...assigned.map((role) => role.position)), permissions };
 }
 
 
@@ -53,7 +53,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ sp
   if (!access.owner && targetTop >= access.topPosition) return NextResponse.json({ code: "ROLE_HIERARCHY", message: "Нельзя изменять роли участника с равной или более высокой ролью." }, { status: 403 });
   const requested = [...new Set(body.roleIds as string[])];
   const available = requested.length ? await access.database.select({ id: roles.id, position: roles.position, permissions: roles.permissions }).from(roles).where(and(eq(roles.spaceId, spaceId), eq(roles.isManaged, false), inArray(roles.id, requested))) : [];
-  if (!access.owner && available.some((role) => hasPermission(Number(role.permissions), Permission.Administrator))) return NextResponse.json({ code: "ROLE_ESCALATION", message: "Только владелец может назначать роль администратора." }, { status: 403 });
+  if (!access.owner && available.some((role) => hasPermission(Number(role.permissions), Permission.Administrator) || (Number(role.permissions) & ~access.permissions) !== 0)) return NextResponse.json({ code: "ROLE_ESCALATION", message: "Нельзя назначать роль с правами, которых нет у вас." }, { status: 403 });
   if (!access.owner && available.some((role) => role.position >= access.topPosition)) return NextResponse.json({ code: "ROLE_HIERARCHY", message: "Нельзя назначать роль на уровне вашей высшей роли или выше." }, { status: 403 });
   if (available.length !== requested.length) return NextResponse.json({ code: "INVALID_ROLE", message: "Одна из ролей недоступна." }, { status: 400 });
   const [memberRole] = await access.database.select({ id: roles.id }).from(roles).where(and(eq(roles.spaceId, spaceId), eq(roles.name, "Участник"))).limit(1);
