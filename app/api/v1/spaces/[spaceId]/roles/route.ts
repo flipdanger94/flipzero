@@ -6,7 +6,8 @@ import { roles, spaces } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
 import { roleSchema } from "@/lib/role-validation";
 import { memberRoles, members } from "@/db/schema";
-import { expandPermissions, hasPermission, Permission } from "@/lib/permissions";
+import { expandPermissions, hasPermission, Permission, VOICE_PERMISSION_MASK } from "@/lib/permissions";
+import { evictParticipantsFromSpaceVoice } from "@/lib/livekit-admin";
 
 async function requireRoleManager(spaceId: string) {
   const user = await getCurrentUser();
@@ -67,7 +68,12 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ sp
   if (!access.owner && existing.position >= access.topPosition) return NextResponse.json({ code: "ROLE_HIERARCHY", message: "Нельзя изменять роль на уровне вашей высшей роли или выше." }, { status: 403 });
   if (!access.owner && (hasPermission(Number(existing.permissions), Permission.Administrator) || (Number(existing.permissions) & ~access.permissions) !== 0)) return NextResponse.json({ code: "ROLE_HIERARCHY", message: "Нельзя изменять роль с правами выше ваших." }, { status: 403 });
   if (!access.owner && (hasPermission(parsed.data.permissions, Permission.Administrator) || (parsed.data.permissions & ~access.permissions) !== 0)) return NextResponse.json({ code: "ROLE_ESCALATION", message: "Нельзя выдать роли права, которых нет у вас." }, { status: 403 });
+  const voicePermissionsChanged = ((Number(existing.permissions) ^ parsed.data.permissions) & VOICE_PERMISSION_MASK) !== 0;
+  const affectedMembers = voicePermissionsChanged
+    ? await access.database.select({ userId: memberRoles.userId }).from(memberRoles).where(and(eq(memberRoles.spaceId, spaceId), eq(memberRoles.roleId, body.id)))
+    : [];
   const [updated] = await access.database.update(roles).set(parsed.data).where(and(eq(roles.id, body.id), eq(roles.spaceId, spaceId))).returning();
+  if (voicePermissionsChanged && affectedMembers.length) await evictParticipantsFromSpaceVoice(spaceId, affectedMembers.map((item) => item.userId));
   return NextResponse.json({ role: updated });
 }
 
@@ -82,6 +88,8 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ s
   if (existing.isManaged) return NextResponse.json({ code: "PROTECTED_ROLE", message: "Системную роль нельзя удалить." }, { status: 409 });
   if (!access.owner && existing.position >= access.topPosition) return NextResponse.json({ code: "ROLE_HIERARCHY", message: "Нельзя удалить роль на уровне вашей высшей роли или выше." }, { status: 403 });
   if (!access.owner && (hasPermission(Number(existing.permissions), Permission.Administrator) || (Number(existing.permissions) & ~access.permissions) !== 0)) return NextResponse.json({ code: "ROLE_HIERARCHY", message: "Нельзя удалить роль с правами выше ваших." }, { status: 403 });
+  const affectedMembers = await access.database.select({ userId: memberRoles.userId }).from(memberRoles).where(and(eq(memberRoles.spaceId, spaceId), eq(memberRoles.roleId, roleId)));
   await access.database.delete(roles).where(and(eq(roles.id, roleId), eq(roles.spaceId, spaceId)));
+  if ((Number(existing.permissions) & VOICE_PERMISSION_MASK) !== 0 && affectedMembers.length) await evictParticipantsFromSpaceVoice(spaceId, affectedMembers.map((item) => item.userId));
   return NextResponse.json({ ok: true });
 }
