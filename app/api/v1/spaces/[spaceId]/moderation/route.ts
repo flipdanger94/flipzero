@@ -100,6 +100,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ spa
   if ("error" in access) return access.error;
   const parsed = actionSchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ code: "INVALID_INPUT", message: "Проверьте действие, причину и длительность." }, { status: 400 });
+  if (["timeout", "kick", "ban"].includes(parsed.data.action) && parsed.data.reason.length < 3) {
+    return NextResponse.json({ code: "REASON_REQUIRED", message: "Для таймаута, исключения и блокировки укажите причину минимум из 3 символов." }, { status: 400 });
+  }
   if (!access.owner && !hasPermission(access.permissions, actionPermission(parsed.data.action))) return NextResponse.json({ code: "FORBIDDEN", message: "Недостаточно прав для этого действия." }, { status: 403 });
   if (parsed.data.targetUserId === access.user.id) return NextResponse.json({ code: "SELF_MODERATION", message: "Нельзя применить это действие к самому себе." }, { status: 409 });
   if (parsed.data.targetUserId === access.space.ownerId) return NextResponse.json({ code: "OWNER_PROTECTED", message: "Владельца пространства нельзя модерировать." }, { status: 409 });
