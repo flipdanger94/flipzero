@@ -17,10 +17,13 @@ export const createChannelSchema = z.object({
 });
 
 export const createCategorySchema = z.object({ name: z.string().trim().min(2).max(32) });
+export const updateCategorySchema = z.object({ categoryId: z.string().uuid(), name: z.string().trim().min(2).max(32) });
 
 
 export const updateChannelSchema = z.object({
   channelId: z.string().uuid(),
+  name: z.string().trim().min(2).max(48).transform((value) => value.replace(/\s+/g, "-")),
+  parentId: z.string().uuid().nullable().optional().default(null),
   topic: z.string().trim().max(240).optional().default(""),
   slowmodeSeconds: z.number().int().min(0).max(21600).optional().default(0),
   isNsfw: z.boolean().optional().default(false),
