@@ -6,7 +6,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { updateSpaceSchema } from "@/lib/space-validation";
 import { getSpacePermissions } from "@/lib/space-permissions";
 import { hasPermission, Permission } from "@/lib/permissions";
-import { evictParticipantFromSpaceVoice } from "@/lib/livekit-admin";
+import { deleteSpaceVoiceRooms, evictParticipantFromSpaceVoice } from "@/lib/livekit-admin";
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ spaceId: string }> }) {
   const [user, { spaceId }] = await Promise.all([getCurrentUser(), params]);
@@ -49,5 +49,6 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ s
   if (body?.action !== "delete" || body?.name !== space.name) return NextResponse.json({ code: "CONFIRMATION_REQUIRED", message: "Введите точное название сервера." }, { status: 400 });
   if (space.ownerId !== user.id && user.platformRole !== "admin") return NextResponse.json({ code: "FORBIDDEN", message: "Удалить сервер может только владелец." }, { status: 403 });
   await database.delete(spaces).where(eq(spaces.id, spaceId));
+  await deleteSpaceVoiceRooms(spaceId);
   return NextResponse.json({ ok: true });
 }
