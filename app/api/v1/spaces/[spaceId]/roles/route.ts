@@ -14,14 +14,14 @@ async function requireRoleManager(spaceId: string) {
   const database = getDatabase();
   const [space] = await database.select({ ownerId: spaces.ownerId }).from(spaces).where(eq(spaces.id, spaceId)).limit(1);
   if (!space) return { error: NextResponse.json({ code: "NOT_FOUND", message: "Пространство не найдено." }, { status: 404 }) };
+  let assigned: { permissions: number; position: number }[] = [];
   if (space.ownerId !== user.id) {
     const [membership] = await database.select({ userId: members.userId }).from(members).where(and(eq(members.spaceId, spaceId), eq(members.userId, user.id))).limit(1);
     if (!membership) return { error: NextResponse.json({ code: "FORBIDDEN", message: "Вы не состоите в этом сообществе." }, { status: 403 }) };
-    const assigned = await database.select({ permissions: roles.permissions, position: roles.position }).from(memberRoles).innerJoin(roles, eq(roles.id, memberRoles.roleId)).where(and(eq(memberRoles.spaceId, spaceId), eq(memberRoles.userId, user.id)));
-    const permissions = assigned.reduce((value, role) => value | Number(role.permissions), 0);
-    if (!hasPermission(permissions, Permission.ManageRoles)) return { error: NextResponse.json({ code: "FORBIDDEN", message: "Недостаточно прав для управления ролями." }, { status: 403 }) };
+    assigned = await database.select({ permissions: roles.permissions, position: roles.position }).from(memberRoles).innerJoin(roles, eq(roles.id, memberRoles.roleId)).where(and(eq(memberRoles.spaceId, spaceId), eq(memberRoles.userId, user.id)));
+    const assignedPermissions = assigned.reduce((value, role) => value | Number(role.permissions), 0);
+    if (!hasPermission(assignedPermissions, Permission.ManageRoles)) return { error: NextResponse.json({ code: "FORBIDDEN", message: "Недостаточно прав для управления ролями." }, { status: 403 }) };
   }
-  const assigned = space.ownerId === user.id ? [] : await database.select({ permissions: roles.permissions, position: roles.position }).from(memberRoles).innerJoin(roles, eq(roles.id, memberRoles.roleId)).where(and(eq(memberRoles.spaceId, spaceId), eq(memberRoles.userId, user.id)));
   const permissions = space.ownerId === user.id ? Permission.Administrator : assigned.reduce((value, role) => value | Number(role.permissions), 0);
   return { database, user, space, owner: space.ownerId === user.id, topPosition: space.ownerId === user.id ? Number.MAX_SAFE_INTEGER : Math.max(0, ...assigned.map((role) => role.position)), permissions };
 }
