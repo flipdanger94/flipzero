@@ -7,6 +7,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { createChannelSchema } from "@/lib/space-validation";
 import { getSpacePermissions } from "@/lib/space-permissions";
 import { hasPermission, Permission } from "@/lib/permissions";
+import { resetChannelVoiceRooms } from "@/lib/livekit-admin";
 
 export async function POST(request: Request, { params }: { params: Promise<{ spaceId: string }> }) {
   const [user, { spaceId }] = await Promise.all([getCurrentUser(), params]);
@@ -51,6 +52,7 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ s
     const [textCount] = await database.select({ value: count() }).from(channels).where(and(eq(channels.spaceId, spaceId), eq(channels.kind, "text")));
     if (textCount.value <= 1) return NextResponse.json({ code: "LAST_TEXT_CHANNEL", message: "Нельзя удалить последний текстовый канал." }, { status: 409 });
   }
+  if (["voice", "stage"].includes(channel.kind)) await resetChannelVoiceRooms(spaceId, channelId);
   await database.delete(channels).where(eq(channels.id, channelId));
   return NextResponse.json({ success: true });
 }
