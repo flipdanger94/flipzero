@@ -4,20 +4,25 @@ import { NextResponse } from "next/server";
 import { getDatabase } from "@/db/client";
 import { achievementDefinitions, spaces } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
+import { getSpacePermissions } from "@/lib/space-permissions";
+import { hasPermission, Permission } from "@/lib/permissions";
 
-async function requireOwner(spaceId: string) {
+async function requireAchievementManager(spaceId: string) {
   const user = await getCurrentUser();
   if (!user) return { error: NextResponse.json({ code: "UNAUTHENTICATED", message: "Требуется вход." }, { status: 401 }) };
   const database = getDatabase();
   const [space] = await database.select({ ownerId: spaces.ownerId }).from(spaces).where(eq(spaces.id, spaceId)).limit(1);
   if (!space) return { error: NextResponse.json({ code: "NOT_FOUND", message: "Пространство не найдено." }, { status: 404 }) };
-  if (space.ownerId !== user.id) return { error: NextResponse.json({ code: "FORBIDDEN", message: "Достижения может создавать только владелец." }, { status: 403 }) };
+  if (space.ownerId !== user.id) {
+    const state = await getSpacePermissions(spaceId, user.id);
+    if (!state.spaceId || !hasPermission(state.permissions, Permission.ManageSpace)) return { error: NextResponse.json({ code: "FORBIDDEN", message: "Недостаточно прав для управления достижениями." }, { status: 403 }) };
+  }
   return { database, user };
 }
 
 export async function POST(request: Request, { params }: { params: Promise<{ spaceId: string }> }) {
   const { spaceId } = await params;
-  const access = await requireOwner(spaceId);
+  const access = await requireAchievementManager(spaceId);
   if ("error" in access) return access.error;
   const body = await request.json().catch(() => null);
   const name = typeof body?.name === "string" ? body.name.trim().slice(0, 50) : "";
@@ -33,7 +38,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ spa
 
 export async function DELETE(request: Request, { params }: { params: Promise<{ spaceId: string }> }) {
   const { spaceId } = await params;
-  const access = await requireOwner(spaceId);
+  const access = await requireAchievementManager(spaceId);
   if ("error" in access) return access.error;
   const achievementId = new URL(request.url).searchParams.get("achievementId");
   if (!achievementId) return NextResponse.json({ code: "INVALID_INPUT", message: "Не указано достижение." }, { status: 400 });
