@@ -32,8 +32,11 @@ export async function getSpaceChannelPermissions(spaceId: string, userId: string
     .where(eq(spaces.id, spaceId))
     .limit(1);
   if (!base) return result;
+  const validChannels = await db.select({ id: channels.id }).from(channels).where(and(eq(channels.spaceId, spaceId), inArray(channels.id, uniqueChannelIds)));
+  const validChannelIds = validChannels.map((channel) => channel.id);
+  if (!validChannelIds.length) return result;
   if (base.ownerId === userId) {
-    uniqueChannelIds.forEach((channelId) => result.set(channelId, Permission.Administrator));
+    validChannelIds.forEach((channelId) => result.set(channelId, Permission.Administrator));
     return result;
   }
 
@@ -44,12 +47,12 @@ export async function getSpaceChannelPermissions(spaceId: string, userId: string
   const roleIds = assignedRoles.map((role) => role.roleId);
   const basePermissions = assignedRoles.reduce((value, role) => value | Number(role.permissions), 0);
   if (hasPermission(basePermissions, Permission.Administrator)) {
-    uniqueChannelIds.forEach((channelId) => result.set(channelId, basePermissions));
+    validChannelIds.forEach((channelId) => result.set(channelId, basePermissions));
     return result;
   }
 
-  const overrides = await db.select().from(channelOverrides).where(inArray(channelOverrides.channelId, uniqueChannelIds));
-  for (const channelId of uniqueChannelIds) {
+  const overrides = await db.select().from(channelOverrides).where(inArray(channelOverrides.channelId, validChannelIds));
+  for (const channelId of validChannelIds) {
     let permissions = basePermissions;
     let roleAllow = 0;
     let roleDeny = 0;
