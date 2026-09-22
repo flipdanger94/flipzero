@@ -39,7 +39,6 @@ export async function PUT(request: Request, { params }: { params: Promise<{ chan
   if (!targetId || !["role", "member"].includes(targetType) || !Number.isSafeInteger(allow) || !Number.isSafeInteger(deny) || allow < 0 || deny < 0 || (allow & ~channelPermissionMask) !== 0 || (deny & ~channelPermissionMask) !== 0 || (allow & deny) !== 0) {
     return NextResponse.json({ code: "INVALID_OVERRIDE", message: "Некорректные права канала." }, { status: 400 });
   }
-  if (!access.owner && ((allow | deny) & Permission.Administrator) !== 0) return NextResponse.json({ code: "ROLE_ESCALATION", message: "Только владелец может изменять право администратора." }, { status: 403 });
   if (targetType === "role") {
     const [target] = await access.db.select({ id: roles.id }).from(roles).where(and(eq(roles.id, targetId), eq(roles.spaceId, access.channel.spaceId))).limit(1);
     if (!target) return NextResponse.json({ code: "INVALID_TARGET", message: "Роль не принадлежит этому серверу." }, { status: 400 });
