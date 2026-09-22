@@ -7,6 +7,7 @@ import { updateSpaceSchema } from "@/lib/space-validation";
 import { getSpacePermissions } from "@/lib/space-permissions";
 import { hasPermission, Permission } from "@/lib/permissions";
 import { deleteSpaceVoiceRooms, evictParticipantFromSpaceVoice } from "@/lib/livekit-admin";
+import { writeSpaceAuditLog } from "@/lib/space-audit";
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ spaceId: string }> }) {
   const [user, { spaceId }] = await Promise.all([getCurrentUser(), params]);
@@ -29,6 +30,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ sp
     accentColor: parsed.data.accentColor,
     updatedAt: new Date(),
   }).where(eq(spaces.id, spaceId)).returning({ id: spaces.id, name: spaces.name, description: spaces.description, visibility: spaces.visibility, accentColor: spaces.accentColor });
+  await writeSpaceAuditLog({ spaceId, actorId: user.id, action: "space.update", targetType: "space", targetId: spaceId, metadata: { name: updated.name, visibility: updated.visibility, accentColor: updated.accentColor } });
   return NextResponse.json({ space: updated });
 }
 
@@ -44,6 +46,7 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ s
     if (!membership) return NextResponse.json({ code: "NOT_MEMBER", message: "Вы не состоите в этом сервере." }, { status: 404 });
     await database.transaction(async (tx) => { await tx.delete(memberRoles).where(and(eq(memberRoles.userId, user.id), eq(memberRoles.spaceId, spaceId))); await tx.delete(members).where(and(eq(members.userId, user.id), eq(members.spaceId, spaceId))); });
     await evictParticipantFromSpaceVoice(spaceId, user.id);
+    await writeSpaceAuditLog({ spaceId, actorId: user.id, action: "member.leave", targetType: "user", targetId: user.id });
     return NextResponse.json({ ok: true });
   }
   if (body?.action !== "delete" || body?.name !== space.name) return NextResponse.json({ code: "CONFIRMATION_REQUIRED", message: "Введите точное название сервера." }, { status: 400 });
