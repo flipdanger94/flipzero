@@ -1,6 +1,6 @@
 "use client";
 
-import { type FormEvent, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { BookOpen, Check, ChevronDown, CirclePlus, Code2, Compass, Copy, Gem, Gift, Hash, Headphones, HelpCircle, Home as HomeIcon, Image as ImageIcon, LoaderCircle, Menu, MessageCircle, Mic, MicOff, MonitorUp, Plus, Search, SendHorizontal, Settings, Settings2, Share2, ShieldCheck, Smile, Sparkles, Trash2, UserRound, Users, Video, Volume2, X } from "lucide-react";
 import { CreateSpaceDialog } from "@/components/create-space-dialog";
 import { MediaImage } from "@/components/media-image";
@@ -36,9 +36,8 @@ type ApiSpace = { id: string; ownerId?: string; name: string; slug: string; desc
 type SpaceMember = { userId: string; nickname: string | null; username: string | null; displayName: string; avatarUrl: string | null; level: number; };
 type CurrentUser = AccountProfile;
 type AppNotice = { message: string; tone: "error" | "success" };
-type Message = { initials: string; name: string; time: string; text: string; accent: string; reactions: string[]; badge?: string; quest?: boolean };
-
-const generalMessages: Message[] = [
+/* Legacy demo chat data removed: all real text/forum/announcement channels render API-backed components. */
+/*
   { initials: "AP", name: "Alex Push", time: "Сегодня, 10:42", text: "Добро пожаловать в FlipZero! Здесь мы собираем первые идеи продукта и вместе решаем, каким станет наше сообщество.", accent: "avatar-coral", reactions: ["🔥  12", "✨  8"] },
   { initials: "MK", name: "Mira K.", time: "Сегодня, 10:46", text: "Новый профиль выглядит мощно. Особенно нравится, что уровень отражает реальную активность, а не просто количество сообщений.", accent: "avatar-violet", reactions: ["💜  6"] },
   { initials: "ZS", name: "Zero System", time: "Сегодня, 10:48", text: "Еженедельный челлендж открыт: проведите 30 минут в голосовых комнатах и получите значок «На одной волне».", accent: "avatar-lime", badge: "БОТ", quest: true, reactions: [] },
@@ -57,14 +56,12 @@ const channelDetails: Record<string, { title: string; description: string }> = {
   "творчество": { title: "Покажите, что вы создаёте", description: "Работы, процессы, идеи и поддержка от сообщества." },
   "игры": { title: "Играем вместе", description: "Ищите команду, договаривайтесь о сессиях и делитесь моментами." },
 };
+*/
 export default function Home({ initialSpaceId, initialChannelId }: { initialSpaceId?: string; initialChannelId?: string } = {}) {
-  const [channelMessages, setChannelMessages] = useState(initialChannelMessages);
-  const [draft, setDraft] = useState("");
   const [activeChannel, setActiveChannel] = useState("общий-чат");
   const [voicePresence, setVoicePresence] = useState<Record<string, VoicePresence[]>>({});
   const [searchQuery, setSearchQuery] = useState("");
   const [showMembers, setShowMembers] = useState(true);
-  const [storageReady, setStorageReady] = useState(false);
   const [user, setUser] = useState<CurrentUser | null>(null);
   const [userSpaces, setUserSpaces] = useState<ApiSpace[]>([]);
   const [activeSpaceId, setActiveSpaceId] = useState<string | null>(null);
@@ -120,26 +117,6 @@ export default function Home({ initialSpaceId, initialChannelId }: { initialSpac
     return () => { cancelled = true; };
   }, [initialChannelId, initialSpaceId]);
 
-  useEffect(() => {
-    const saved = window.localStorage.getItem("flipzero:messages:v2");
-    let restoredMessages = initialChannelMessages;
-    if (saved) {
-      try {
-        restoredMessages = JSON.parse(saved) as Record<string, Message[]>;
-      } catch {
-        window.localStorage.removeItem("flipzero:messages:v2");
-      }
-    }
-    queueMicrotask(() => {
-      setChannelMessages(restoredMessages);
-      setStorageReady(true);
-    });
-  }, []);
-
-  useEffect(() => {
-    if (storageReady) window.localStorage.setItem("flipzero:messages:v2", JSON.stringify(channelMessages));
-  }, [channelMessages, storageReady]);
-
   useEffect(() => { const handler = (event: Event) => selectChannel((event as CustomEvent<string>).detail); window.addEventListener("flipzero:select-channel", handler); return () => window.removeEventListener("flipzero:select-channel", handler); });
 
   useEffect(() => {
@@ -154,7 +131,6 @@ export default function Home({ initialSpaceId, initialChannelId }: { initialSpac
     return () => window.removeEventListener("popstate", syncRoute);
   }, [userSpaces]);
 
-  const activeMessages = channelMessages[activeChannel] ?? [];
   const activeSpace = userSpaces.find((space) => space.id === activeSpaceId) ?? null;
   useEffect(() => {
     if (!activeSpaceId || !showMembers) return;
@@ -185,11 +161,6 @@ export default function Home({ initialSpaceId, initialChannelId }: { initialSpac
   const activeBoardChannel = activeSpace?.channels.find((channel) => channel.name === activeChannel && channel.kind === "board") ?? null;
   const activeForumChannel = activeSpace?.channels.find((channel) => channel.name === activeChannel && channel.kind === "forum") ?? null;
   const activeVoiceChannel = activeSpace?.channels.find((channel) => channel.name === activeChannel && channel.kind === "voice") ?? null;
-  const activeDetails = channelDetails[activeChannel] ?? { title: activeChannel, description: "Канал пространства FlipZero." };
-  const visibleMessages = activeMessages.filter((message) => {
-    const query = searchQuery.trim().toLocaleLowerCase("ru");
-    return !query || message.text.toLocaleLowerCase("ru").includes(query) || message.name.toLocaleLowerCase("ru").includes(query);
-  });
 
   async function shareChannelLink() {
     if (!activeSpace || !activeRouteChannel) return;
@@ -222,28 +193,9 @@ export default function Home({ initialSpaceId, initialChannelId }: { initialSpac
     }
   }
 
-  async function sendMessage(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const text = draft.trim();
-    if (!text) return;
-    const displayName = user?.displayName ?? "Alex Push";
-    const initials = displayName.split(/\s+/).map((part) => part[0]).join("").slice(0, 2).toLocaleUpperCase("ru");
-    setChannelMessages((current) => ({ ...current, [activeChannel]: [...(current[activeChannel] ?? []), { initials, name: displayName, time: "Только что", text, accent: "avatar-coral", reactions: [] }] }));
-    setDraft("");
-    if (activeSpace) {
-      const response = await fetch("/api/v1/gamification/award", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ source: "message", spaceId: activeSpace.id, idempotencyKey: `message:${activeSpace.id}:${crypto.randomUUID()}` }) });
-      const result = await response.json().catch(() => null);
-      if (response.ok && result?.profile) {
-        setUser((current) => current ? { ...current, globalXp: result.profile.globalXp, globalLevel: result.profile.globalLevel } : current);
-        if (result.profile.levelUp) { setLevelUp(result.profile.globalLevel); window.setTimeout(() => setLevelUp(null), 4200); }
-      }
-    }
-  }
-
   function selectChannel(channel: string, channelId?: string, spaceId?: string) {
     setActiveChannel(channel);
     setSearchQuery("");
-    setDraft("");
     setMobileChannelsOpen(false);
     if (channelId && spaceId && window.location.pathname !== `/channels/${spaceId}/${channelId}`) window.history.pushState({}, "", `/channels/${spaceId}/${channelId}`);
   }
@@ -341,21 +293,7 @@ export default function Home({ initialSpaceId, initialChannelId }: { initialSpac
 
       <section className="chat-panel">
         <header className="chat-header"><button className="mobile-menu-button" aria-label="Открыть сообщества и каналы" onClick={() => setMobileChannelsOpen(true)}><Menu size={20} /></button><div className="channel-title"><Hash size={21} /><strong>{activeChannel}</strong><span>Разговоры обо всём</span></div><div className="header-actions"><button className={`channel-share-action ${channelLinkCopied ? "is-active link-copied" : ""}`} aria-label={channelLinkCopied ? "Ссылка на канал скопирована" : "Поделиться ссылкой на канал"} title={channelLinkCopied ? "Скопировано" : "Поделиться ссылкой на канал"} onClick={shareChannelLink} disabled={!activeRouteChannel}>{channelLinkCopied ? <Check size={18} /> : <><Copy className="desktop-copy-icon" size={18} /><Share2 className="mobile-share-icon" size={18} /></>}</button><NotificationCenter onOpenMessages={(userId) => { setSocialRoute((route) => ({ tab: "messages", userId, nonce: route.nonce + 1 })); setPlatformView("social"); }} onOpenFriends={() => { setSocialRoute((route) => ({ tab: "friends", userId: null, nonce: route.nonce + 1 })); setPlatformView("social"); }} /><button className={showMembers ? "is-active" : ""} aria-label={showMembers ? "Скрыть участников" : "Показать участников"} aria-pressed={showMembers} onClick={() => setShowMembers((value) => !value)}><Users size={19} /></button><label className="search-box"><Search size={16} /><input aria-label="Поиск" placeholder="Поиск" value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} /></label></div></header>
-        {activeBoardChannel ? <ChannelBoard channelId={activeBoardChannel.id} channelName={activeBoardChannel.name} /> : activeForumChannel ? <ForumChannel channelId={activeForumChannel.id} channelName={activeForumChannel.name} /> : activeVoiceChannel ? <VoiceRoom key={activeVoiceChannel.id} channelId={activeVoiceChannel.id} channelName={activeVoiceChannel.name} autoJoin onPresenceChange={(participants) => setVoicePresence((current) => ({ ...current, [activeVoiceChannel.id]: participants }))} /> : activeApiChannel && user ? <PersistentChat key={activeApiChannel.id} channelId={activeApiChannel.id} channelName={activeApiChannel.name} spaceId={activeSpace!.id} currentUserId={user.id} ownerId={activeSpace?.ownerId} searchQuery={searchQuery}  onOpenDirect={(userId) => { setSocialRoute((route) => ({ tab: "messages", userId, nonce: route.nonce + 1 })); setPlatformView("social"); }} /> : <><div className="message-list">
-          <div className="channel-intro"><div className="intro-icon"><Hash size={31} /></div><h1>{activeDetails.title}</h1><p>Это начало канала <strong>#{activeChannel}</strong>. {activeDetails.description}</p></div>
-          <div className="day-divider"><span>17 сентября 2026</span></div>
-          {visibleMessages.map((message) => (
-            <article className="message" key={message.name}>
-              <div className={`avatar ${message.accent}`}>{message.initials}</div>
-              <div className="message-body"><div className="message-meta"><strong>{message.name}</strong>{message.badge && <span className="bot-badge">{message.badge}</span>}<time>{message.time}</time></div><p>{message.text}</p>
-                {message.quest && <div className="quest-card"><div className="quest-symbol"><Gift size={22} /></div><div><small>ЕЖЕНЕДЕЛЬНЫЙ ЧЕЛЛЕНДЖ</small><strong>На одной волне</strong><span>Прогресс: 18 из 30 минут</span><div className="progress"><i /></div></div><b>+250 XP</b></div>}
-                {message.reactions.length > 0 && <div className="reactions">{message.reactions.map((reaction) => <button key={reaction}>{reaction}</button>)}</div>}
-              </div>
-            </article>
-          ))}
-          {visibleMessages.length === 0 && <div className="search-empty"><Search size={24} /><strong>Ничего не найдено</strong><span>Попробуйте изменить поисковый запрос.</span></div>}
-        </div>
-        <div className="composer-wrap"><div className="typing"><span /><span /><span /> Mira печатает...</div><form className="composer" onSubmit={sendMessage}><button type="button" aria-label="Добавить"><CirclePlus size={22} /></button><textarea aria-label="Сообщение" placeholder={`Написать в #${activeChannel}`} rows={1} value={draft} onChange={(event) => setDraft(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); event.currentTarget.form?.requestSubmit(); } }} /><button type="button" aria-label="Изображение"><ImageIcon size={20} /></button><button type="button" aria-label="Эмодзи"><Smile size={20} /></button><button className="send-button" type="submit" aria-label="Отправить" disabled={!draft.trim()}><SendHorizontal size={18} /></button></form></div></>}
+        {activeBoardChannel ? <ChannelBoard channelId={activeBoardChannel.id} channelName={activeBoardChannel.name} /> : activeForumChannel ? <ForumChannel channelId={activeForumChannel.id} channelName={activeForumChannel.name} /> : activeVoiceChannel ? <VoiceRoom key={activeVoiceChannel.id} channelId={activeVoiceChannel.id} channelName={activeVoiceChannel.name} autoJoin onPresenceChange={(participants) => setVoicePresence((current) => ({ ...current, [activeVoiceChannel.id]: participants }))} /> : activeApiChannel && user ? <PersistentChat key={activeApiChannel.id} channelId={activeApiChannel.id} channelName={activeApiChannel.name} spaceId={activeSpace!.id} currentUserId={user.id} ownerId={activeSpace?.ownerId} searchQuery={searchQuery}  onOpenDirect={(userId) => { setSocialRoute((route) => ({ tab: "messages", userId, nonce: route.nonce + 1 })); setPlatformView("social"); }} /> : <div className="channel-empty-state"><Hash size={31} /><strong>Канал недоступен</strong><span>Выберите доступный канал в списке слева.</span></div>}
       </section>
 
       <aside className="member-panel">
