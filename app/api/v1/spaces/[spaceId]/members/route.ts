@@ -52,7 +52,8 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ sp
   const targetTop = Math.max(0, ...targetAssigned.map((role) => role.position));
   if (!access.owner && targetTop >= access.topPosition) return NextResponse.json({ code: "ROLE_HIERARCHY", message: "Нельзя изменять роли участника с равной или более высокой ролью." }, { status: 403 });
   const requested = [...new Set(body.roleIds as string[])];
-  const available = requested.length ? await access.database.select({ id: roles.id, position: roles.position }).from(roles).where(and(eq(roles.spaceId, spaceId), eq(roles.isManaged, false), inArray(roles.id, requested))) : [];
+  const available = requested.length ? await access.database.select({ id: roles.id, position: roles.position, permissions: roles.permissions }).from(roles).where(and(eq(roles.spaceId, spaceId), eq(roles.isManaged, false), inArray(roles.id, requested))) : [];
+  if (!access.owner && available.some((role) => hasPermission(Number(role.permissions), Permission.Administrator))) return NextResponse.json({ code: "ROLE_ESCALATION", message: "Только владелец может назначать роль администратора." }, { status: 403 });
   if (!access.owner && available.some((role) => role.position >= access.topPosition)) return NextResponse.json({ code: "ROLE_HIERARCHY", message: "Нельзя назначать роль на уровне вашей высшей роли или выше." }, { status: 403 });
   if (available.length !== requested.length) return NextResponse.json({ code: "INVALID_ROLE", message: "Одна из ролей недоступна." }, { status: 400 });
   const [memberRole] = await access.database.select({ id: roles.id }).from(roles).where(and(eq(roles.spaceId, spaceId), eq(roles.name, "Участник"))).limit(1);
