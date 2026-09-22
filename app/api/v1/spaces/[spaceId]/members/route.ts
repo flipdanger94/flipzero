@@ -86,7 +86,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ sp
   if (!access.owner && newlyAssigned.some((role) => hasPermission(Number(role.permissions), Permission.Administrator) || (Number(role.permissions) & ~access.permissions) !== 0)) return NextResponse.json({ code: "ROLE_ESCALATION", message: "Нельзя назначать роль с правами, которых нет у вас." }, { status: 403 });
   if (!access.owner && newlyAssigned.some((role) => role.position >= access.topPosition)) return NextResponse.json({ code: "ROLE_HIERARCHY", message: "Нельзя назначать роль на уровне вашей высшей роли или выше." }, { status: 403 });
   if (available.length !== requested.length) return NextResponse.json({ code: "INVALID_ROLE", message: "Одна из ролей недоступна." }, { status: 400 });
-  const [memberRole] = await access.database.select({ id: roles.id }).from(roles).where(and(eq(roles.spaceId, spaceId), eq(roles.name, "Участник"))).limit(1);
+  const [memberRole] = await access.database.select({ id: roles.id }).from(roles).where(and(eq(roles.spaceId, spaceId), eq(roles.name, "Участник"), eq(roles.isManaged, true))).limit(1);
   await access.database.transaction(async (tx) => {
     await tx.delete(memberRoles).where(and(eq(memberRoles.userId, body.userId), eq(memberRoles.spaceId, spaceId)));
     const roleIds = [...(memberRole ? [memberRole.id] : []), ...requested];
