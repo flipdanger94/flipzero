@@ -32,7 +32,7 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ code: "UNAUTHENTICATED", message: "Войдите, чтобы вступить в сообщество." }, { status: 401 });
-  const body = await request.json().catch(() => null) as { spaceId?: unknown } | null;
+  const body = await request.json().catch(() => null) as { spaceId?: unknown; message?: unknown } | null;
   if (typeof body?.spaceId !== "string" || !body.spaceId) return NextResponse.json({ code: "INVALID_INPUT", message: "Не выбрано сообщество." }, { status: 400 });
   const database = getDatabase();
   const [space] = await database.select({ id: spaces.id, ownerId: spaces.ownerId, visibility: spaces.visibility }).from(spaces).where(and(eq(spaces.id, body.spaceId), inArray(spaces.visibility, ["public", "application"]))).limit(1);
