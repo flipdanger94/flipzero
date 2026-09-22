@@ -1,4 +1,4 @@
-import { boolean, index, jsonb, pgTable, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
+import { boolean, index, integer, jsonb, pgTable, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
 import { developerApps, spaces, users } from "./schema";
 
 export const developerOauthClients = pgTable("developer_oauth_clients", {
@@ -68,4 +68,21 @@ export const developerAppInstallations = pgTable("developer_app_installations", 
 }, (table) => [
   uniqueIndex("developer_app_installation_unique").on(table.appId, table.spaceId),
   index("developer_app_installations_space_idx").on(table.spaceId),
+]);
+
+export const developerWebhookDeliveries = pgTable("developer_webhook_deliveries", {
+  id: text("id").primaryKey(),
+  webhookId: text("webhook_id").notNull().references(() => developerWebhooks.id, { onDelete: "cascade" }),
+  eventId: text("event_id").notNull(),
+  eventType: text("event_type").notNull(),
+  status: text("status").default("pending").notNull(),
+  attempt: integer("attempt").default(1).notNull(),
+  responseStatus: integer("response_status"),
+  durationMs: integer("duration_ms"),
+  error: text("error"),
+  completedAt: timestamp("completed_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [
+  index("developer_webhook_deliveries_webhook_created_idx").on(table.webhookId, table.createdAt),
+  index("developer_webhook_deliveries_event_idx").on(table.eventId),
 ]);
