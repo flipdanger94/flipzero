@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Award, Crown, LoaderCircle, Medal, Palette, Plus, Sparkles, Trophy, X } from "lucide-react";
+import { useModalA11y } from "@/hooks/use-modal-a11y";
 
 type Progress = { level: number; current: number; required: number; percent: number };
 type Cosmetics = { title: string; avatarFrame: string; profileEffect: string; showcasedPath: string };
@@ -12,7 +13,8 @@ type GamificationData = {
   leaderboard: Array<{ userId: string; displayName: string; username: string; xp: number; level: number; rank: number; isCurrentUser: boolean }>;
 };
 
-export function GamificationDialog({ spaceId, isOwner, onClose }: { spaceId: string; isOwner: boolean; onClose: () => void }) {
+export function GamificationDialog({
+  const dialogRef = useModalA11y(onClose); spaceId, isOwner, onClose }: { spaceId: string; isOwner: boolean; onClose: () => void }) {
   const [data, setData] = useState<GamificationData | null>(null);
   const [tab, setTab] = useState<"profile" | "achievements" | "leaderboard" | "create">("profile");
   const [error, setError] = useState("");
@@ -24,7 +26,7 @@ export function GamificationDialog({ spaceId, isOwner, onClose }: { spaceId: str
   async function saveCosmetics(form: FormData) { setSaving(true); setError(""); const response = await fetch("/api/v1/gamification", { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify(Object.fromEntries(form.entries())) }); const result = await response.json(); setSaving(false); if (!response.ok) setError(result.message ?? "Не удалось сохранить оформление."); else await load(); }
   async function createAchievement(form: FormData) { setSaving(true); setError(""); const response = await fetch(`/api/v1/spaces/${spaceId}/achievements`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(Object.fromEntries(form.entries())) }); const result = await response.json(); setSaving(false); if (!response.ok) setError(result.message ?? "Не удалось создать достижение."); else { await load(); setTab("achievements"); } }
 
-  return <div className="dialog-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}><section className="space-dialog gamification-dialog" role="dialog" aria-modal="true" aria-label="Прогресс и достижения">
+  return <div className="dialog-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}><section ref={dialogRef} tabIndex={-1} className="space-dialog gamification-dialog" role="dialog" aria-modal="true" aria-label="Прогресс и достижения">
     <button className="dialog-close" onClick={onClose} aria-label="Закрыть"><X size={18} /></button>
     <div className="gamification-head"><span className="dialog-symbol"><Trophy size={22} /></span><div><h2>Прогресс FlipZero</h2><p>Уровни, пути развития и достижения</p></div></div>
     <nav className="gamification-tabs"><button className={tab === "profile" ? "active" : ""} onClick={() => setTab("profile")}><Sparkles size={15} /> Профиль</button><button className={tab === "achievements" ? "active" : ""} onClick={() => setTab("achievements")}><Award size={15} /> Достижения</button><button className={tab === "leaderboard" ? "active" : ""} onClick={() => setTab("leaderboard")}><Crown size={15} /> Рейтинг</button>{isOwner ? <button className={tab === "create" ? "active" : ""} onClick={() => setTab("create")}><Plus size={15} /> Создать</button> : null}</nav>
