@@ -45,7 +45,7 @@ const flipzero = new FlipZeroClient({ token: oauth.access_token });
 const profile = await flipzero.me();
 ```
 
-Для публичных клиентов используйте PKCE S256: передайте `codeChallenge` в authorization URL и соответствующий `codeVerifier` при обмене кода. Authorization code одноразовый и короткоживущий.
+Для дополнительной защиты Authorization Code Flow используйте PKCE S256: передайте `codeChallenge` в authorization URL и соответствующий `codeVerifier` при обмене кода. Authorization code одноразовый и короткоживущий.
 
 OAuth scopes:
 
