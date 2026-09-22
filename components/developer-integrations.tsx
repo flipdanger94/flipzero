@@ -21,6 +21,7 @@ export function DeveloperIntegrations({ appId }: { appId: string }) {
   const [events, setEvents] = useState<string[]>(["message.created"]);
   const [secret, setSecret] = useState<SecretNotice>(null);
   const [copied, setCopied] = useState(false);
+  const [authorizeCopied, setAuthorizeCopied] = useState(false);
   const [loading, setLoading] = useState(true);
   const [working, setWorking] = useState(false);
   const [error, setError] = useState("");
@@ -88,6 +89,15 @@ export function DeveloperIntegrations({ appId }: { appId: string }) {
 
   async function copySecret() { if (!secret) return; await navigator.clipboard.writeText(secret.value); setCopied(true); window.setTimeout(() => setCopied(false), 1500); }
 
+  const authorizePath = oauth?.redirectUris[0] ? `/oauth/authorize?client_id=${encodeURIComponent(oauth.clientId)}&redirect_uri=${encodeURIComponent(oauth.redirectUris[0])}&response_type=code&scope=${encodeURIComponent(oauth.scopes.join(" "))}` : "";
+
+  async function copyAuthorizeUrl() {
+    if (!authorizePath) return;
+    await navigator.clipboard.writeText(`${window.location.origin}${authorizePath}`);
+    setAuthorizeCopied(true);
+    window.setTimeout(() => setAuthorizeCopied(false), 1500);
+  }
+
   if (loading) return <div className="developer-inline-loading"><LoaderCircle className="spin" size={18} /> Загружаем OAuth и Webhooks…</div>;
 
   return <section className="developer-integrations">
@@ -95,7 +105,7 @@ export function DeveloperIntegrations({ appId }: { appId: string }) {
     {error ? <div className="auth-error" role="alert">{error}</div> : null}
     {secret ? <div className="secret-reveal"><ShieldCheck size={18} /><div><strong>{secret.title}</strong><span>Скопируйте сейчас: повторно secret не показывается.</span><code>{secret.value}</code></div><button onClick={copySecret}>{copied ? <Check size={15} /> : <Copy size={15} />}</button></div> : null}
 
-    {tab === "oauth" ? <div className="developer-section"><div className="developer-section-head"><div><small>OAUTH CLIENT</small><h4>{oauth ? "OAuth настроен" : "Создать OAuth client"}</h4><p>Redirect URI проверяются на backend, полный secret хранится только в виде SHA-256 хеша.</p></div>{oauth ? <button className="secondary-action" onClick={regenerateOAuth} disabled={working}><RefreshCw size={14} /> Новый secret</button> : null}</div>{oauth ? <div className="oauth-credentials"><label><span>Client ID</span><code>{oauth.clientId}</code></label><label><span>Secret prefix</span><code>{oauth.secretPrefix}</code></label></div> : null}<form className="oauth-form" onSubmit={saveOAuth}><label><span>Redirect URI — по одному на строку</span><textarea value={redirectUris} onChange={(event) => setRedirectUris(event.target.value)} rows={3} placeholder="https://example.com/oauth/callback" required /></label><div className="developer-choice-row wrap">{oauthScopes.map((scope) => <label key={scope}><input type="checkbox" checked={selectedScopes.includes(scope)} onChange={() => toggle(scope, selectedScopes, setSelectedScopes)} /><span>{scope}</span></label>)}</div><button className="primary-action" disabled={working || selectedScopes.length === 0}><Save size={14} /> {oauth ? "Сохранить" : "Создать client"}</button></form></div> : null}
+    {tab === "oauth" ? <div className="developer-section"><div className="developer-section-head"><div><small>OAUTH CLIENT</small><h4>{oauth ? "OAuth настроен" : "Создать OAuth client"}</h4><p>Redirect URI проверяются на backend, полный secret хранится только в виде SHA-256 хеша.</p></div>{oauth ? <button className="secondary-action" onClick={regenerateOAuth} disabled={working}><RefreshCw size={14} /> Новый secret</button> : null}</div>{oauth ? <><div className="oauth-credentials"><label><span>Client ID</span><code>{oauth.clientId}</code></label><label><span>Secret prefix</span><code>{oauth.secretPrefix}</code></label></div>{authorizePath ? <div className="oauth-authorize-url"><code>{authorizePath}</code><button onClick={copyAuthorizeUrl} title="Копировать authorization URL">{authorizeCopied ? <Check size={14} /> : <Copy size={14} />}</button></div> : null}</> : null}<form className="oauth-form" onSubmit={saveOAuth}><label><span>Redirect URI — по одному на строку</span><textarea value={redirectUris} onChange={(event) => setRedirectUris(event.target.value)} rows={3} placeholder="https://example.com/oauth/callback" required /></label><div className="developer-choice-row wrap">{oauthScopes.map((scope) => <label key={scope}><input type="checkbox" checked={selectedScopes.includes(scope)} onChange={() => toggle(scope, selectedScopes, setSelectedScopes)} /><span>{scope}</span></label>)}</div><button className="primary-action" disabled={working || selectedScopes.length === 0}><Save size={14} /> {oauth ? "Сохранить" : "Создать client"}</button></form></div> : null}
 
     {tab === "webhooks" ? <div className="developer-section"><div className="developer-section-head"><div><small>WEBHOOK ENDPOINTS</small><h4>Подписки на события</h4><p>Разрешены только HTTPS endpoint. Signing secret выдаётся один раз при создании или регенерации.</p></div></div><form className="webhook-create" onSubmit={createWebhook}><div className="webhook-inputs"><input name="name" minLength={2} maxLength={60} placeholder="Production webhook" required /><input name="url" type="url" placeholder="https://api.example.com/flipzero" required /></div><div className="developer-choice-row wrap">{webhookEvents.map((eventName) => <label key={eventName}><input type="checkbox" checked={events.includes(eventName)} onChange={() => toggle(eventName, events, setEvents)} /><span>{eventName}</span></label>)}</div><button className="primary-action" disabled={working || events.length === 0}><Plus size={14} /> Создать webhook</button></form><div className="webhook-list">{webhooks.map((webhook) => <article key={webhook.id} className={webhook.enabled ? "" : "disabled"}><Webhook size={16} /><div><strong>{webhook.name}</strong><code>{webhook.url}</code><span>{webhook.eventTypes.join(" · ")} · {webhook.secretPrefix}</span></div><div className="webhook-actions"><button onClick={() => mutateWebhook(webhook, "toggle")}>{webhook.enabled ? "On" : "Off"}</button><button onClick={() => mutateWebhook(webhook, "regenerate")}><RefreshCw size={13} /></button><button onClick={() => mutateWebhook(webhook, "delete")}><Trash2 size={13} /></button></div></article>)}{!webhooks.length ? <div className="developer-empty">Webhooks пока не созданы.</div> : null}</div></div> : null}
   </section>;
