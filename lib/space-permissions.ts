@@ -20,6 +20,52 @@ export async function getSpacePermissions(spaceId: string, userId: string) {
   return { spaceId, owner: false, permissions };
 }
 
+export async function getSpaceChannelPermissions(spaceId: string, userId: string, channelIds: string[]) {
+  const uniqueChannelIds = [...new Set(channelIds)];
+  const result = new Map<string, number>();
+  if (!uniqueChannelIds.length) return result;
+
+  const db = getDatabase();
+  const [base] = await db.select({ ownerId: spaces.ownerId })
+    .from(spaces)
+    .innerJoin(members, and(eq(members.spaceId, spaces.id), eq(members.userId, userId)))
+    .where(eq(spaces.id, spaceId))
+    .limit(1);
+  if (!base) return result;
+  if (base.ownerId === userId) {
+    uniqueChannelIds.forEach((channelId) => result.set(channelId, Permission.Administrator));
+    return result;
+  }
+
+  const assignedRoles = await db.select({ roleId: roles.id, permissions: roles.permissions })
+    .from(memberRoles)
+    .innerJoin(roles, eq(roles.id, memberRoles.roleId))
+    .where(and(eq(memberRoles.userId, userId), eq(memberRoles.spaceId, spaceId)));
+  const roleIds = assignedRoles.map((role) => role.roleId);
+  const basePermissions = assignedRoles.reduce((value, role) => value | Number(role.permissions), 0);
+  if (hasPermission(basePermissions, Permission.Administrator)) {
+    uniqueChannelIds.forEach((channelId) => result.set(channelId, basePermissions));
+    return result;
+  }
+
+  const overrides = await db.select().from(channelOverrides).where(inArray(channelOverrides.channelId, uniqueChannelIds));
+  for (const channelId of uniqueChannelIds) {
+    let permissions = basePermissions;
+    let roleAllow = 0;
+    let roleDeny = 0;
+    for (const item of overrides) {
+      if (item.channelId !== channelId || item.targetType !== "role" || !roleIds.includes(item.targetId)) continue;
+      roleAllow |= Number(item.allow);
+      roleDeny |= Number(item.deny);
+    }
+    permissions = (permissions & ~roleDeny) | roleAllow;
+    const memberOverride = overrides.find((item) => item.channelId === channelId && item.targetType === "member" && item.targetId === userId);
+    if (memberOverride) permissions = (permissions & ~Number(memberOverride.deny)) | Number(memberOverride.allow);
+    result.set(channelId, permissions);
+  }
+  return result;
+}
+
 export async function getChannelPermissions(channelId: string, userId: string) {
   const db = getDatabase();
   const [base] = await db.select({ spaceId: channels.spaceId, ownerId: spaces.ownerId })
