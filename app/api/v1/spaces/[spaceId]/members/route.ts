@@ -73,13 +73,16 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ sp
   if (!targetMember) return NextResponse.json({ code: "NOT_FOUND", message: "Участник не найден." }, { status: 404 });
   if (!access.owner && body.userId === access.user.id) return NextResponse.json({ code: "SELF_ROLE_CHANGE", message: "Нельзя изменять собственные роли." }, { status: 403 });
   if (body.userId === access.space.ownerId) return NextResponse.json({ code: "OWNER_PROTECTED", message: "Роли владельца защищены." }, { status: 409 });
-  const targetAssigned = await access.database.select({ position: roles.position }).from(memberRoles).innerJoin(roles, eq(roles.id, memberRoles.roleId)).where(and(eq(memberRoles.spaceId, spaceId), eq(memberRoles.userId, body.userId)));
+  const targetAssigned = await access.database.select({ id: roles.id, position: roles.position, permissions: roles.permissions, isManaged: roles.isManaged }).from(memberRoles).innerJoin(roles, eq(roles.id, memberRoles.roleId)).where(and(eq(memberRoles.spaceId, spaceId), eq(memberRoles.userId, body.userId)));
   const targetTop = Math.max(0, ...targetAssigned.map((role) => role.position));
   if (!access.owner && targetTop >= access.topPosition) return NextResponse.json({ code: "ROLE_HIERARCHY", message: "Нельзя изменять роли участника с равной или более высокой ролью." }, { status: 403 });
   const requested = [...new Set(body.roleIds as string[])];
   const available = requested.length ? await access.database.select({ id: roles.id, position: roles.position, permissions: roles.permissions }).from(roles).where(and(eq(roles.spaceId, spaceId), eq(roles.isManaged, false), inArray(roles.id, requested))) : [];
-  if (!access.owner && available.some((role) => hasPermission(Number(role.permissions), Permission.Administrator) || (Number(role.permissions) & ~access.permissions) !== 0)) return NextResponse.json({ code: "ROLE_ESCALATION", message: "Нельзя назначать роль с правами, которых нет у вас." }, { status: 403 });
-  if (!access.owner && available.some((role) => role.position >= access.topPosition)) return NextResponse.json({ code: "ROLE_HIERARCHY", message: "Нельзя назначать роль на уровне вашей высшей роли или выше." }, { status: 403 });
+  if (!access.owner && targetAssigned.some((role) => hasPermission(Number(role.permissions), Permission.Administrator))) return NextResponse.json({ code: "ROLE_HIERARCHY", message: "Нельзя изменять роли участника с правами администратора." }, { status: 403 });
+  const existingCustomRoleIds = new Set(targetAssigned.filter((role) => !role.isManaged).map((role) => role.id));
+  const newlyAssigned = available.filter((role) => !existingCustomRoleIds.has(role.id));
+  if (!access.owner && newlyAssigned.some((role) => hasPermission(Number(role.permissions), Permission.Administrator) || (Number(role.permissions) & ~access.permissions) !== 0)) return NextResponse.json({ code: "ROLE_ESCALATION", message: "Нельзя назначать роль с правами, которых нет у вас." }, { status: 403 });
+  if (!access.owner && newlyAssigned.some((role) => role.position >= access.topPosition)) return NextResponse.json({ code: "ROLE_HIERARCHY", message: "Нельзя назначать роль на уровне вашей высшей роли или выше." }, { status: 403 });
   if (available.length !== requested.length) return NextResponse.json({ code: "INVALID_ROLE", message: "Одна из ролей недоступна." }, { status: 400 });
   const [memberRole] = await access.database.select({ id: roles.id }).from(roles).where(and(eq(roles.spaceId, spaceId), eq(roles.name, "Участник"))).limit(1);
   await access.database.transaction(async (tx) => {
