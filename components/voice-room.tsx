@@ -46,6 +46,7 @@ export function VoiceRoom({
   const [voiceChecked, setVoiceChecked] = useState(false);
   const [voiceCheckNonce, setVoiceCheckNonce] = useState(0);
   const [muted, setMuted] = useState(false);
+  const [capabilities, setCapabilities] = useState({ speak: false, stream: false });
   const [deafened, setDeafened] = useState(false);
   const [audioBlocked, setAudioBlocked] = useState(false);
   const [camera, setCamera] = useState(false);
@@ -129,6 +130,9 @@ export function VoiceRoom({
       const presenceResponse = await fetch(`/api/v1/channels/${channelId}/voice`, { method: "POST" });
       const presenceData = await presenceResponse.json().catch(() => null);
       if (!presenceResponse.ok) { setError(presenceData?.message ?? "Нет доступа к голосовому каналу."); setStatus("idle"); return; }
+      const nextCapabilities = { speak: Boolean(presenceData?.capabilities?.speak), stream: Boolean(presenceData?.capabilities?.stream) };
+      setCapabilities(nextCapabilities);
+      setMuted(!nextCapabilities.speak);
       const response = await fetch(`/api/v1/channels/${channelId}/voice-token`, {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -252,8 +256,12 @@ export function VoiceRoom({
       ]);
       window.clearTimeout(connectTimeout);
       if (attempt !== joinAttemptRef.current) { void room.disconnect(); return; }
-      try { await room.localParticipant.setMicrophoneEnabled(true); setMuted(false); }
-      catch { setMuted(true); setError("Микрофон недоступен. Разрешите доступ в настройках браузера и нажмите «Включить»."); }
+      if (nextCapabilities.speak) {
+        try { await room.localParticipant.setMicrophoneEnabled(true); setMuted(false); }
+        catch { setMuted(true); setError("Микрофон недоступен. Разрешите доступ в настройках браузера и нажмите «Включить»."); }
+      } else {
+        setMuted(true);
+      }
       try { await room.startAudio(); } catch { setAudioBlocked(true); }
       setAudioBlocked(!room.canPlaybackAudio);
       const [microphones, speakers] = await Promise.all([Room.getLocalDevices("audioinput").catch(() => []), Room.getLocalDevices("audiooutput").catch(() => [])]);
@@ -400,8 +408,14 @@ export function VoiceRoom({
     const room = roomRef.current;
     if (!room) return;
     const next = !muted;
-    try { await room.localParticipant.setMicrophoneEnabled(!next); setMuted(next); void fetch(`/api/v1/channels/${channelId}/voice`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ selfMuted: next }) }); setError(""); }
-    catch { setError("Не удалось включить микрофон. Разрешите доступ в настройках браузера."); }
+    if (!next && !capabilities.speak) { setError("У вас нет права говорить в этом голосовом канале."); return; }
+    try {
+      const permissionResponse = await fetch(`/api/v1/channels/${channelId}/voice`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ selfMuted: next }) });
+      const permissionData = await permissionResponse.json().catch(() => null);
+      if (!permissionResponse.ok) { setError(permissionData?.message ?? "Не удалось изменить состояние микрофона."); return; }
+      await room.localParticipant.setMicrophoneEnabled(!next);
+      setMuted(next); setError("");
+    } catch { setError("Не удалось включить микрофон. Разрешите доступ в настройках браузера."); }
   }
   async function toggleCamera() {
     const room = roomRef.current;
@@ -422,10 +436,13 @@ export function VoiceRoom({
     if (!room) return;
     if (!screenSupported) { setError("Демонстрация экрана недоступна в этом браузере. Откройте FlipZero на компьютере."); return; }
     const next = !sharing;
+    if (next && !capabilities.stream) { setError("У вас нет права запускать демонстрацию экрана."); return; }
     try {
+      const permissionResponse = await fetch(`/api/v1/channels/${channelId}/voice`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ streaming: next }) });
+      const permissionData = await permissionResponse.json().catch(() => null);
+      if (!permissionResponse.ok) { setError(permissionData?.message ?? "Не удалось изменить состояние трансляции."); return; }
       await room.localParticipant.setScreenShareEnabled(next);
       setSharing(next);
-      void fetch(`/api/v1/channels/${channelId}/voice`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ streaming: next }) });
       if (next) attachLocal(Track.Source.ScreenShare, localScreenRef.current);
       else clearMedia(localScreenRef.current);
       setError("");
@@ -446,6 +463,7 @@ export function VoiceRoom({
     setSharing(false);
     setRemoteVideo(false);
     setMuted(false);
+    setCapabilities({ speak: false, stream: false });
     setAudioBlocked(false);
     setDeafened(false);
     deafenedRef.current = false;
@@ -518,7 +536,7 @@ export function VoiceRoom({
         ) : (
           <>
             <div className="voice-controls">
-              <button className={muted ? "is-muted" : ""} onClick={toggleMute}>
+              <button className={muted ? "is-muted" : ""} onClick={toggleMute} disabled={!capabilities.speak} title={!capabilities.speak ? "Нет права говорить в этом канале" : undefined}>
                 {muted ? <MicOff size={20} /> : <Mic size={20} />}
                 <span>{muted ? "Включить" : "Микрофон"}</span>
               </button>
@@ -536,8 +554,8 @@ export function VoiceRoom({
               <button
                 className={sharing ? "is-active" : ""}
                 onClick={toggleScreen}
-                disabled={!screenSupported}
-                title={!screenSupported ? "Демонстрация экрана доступна на компьютере" : undefined}
+                disabled={!screenSupported || !capabilities.stream}
+                title={!capabilities.stream ? "Нет права запускать трансляцию" : !screenSupported ? "Демонстрация экрана доступна на компьютере" : undefined}
               >
                 <MonitorUp size={20} />
                 <span>{sharing ? "Остановить" : screenSupported ? "Экран" : "Экран недоступен"}</span>
