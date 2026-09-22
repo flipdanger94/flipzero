@@ -28,8 +28,13 @@ export async function POST(request: Request) {
   const body = await request.json().catch(() => null) as { spaceId?: unknown } | null;
   if (typeof body?.spaceId !== "string" || !body.spaceId) return NextResponse.json({ code: "INVALID_INPUT", message: "Не выбрано сообщество." }, { status: 400 });
   const database = getDatabase();
-  const [space] = await database.select({ id: spaces.id }).from(spaces).where(and(eq(spaces.id, body.spaceId), eq(spaces.visibility, "public"))).limit(1);
+  const [space] = await database.select({ id: spaces.id, ownerId: spaces.ownerId }).from(spaces).where(and(eq(spaces.id, body.spaceId), eq(spaces.visibility, "public"))).limit(1);
   if (!space) return NextResponse.json({ code: "NOT_FOUND", message: "Открытое сообщество не найдено." }, { status: 404 });
+  const [ownerBlock] = await database.select({ blockerId: userBlocks.blockerId }).from(userBlocks).where(or(
+    and(eq(userBlocks.blockerId, user.id), eq(userBlocks.blockedId, space.ownerId)),
+    and(eq(userBlocks.blockerId, space.ownerId), eq(userBlocks.blockedId, user.id)),
+  )).limit(1);
+  if (ownerBlock) return NextResponse.json({ code: "BLOCKED", message: "Это сообщество недоступно из-за настроек блокировки." }, { status: 403 });
   const [latestBanAction] = await database.select({ action: moderationCases.action }).from(moderationCases).where(and(eq(moderationCases.spaceId, space.id), eq(moderationCases.targetUserId, user.id), or(eq(moderationCases.action, "ban"), eq(moderationCases.action, "unban")))).orderBy(desc(moderationCases.createdAt)).limit(1);
   if (latestBanAction?.action === "ban") return NextResponse.json({ code: "BANNED", message: "Вы заблокированы в этом сообществе." }, { status: 403 });
   const [memberRole] = await database.select({ id: roles.id }).from(roles).where(and(eq(roles.spaceId, space.id), eq(roles.name, "Участник"))).limit(1);
