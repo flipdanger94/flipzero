@@ -6,7 +6,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { getSpacePermissions } from "@/lib/space-permissions";
 import { hasPermission, Permission } from "@/lib/permissions";
 
-const allowedMask = Object.values(Permission).reduce((mask, value) => mask | value, 0);
+const channelPermissionMask = Permission.ViewChannels | Permission.SendMessages | Permission.ManageMessages | Permission.ManageChannels | Permission.ConnectVoice | Permission.SpeakVoice | Permission.Stream;
 
 async function requireManager(channelId: string) {
   const user = await getCurrentUser();
@@ -36,7 +36,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ chan
   const targetId = String(body?.targetId ?? "");
   const targetType = String(body?.targetType ?? "");
   const allow = Number(body?.allow ?? 0), deny = Number(body?.deny ?? 0);
-  if (!targetId || !["role", "member"].includes(targetType) || !Number.isSafeInteger(allow) || !Number.isSafeInteger(deny) || allow < 0 || deny < 0 || (allow & ~allowedMask) !== 0 || (deny & ~allowedMask) !== 0 || (allow & deny) !== 0) {
+  if (!targetId || !["role", "member"].includes(targetType) || !Number.isSafeInteger(allow) || !Number.isSafeInteger(deny) || allow < 0 || deny < 0 || (allow & ~channelPermissionMask) !== 0 || (deny & ~channelPermissionMask) !== 0 || (allow & deny) !== 0) {
     return NextResponse.json({ code: "INVALID_OVERRIDE", message: "Некорректные права канала." }, { status: 400 });
   }
   if (!access.owner && ((allow | deny) & Permission.Administrator) !== 0) return NextResponse.json({ code: "ROLE_ESCALATION", message: "Только владелец может изменять право администратора." }, { status: 403 });
