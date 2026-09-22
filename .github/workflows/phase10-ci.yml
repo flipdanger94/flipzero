@@ -61,6 +61,8 @@ jobs:
           components/system-status-dialog.tsx
           components/wiki-dialog.tsx
           app/api/messages/route.ts
+          app/api/v1/spaces/[spaceId]/members/route.ts
+          components/flipzero-app.tsx
 
       - name: Build
         run: pnpm build
