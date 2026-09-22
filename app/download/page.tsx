@@ -1,5 +1,12 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { Download, MonitorCheck } from "lucide-react";
+
+export const metadata: Metadata = {
+  title: "Скачать FlipZero для Windows",
+  description: "Скачайте десктопное приложение FlipZero для Windows.",
+  alternates: { canonical: "/download" },
+};
 
 const releaseUrl = "https://github.com/flipdanger94/flipzero/releases/latest/download/FlipZero_0.1.0_x64-setup.exe";
 
