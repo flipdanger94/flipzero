@@ -51,12 +51,25 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ sp
     if (!permissionState.spaceId || !hasPermission(permissionState.permissions, Permission.ManageChannels)) return NextResponse.json({ code: "FORBIDDEN", message: "Недостаточно прав для изменения канала." }, { status: 403 });
   }
 
+  if (parsed.data.parentId) {
+    const [parent] = await database.select({ id: channelCategories.id }).from(channelCategories).where(and(eq(channelCategories.id, parsed.data.parentId), eq(channelCategories.spaceId, spaceId))).limit(1);
+    if (!parent) return NextResponse.json({ code: "INVALID_CATEGORY", message: "Категория не принадлежит этому серверу." }, { status: 400 });
+  }
+  const [duplicate] = await database.select({ id: channels.id }).from(channels).where(and(
+    eq(channels.spaceId, spaceId),
+    eq(channels.name, parsed.data.name),
+  )).limit(1);
+  if (duplicate && duplicate.id !== parsed.data.channelId) return NextResponse.json({ code: "CHANNEL_EXISTS", message: "Канал с таким названием уже существует." }, { status: 409 });
+
   const [channel] = await database.update(channels).set({
+    name: parsed.data.name,
+    parentId: parsed.data.parentId,
     topic: parsed.data.topic || null,
     slowmodeSeconds: parsed.data.slowmodeSeconds,
     isNsfw: parsed.data.isNsfw,
   }).where(and(eq(channels.id, parsed.data.channelId), eq(channels.spaceId, spaceId))).returning({
     id: channels.id,
+    parentId: channels.parentId,
     name: channels.name,
     topic: channels.topic,
     kind: channels.kind,
