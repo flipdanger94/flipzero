@@ -26,8 +26,10 @@ export async function GET(_: Request, { params }: { params: Promise<{ channelId:
 export async function POST(_: Request, { params }: { params: Promise<{ channelId: string }> }) {
   const { channelId } = await params; const access = await accessVoice(channelId); if ("error" in access) return access.error;
   if (!hasPermission(access.state.permissions, Permission.ConnectVoice)) return NextResponse.json({ code: "FORBIDDEN", message: "Нет права подключаться к голосовому каналу." }, { status: 403 });
-  await access.db.insert(voiceStates).values({ userId: access.user.id, channelId }).onConflictDoUpdate({ target: voiceStates.userId, set: { channelId, selfMuted: false, selfDeafened: false, streaming: false, joinedAt: new Date(), updatedAt: new Date() } });
-  return NextResponse.json({ connected: true, channelId });
+  const canSpeak = hasPermission(access.state.permissions, Permission.SpeakVoice);
+  const canStream = hasPermission(access.state.permissions, Permission.Stream);
+  await access.db.insert(voiceStates).values({ userId: access.user.id, channelId, selfMuted: !canSpeak }).onConflictDoUpdate({ target: voiceStates.userId, set: { channelId, selfMuted: !canSpeak, selfDeafened: false, streaming: false, joinedAt: new Date(), updatedAt: new Date() } });
+  return NextResponse.json({ connected: true, channelId, capabilities: { speak: canSpeak, stream: canStream } });
 }
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ channelId: string }> }) {
