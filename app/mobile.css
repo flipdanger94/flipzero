@@ -1106,3 +1106,94 @@ html[data-motion="off"] *::after {
     transform: none !important;
   }
 }
+
+
+/* Final mobile DM layout: remove CSS-grid auto placement entirely while a
+   conversation is open. The conversation owns the full Social Hub viewport. */
+@media (max-width: 767px) {
+  .direct-layout.has-profile {
+    position: relative !important;
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    height: 100% !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
+  }
+
+  .direct-layout.has-profile > aside {
+    display: none !important;
+  }
+
+  .direct-layout.has-profile > .direct-profile {
+    display: none !important;
+  }
+
+  .direct-layout.has-profile > section {
+    position: absolute !important;
+    inset: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    width: 100% !important;
+    max-width: none !important;
+    height: 100% !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 0 0 64px !important;
+    overflow: hidden !important;
+  }
+
+  .direct-layout.has-profile .direct-title {
+    flex: 0 0 58px !important;
+    width: 100% !important;
+  }
+
+  .direct-layout.has-profile .direct-messages {
+    flex: 1 1 0 !important;
+    width: 100% !important;
+    min-height: 0 !important;
+    overflow-y: auto !important;
+    padding: 12px 10px 82px !important;
+  }
+
+  .direct-layout.has-profile .direct-composer {
+    position: absolute !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    z-index: 50 !important;
+    display: flex !important;
+    gap: 8px !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    box-sizing: border-box !important;
+    width: 100% !important;
+    min-height: 64px !important;
+    margin: 0 !important;
+    padding: 9px 10px !important;
+    background: #17161c !important;
+    border-top: 1px solid var(--border) !important;
+  }
+
+  .direct-layout.has-profile .direct-composer input {
+    display: block !important;
+    flex: 1 1 0 !important;
+    min-width: 0 !important;
+    width: 100% !important;
+    height: 46px !important;
+    min-height: 46px !important;
+    border-radius: 12px !important;
+    font-size: 16px !important;
+  }
+
+  .direct-layout.has-profile .direct-composer button {
+    display: flex !important;
+    flex: 0 0 46px !important;
+    width: 46px !important;
+    min-width: 46px !important;
+    height: 46px !important;
+    min-height: 46px !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+}
