@@ -5,12 +5,13 @@ import { channelOverrides, channels, members, roles, spaces } from "@/db/schema"
 import { getCurrentUser } from "@/lib/auth";
 import { getSpacePermissions } from "@/lib/space-permissions";
 import { CHANNEL_PERMISSION_MASK, hasPermission, Permission } from "@/lib/permissions";
+import { resetChannelVoiceRooms } from "@/lib/livekit-admin";
 
 async function requireManager(channelId: string) {
   const user = await getCurrentUser();
   if (!user) return { error: NextResponse.json({ code: "UNAUTHENTICATED", message: "Требуется вход." }, { status: 401 }) };
   const db = getDatabase();
-  const [channel] = await db.select({ id: channels.id, spaceId: channels.spaceId, ownerId: spaces.ownerId })
+  const [channel] = await db.select({ id: channels.id, spaceId: channels.spaceId, kind: channels.kind, ownerId: spaces.ownerId })
     .from(channels).innerJoin(spaces, eq(spaces.id, channels.spaceId)).where(eq(channels.id, channelId)).limit(1);
   if (!channel) return { error: NextResponse.json({ code: "NOT_FOUND", message: "Канал не найден." }, { status: 404 }) };
   const state = await getSpacePermissions(channel.spaceId, user.id);
@@ -46,6 +47,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ chan
   }
   await access.db.insert(channelOverrides).values({ channelId, targetId, targetType, allow, deny })
     .onConflictDoUpdate({ target: [channelOverrides.channelId, channelOverrides.targetId], set: { targetType, allow, deny } });
+  if (["voice", "stage"].includes(access.channel.kind)) await resetChannelVoiceRooms(access.channel.spaceId, channelId);
   return NextResponse.json({ targetId, targetType, allow, deny });
 }
 
@@ -55,5 +57,6 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ c
   const targetId = new URL(request.url).searchParams.get("targetId") ?? "";
   if (!targetId) return NextResponse.json({ code: "INVALID_INPUT", message: "Не указана роль или участник." }, { status: 400 });
   await access.db.delete(channelOverrides).where(and(eq(channelOverrides.channelId, channelId), eq(channelOverrides.targetId, targetId)));
+  if (["voice", "stage"].includes(access.channel.kind)) await resetChannelVoiceRooms(access.channel.spaceId, channelId);
   return NextResponse.json({ ok: true });
 }
