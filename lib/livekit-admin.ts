@@ -30,9 +30,39 @@ export async function evictParticipantFromSpaceVoice(spaceId: string, userId: st
     await Promise.allSettled(
       rooms
         .filter((room) => room.name.startsWith(`${spaceId}:`))
-        .map((room) => service.removeParticipant(room.name, userId)),
+        .map((room) => service.removeParticipant(room.name, userId, { revokeTokenTs: BigInt(Math.floor(Date.now() / 1000)) })),
     );
   } catch {
     // Voice cleanup must not roll back the primary moderation/member operation.
+  }
+}
+
+
+export async function resetChannelVoiceRooms(spaceId: string, channelId: string) {
+  const db = getDatabase();
+  await db.delete(voiceStates).where(eq(voiceStates.channelId, channelId));
+  const service = getVoiceAdminClient();
+  if (!service) return;
+  try {
+    const prefix = `${spaceId}:${channelId}:`;
+    const rooms = await service.listRooms([]);
+    await Promise.allSettled(
+      rooms.filter((room) => room.name.startsWith(prefix)).map((room) => service.deleteRoom(room.name)),
+    );
+  } catch {
+    // Permission changes still persist even if LiveKit is temporarily unavailable.
+  }
+}
+
+export async function deleteSpaceVoiceRooms(spaceId: string) {
+  const service = getVoiceAdminClient();
+  if (!service) return;
+  try {
+    const rooms = await service.listRooms([]);
+    await Promise.allSettled(
+      rooms.filter((room) => room.name.startsWith(`${spaceId}:`)).map((room) => service.deleteRoom(room.name)),
+    );
+  } catch {
+    // Deleting the database space remains authoritative.
   }
 }
