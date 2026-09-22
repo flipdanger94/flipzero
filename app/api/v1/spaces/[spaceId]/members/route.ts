@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { getDatabase } from "@/db/client";
 import { memberRoles, members, roles, spaces, users } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
+import { dispatchDeveloperEvent } from "@/lib/developer-webhooks";
 import { hasPermission, Permission } from "@/lib/permissions";
 
 async function requireMemberManager(spaceId: string, requiredPermission: number) {
@@ -72,5 +73,6 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ s
     await tx.delete(memberRoles).where(and(eq(memberRoles.userId, userId), eq(memberRoles.spaceId, spaceId)));
     await tx.delete(members).where(and(eq(members.userId, userId), eq(members.spaceId, spaceId)));
   });
+  void dispatchDeveloperEvent(spaceId, "member.left", { userId, reason: "removed", actorId: access.user.id }).catch(() => undefined);
   return NextResponse.json({ ok: true });
 }
