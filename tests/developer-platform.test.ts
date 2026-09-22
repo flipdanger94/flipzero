@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { normalizeApiTokenScopes, normalizeOAuthScopes, normalizeWebhookEvents, validateRedirectUris, validateWebhookUrl } from "../lib/developer-validation";
-import { isPrivateWebhookIp } from "../lib/developer-webhooks";
+import { isPrivateWebhookIp, normalizeApiTokenScopes, normalizeOAuthScopes, normalizeWebhookEvents, validateRedirectUris, validateWebhookUrl } from "../lib/developer-validation";
 import { createPkceS256Challenge } from "../lib/oauth-pkce";
 
 describe("developer platform validation", () => {
