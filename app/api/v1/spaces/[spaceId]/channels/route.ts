@@ -40,7 +40,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ spa
 export async function PATCH(request: Request, { params }: { params: Promise<{ spaceId: string }> }) {
   const [user, { spaceId }] = await Promise.all([getCurrentUser(), params]);
   if (!user) return NextResponse.json({ code: "UNAUTHENTICATED", message: "Требуется вход." }, { status: 401 });
-  const parsed = updateChannelSchema.safeParse(await request.json().catch(() => null));
+  const body = await request.json().catch(() => null);
   if (!parsed.success) return NextResponse.json({ code: "INVALID_INPUT", message: "Проверьте настройки канала.", issues: parsed.error.flatten() }, { status: 400 });
 
   const database = getDatabase();
@@ -50,6 +50,26 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ sp
     const permissionState = await getSpacePermissions(spaceId, user.id);
     if (!permissionState.spaceId || !hasPermission(permissionState.permissions, Permission.ManageChannels)) return NextResponse.json({ code: "FORBIDDEN", message: "Недостаточно прав для изменения канала." }, { status: 403 });
   }
+
+  if (body?.action === "reorder") {
+    const parentId = typeof body.parentId === "string" && body.parentId ? body.parentId : null;
+    const orderedIds = Array.isArray(body.orderedIds) ? [...new Set(body.orderedIds.filter((id: unknown): id is string => typeof id === "string"))] : [];
+    if (!orderedIds.length || orderedIds.length > 200) return NextResponse.json({ code: "INVALID_INPUT", message: "Некорректный порядок каналов." }, { status: 400 });
+    const parentCondition = parentId ? eq(channels.parentId, parentId) : isNull(channels.parentId);
+    if (parentId) {
+      const [category] = await database.select({ id: channelCategories.id }).from(channelCategories).where(and(eq(channelCategories.id, parentId), eq(channelCategories.spaceId, spaceId))).limit(1);
+      if (!category) return NextResponse.json({ code: "INVALID_CATEGORY", message: "Категория не принадлежит этому серверу." }, { status: 400 });
+    }
+    const existing = await database.select({ id: channels.id }).from(channels).where(and(eq(channels.spaceId, spaceId), parentCondition, inArray(channels.id, orderedIds)));
+    if (existing.length !== orderedIds.length) return NextResponse.json({ code: "INVALID_CHANNEL", message: "Один из каналов не принадлежит выбранной категории." }, { status: 400 });
+    await database.transaction(async (tx) => {
+      for (const [position, id] of orderedIds.entries()) await tx.update(channels).set({ position }).where(and(eq(channels.id, id), eq(channels.spaceId, spaceId)));
+    });
+    return NextResponse.json({ orderedIds, parentId });
+  }
+
+  const parsed = updateChannelSchema.safeParse(body);
+  if (!parsed.success) return NextResponse.json({ code: "INVALID_INPUT", message: "Проверьте настройки канала.", issues: parsed.error.flatten() }, { status: 400 });
 
   if (parsed.data.parentId) {
     const [parent] = await database.select({ id: channelCategories.id }).from(channelCategories).where(and(eq(channelCategories.id, parsed.data.parentId), eq(channelCategories.spaceId, spaceId))).limit(1);
