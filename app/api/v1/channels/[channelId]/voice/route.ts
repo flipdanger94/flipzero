@@ -36,15 +36,20 @@ export async function POST(_: Request, { params }: { params: Promise<{ channelId
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ channelId: string }> }) {
   const { channelId } = await params; const access = await accessVoice(channelId); if ("error" in access) return access.error;
+  if (!hasPermission(access.state.permissions, Permission.ConnectVoice)) return NextResponse.json({ code: "FORBIDDEN", message: "Нет права оставаться в голосовом канале." }, { status: 403 });
+  const canSpeak = hasPermission(access.state.permissions, Permission.SpeakVoice);
+  const canStream = hasPermission(access.state.permissions, Permission.Stream);
   const body = await request.json().catch(() => null);
   const [current] = await access.db.select().from(voiceStates).where(and(eq(voiceStates.userId, access.user.id), eq(voiceStates.channelId, channelId))).limit(1);
   if (!current) return NextResponse.json({ code: "NOT_CONNECTED", message: "Сначала подключитесь к голосовому каналу." }, { status: 409 });
   const streaming = typeof body?.streaming === "boolean" ? body.streaming : current.streaming;
-  if (streaming && !hasPermission(access.state.permissions, Permission.Stream)) return NextResponse.json({ code: "FORBIDDEN", message: "Нет права запускать трансляцию." }, { status: 403 });
+  if (streaming && !canStream) return NextResponse.json({ code: "FORBIDDEN", message: "Нет права запускать трансляцию." }, { status: 403 });
   const speaking = body?.selfMuted === false;
-  if (speaking && !hasPermission(access.state.permissions, Permission.SpeakVoice)) return NextResponse.json({ code: "FORBIDDEN", message: "Нет права говорить в этом канале." }, { status: 403 });
-  await access.db.update(voiceStates).set({ selfMuted: typeof body?.selfMuted === "boolean" ? body.selfMuted : current.selfMuted, selfDeafened: typeof body?.selfDeafened === "boolean" ? body.selfDeafened : current.selfDeafened, streaming, updatedAt: new Date() }).where(eq(voiceStates.userId, access.user.id));
-  return NextResponse.json({ ok: true });
+  if (speaking && !canSpeak) return NextResponse.json({ code: "FORBIDDEN", message: "Нет права говорить в этом канале." }, { status: 403 });
+  const selfMuted = canSpeak ? (typeof body?.selfMuted === "boolean" ? body.selfMuted : current.selfMuted) : true;
+  const nextStreaming = canStream ? streaming : false;
+  await access.db.update(voiceStates).set({ selfMuted, selfDeafened: typeof body?.selfDeafened === "boolean" ? body.selfDeafened : current.selfDeafened, streaming: nextStreaming, updatedAt: new Date() }).where(eq(voiceStates.userId, access.user.id));
+  return NextResponse.json({ ok: true, capabilities: { speak: canSpeak, stream: canStream }, state: { selfMuted, streaming: nextStreaming } });
 }
 
 export async function DELETE(_: Request, { params }: { params: Promise<{ channelId: string }> }) {
