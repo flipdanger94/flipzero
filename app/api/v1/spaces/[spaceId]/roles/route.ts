@@ -8,6 +8,7 @@ import { roleSchema } from "@/lib/role-validation";
 import { memberRoles, members } from "@/db/schema";
 import { expandPermissions, hasPermission, Permission, VOICE_PERMISSION_MASK } from "@/lib/permissions";
 import { evictParticipantsFromSpaceVoice } from "@/lib/livekit-admin";
+import { writeSpaceAuditLog } from "@/lib/space-audit";
 
 async function requireRoleManager(spaceId: string) {
   const user = await getCurrentUser();
@@ -55,6 +56,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ spa
   const [position] = await access.database.select({ value: max(roles.position) }).from(roles).where(and(eq(roles.spaceId, spaceId), eq(roles.isManaged, false), lt(roles.position, hierarchyCeiling)));
   const nextPosition = Math.min(hierarchyCeiling - 1, Math.max(1, (position.value ?? 0) + 1));
   const [created] = await access.database.insert(roles).values({ id: randomUUID(), spaceId, ...parsed.data, position: nextPosition, isManaged: false }).returning();
+  await writeSpaceAuditLog({ spaceId, actorId: access.user.id, action: "role.create", targetType: "role", targetId: created.id, metadata: { name: created.name, permissions: created.permissions, position: created.position } });
   return NextResponse.json({ role: created }, { status: 201 });
 }
 
@@ -75,6 +77,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ sp
       for (const [index, roleId] of orderedIds.entries()) await tx.update(roles).set({ position: slots[index] }).where(and(eq(roles.id, roleId), eq(roles.spaceId, spaceId), eq(roles.isManaged, false)));
     });
     const reordered = await access.database.select().from(roles).where(eq(roles.spaceId, spaceId)).orderBy(asc(roles.position));
+    await writeSpaceAuditLog({ spaceId, actorId: access.user.id, action: "role.reorder", targetType: "role", metadata: { orderedIds } });
     return NextResponse.json({ roles: reordered });
   }
 
@@ -94,6 +97,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ sp
     : [];
   const [updated] = await access.database.update(roles).set(parsed.data).where(and(eq(roles.id, body.id), eq(roles.spaceId, spaceId))).returning();
   if (voicePermissionsChanged && affectedMembers.length) await evictParticipantsFromSpaceVoice(spaceId, affectedMembers.map((item) => item.userId));
+  await writeSpaceAuditLog({ spaceId, actorId: access.user.id, action: "role.update", targetType: "role", targetId: updated.id, metadata: { name: updated.name, permissions: updated.permissions, position: updated.position } });
   return NextResponse.json({ role: updated });
 }
 
@@ -111,5 +115,6 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ s
   const affectedMembers = await access.database.select({ userId: memberRoles.userId }).from(memberRoles).where(and(eq(memberRoles.spaceId, spaceId), eq(memberRoles.roleId, roleId)));
   await access.database.delete(roles).where(and(eq(roles.id, roleId), eq(roles.spaceId, spaceId)));
   if ((Number(existing.permissions) & VOICE_PERMISSION_MASK) !== 0 && affectedMembers.length) await evictParticipantsFromSpaceVoice(spaceId, affectedMembers.map((item) => item.userId));
+  await writeSpaceAuditLog({ spaceId, actorId: access.user.id, action: "role.delete", targetType: "role", targetId: roleId, metadata: { permissions: existing.permissions, position: existing.position } });
   return NextResponse.json({ ok: true });
 }
