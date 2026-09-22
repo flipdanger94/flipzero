@@ -2,7 +2,7 @@ import "server-only";
 import { and, eq } from "drizzle-orm";
 import { randomUUID } from "node:crypto";
 import { getDatabase } from "@/db/client";
-import { developerWebhooks } from "@/db/developer-schema";
+import { developerAppInstallations, developerWebhooks } from "@/db/developer-schema";
 import { developerApps, spaces } from "@/db/schema";
 import { decryptDeveloperSecret, signDeveloperPayload } from "@/lib/developer-secret";
 
@@ -29,7 +29,12 @@ export async function dispatchDeveloperEvent(spaceId: string, event: DeveloperWe
     })
     .from(developerWebhooks)
     .innerJoin(developerApps, eq(developerApps.id, developerWebhooks.appId))
-    .where(and(eq(developerApps.ownerId, space.ownerId), eq(developerWebhooks.enabled, true)));
+    .innerJoin(developerAppInstallations, eq(developerAppInstallations.appId, developerApps.id))
+    .where(and(
+      eq(developerApps.ownerId, space.ownerId),
+      eq(developerAppInstallations.spaceId, spaceId),
+      eq(developerWebhooks.enabled, true),
+    ));
 
   const matching = endpoints.filter((endpoint) => endpoint.eventTypes.includes(event));
   if (!matching.length) return { attempted: 0, delivered: 0 };
