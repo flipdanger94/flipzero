@@ -7,6 +7,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { createCategorySchema, updateCategorySchema } from "@/lib/space-validation";
 import { getSpacePermissions } from "@/lib/space-permissions";
 import { hasPermission, Permission } from "@/lib/permissions";
+import { writeSpaceAuditLog } from "@/lib/space-audit";
 
 async function managerAccess(spaceId: string) {
   const user = await getCurrentUser();
@@ -18,7 +19,7 @@ async function managerAccess(spaceId: string) {
     const state = await getSpacePermissions(spaceId, user.id);
     if (!state.spaceId || !hasPermission(state.permissions, Permission.ManageChannels)) return { error: NextResponse.json({ code: "FORBIDDEN", message: "Недостаточно прав для управления категориями." }, { status: 403 }) };
   }
-  return { database };
+  return { database, user };
 }
 
 export async function POST(request: Request, { params }: { params: Promise<{ spaceId: string }> }) {
@@ -32,6 +33,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ spa
   const [position] = await access.database.select({ value: max(channelCategories.position) }).from(channelCategories).where(eq(channelCategories.spaceId, spaceId));
   const category = { id: randomUUID(), spaceId, name: parsed.data.name, position: (position?.value ?? -1) + 1 };
   await access.database.insert(channelCategories).values(category);
+  await writeSpaceAuditLog({ spaceId, actorId: access.user.id, action: "category.create", targetType: "category", targetId: category.id, metadata: { name: category.name } });
   return NextResponse.json({ category }, { status: 201 });
 }
 
@@ -50,6 +52,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ sp
     await access.database.transaction(async (tx) => {
       for (const [position, id] of orderedIds.entries()) await tx.update(channelCategories).set({ position }).where(and(eq(channelCategories.id, id), eq(channelCategories.spaceId, spaceId)));
     });
+    await writeSpaceAuditLog({ spaceId, actorId: access.user.id, action: "category.reorder", targetType: "category", metadata: { orderedIds } });
     return NextResponse.json({ orderedIds });
   }
 
@@ -59,6 +62,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ sp
   if (duplicate && duplicate.id !== parsed.data.categoryId) return NextResponse.json({ code: "CATEGORY_EXISTS", message: "Такая категория уже существует." }, { status: 409 });
   const [category] = await access.database.update(channelCategories).set({ name: parsed.data.name }).where(and(eq(channelCategories.id, parsed.data.categoryId), eq(channelCategories.spaceId, spaceId))).returning();
   if (!category) return NextResponse.json({ code: "NOT_FOUND", message: "Категория не найдена." }, { status: 404 });
+  await writeSpaceAuditLog({ spaceId, actorId: access.user.id, action: "category.update", targetType: "category", targetId: category.id, metadata: { name: category.name } });
   return NextResponse.json({ category });
 }
 
@@ -74,5 +78,6 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ s
     await tx.update(channels).set({ parentId: null }).where(eq(channels.parentId, categoryId));
     await tx.delete(channelCategories).where(eq(channelCategories.id, categoryId));
   });
+  await writeSpaceAuditLog({ spaceId, actorId: access.user.id, action: "category.delete", targetType: "category", targetId: categoryId });
   return NextResponse.json({ success: true });
 }
