@@ -5,9 +5,7 @@ import { getDatabase } from "@/db/client";
 import { channelOverrides, channels, roles, spaces } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
 import { getSpacePermissions } from "@/lib/space-permissions";
-import { hasPermission, Permission } from "@/lib/permissions";
-
-const channelPermissionMask = Permission.ViewChannels | Permission.SendMessages | Permission.ManageMessages | Permission.ManageChannels | Permission.ConnectVoice | Permission.SpeakVoice | Permission.Stream;
+import { CHANNEL_PERMISSION_MASK, hasPermission, Permission } from "@/lib/permissions";
 
 const overrideSchema = z.object({
   channelId: z.string().min(1),
@@ -52,7 +50,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ spac
   if (!parsed.success) return NextResponse.json({ code: "INVALID_INPUT", message: "Проверьте настройки доступа." }, { status: 400 });
   const access = await requireOwner(spaceId, parsed.data.channelId);
   if ("error" in access) return access.error;
-  if (parsed.data.overrides.some((item) => (item.allow & ~channelPermissionMask) !== 0 || (item.deny & ~channelPermissionMask) !== 0)) return NextResponse.json({ code: "INVALID_OVERRIDE", message: "Переопределение содержит права, которые нельзя задавать на уровне канала." }, { status: 400 });
+  if (parsed.data.overrides.some((item) => (item.allow & ~CHANNEL_PERMISSION_MASK) !== 0 || (item.deny & ~CHANNEL_PERMISSION_MASK) !== 0)) return NextResponse.json({ code: "INVALID_OVERRIDE", message: "Переопределение содержит права, которые нельзя задавать на уровне канала." }, { status: 400 });
   const roleIds = [...new Set(parsed.data.overrides.map((item) => item.roleId))];
   if (roleIds.length !== parsed.data.overrides.length) return NextResponse.json({ code: "DUPLICATE_ROLE", message: "Роль указана несколько раз." }, { status: 400 });
   if (roleIds.length) {
