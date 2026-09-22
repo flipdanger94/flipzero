@@ -4,7 +4,7 @@ import { NextResponse } from "next/server";
 import { getDatabase } from "@/db/client";
 import { channels, members } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
-import { getChannelPermissions } from "@/lib/space-permissions";
+import { getSpaceChannelPermissions } from "@/lib/space-permissions";
 import { hasPermission, Permission } from "@/lib/permissions";
 
 export async function GET(_request: Request, { params }: { params: Promise<{ spaceId: string }> }) {
@@ -16,8 +16,8 @@ export async function GET(_request: Request, { params }: { params: Promise<{ spa
   if (!membership) return NextResponse.json({ message: "Нет доступа к сообществу." }, { status: 403 });
 
   const allVoiceChannels = await database.select({ id: channels.id }).from(channels).where(and(eq(channels.spaceId, spaceId), inArray(channels.kind, ["voice", "stage"])));
-  const permissionRows = await Promise.all(allVoiceChannels.map(async (channel) => ({ channel, state: await getChannelPermissions(channel.id, user.id) })));
-  const voiceChannels = permissionRows.filter(({ state }) => state.spaceId === spaceId && hasPermission(state.permissions, Permission.ViewChannels)).map(({ channel }) => channel);
+  const permissionMap = await getSpaceChannelPermissions(spaceId, user.id, allVoiceChannels.map((channel) => channel.id));
+  const voiceChannels = allVoiceChannels.filter((channel) => hasPermission(permissionMap.get(channel.id) ?? 0, Permission.ViewChannels));
   const url = process.env.LIVEKIT_URL; const key = process.env.LIVEKIT_API_KEY; const secret = process.env.LIVEKIT_API_SECRET;
   if (!url || !key || !secret || !voiceChannels.length) return NextResponse.json({ channels: {} }, { headers: { "cache-control": "no-store" } });
 
