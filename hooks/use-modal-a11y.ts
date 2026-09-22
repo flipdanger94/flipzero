@@ -23,12 +23,13 @@ export function useModalA11y(onClose: () => void, active = true) {
     if (!active) return;
     const dialog = dialogRef.current;
     if (!dialog) return;
+    const dialogElement = dialog;
 
     const previouslyFocused = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     const focusInitial = window.requestAnimationFrame(() => {
-      const preferred = dialog.querySelector<HTMLElement>("[autofocus]");
-      const first = dialog.querySelector<HTMLElement>(FOCUSABLE);
-      (preferred ?? first ?? dialog).focus({ preventScroll: true });
+      const preferred = dialogElement.querySelector<HTMLElement>("[autofocus]");
+      const first = dialogElement.querySelector<HTMLElement>(FOCUSABLE);
+      (preferred ?? first ?? dialogElement).focus({ preventScroll: true });
     });
 
     function onKeyDown(event: KeyboardEvent) {
@@ -40,12 +41,12 @@ export function useModalA11y(onClose: () => void, active = true) {
       }
 
       if (event.key !== "Tab") return;
-      const focusable = [...dialog.querySelectorAll<HTMLElement>(FOCUSABLE)]
+      const focusable = [...dialogElement.querySelectorAll<HTMLElement>(FOCUSABLE)]
         .filter((element) => !element.hasAttribute("disabled") && element.getClientRects().length > 0);
 
       if (!focusable.length) {
         event.preventDefault();
-        dialog.focus({ preventScroll: true });
+        dialogElement.focus({ preventScroll: true });
         return;
       }
 
@@ -53,7 +54,7 @@ export function useModalA11y(onClose: () => void, active = true) {
       const last = focusable[focusable.length - 1];
       const current = document.activeElement;
 
-      if (event.shiftKey && (current === first || !dialog.contains(current))) {
+      if (event.shiftKey && (current === first || !dialogElement.contains(current))) {
         event.preventDefault();
         last.focus();
       } else if (!event.shiftKey && current === last) {
