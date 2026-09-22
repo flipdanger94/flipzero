@@ -42,7 +42,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ sp
   const body = await request.json().catch(() => null);
 
   if (body?.action === "reorder") {
-    const orderedIds = Array.isArray(body.orderedIds) ? [...new Set(body.orderedIds.filter((id: unknown): id is string => typeof id === "string"))] : [];
+    const orderedIds: string[] = Array.isArray(body.orderedIds) ? Array.from(new Set((body.orderedIds as unknown[]).filter((id): id is string => typeof id === "string"))) : [];
     if (!orderedIds.length || orderedIds.length > 100) return NextResponse.json({ code: "INVALID_INPUT", message: "Некорректный порядок категорий." }, { status: 400 });
     const existing = await access.database.select({ id: channelCategories.id }).from(channelCategories).where(and(eq(channelCategories.spaceId, spaceId), inArray(channelCategories.id, orderedIds)));
     if (existing.length !== orderedIds.length) return NextResponse.json({ code: "INVALID_CATEGORY", message: "Одна из категорий не принадлежит серверу." }, { status: 400 });
