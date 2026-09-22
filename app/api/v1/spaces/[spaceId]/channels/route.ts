@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { and, count, eq, inArray, isNull, max } from "drizzle-orm";
+import { and, count, eq, isNull, max } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { getDatabase } from "@/db/client";
 import { channelCategories, channels, spaces } from "@/db/schema";
@@ -30,7 +30,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ spa
 
   const [duplicate] = await database.select({ id: channels.id }).from(channels).where(and(eq(channels.spaceId, spaceId), eq(channels.name, parsed.data.name))).limit(1);
   if (duplicate) return NextResponse.json({ code: "CHANNEL_EXISTS", message: "Канал с таким названием уже существует." }, { status: 409 });
-  const [positionResult] = await database.select({ value: max(channels.position) }).from(channels).where(eq(channels.spaceId, spaceId));
+  const parentPositionCondition = parsed.data.parentId ? eq(channels.parentId, parsed.data.parentId) : isNull(channels.parentId);
+  const [positionResult] = await database.select({ value: max(channels.position) }).from(channels).where(and(eq(channels.spaceId, spaceId), parentPositionCondition));
   const channel = { id: randomUUID(), spaceId, parentId: parsed.data.parentId, name: parsed.data.name, topic: parsed.data.topic || null, kind: parsed.data.kind, position: (positionResult?.value ?? -1) + 1 };
   await database.insert(channels).values(channel);
   return NextResponse.json({ channel }, { status: 201 });
@@ -59,8 +60,9 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ sp
       const [category] = await database.select({ id: channelCategories.id }).from(channelCategories).where(and(eq(channelCategories.id, parentId), eq(channelCategories.spaceId, spaceId))).limit(1);
       if (!category) return NextResponse.json({ code: "INVALID_CATEGORY", message: "Категория не принадлежит этому серверу." }, { status: 400 });
     }
-    const existing = await database.select({ id: channels.id }).from(channels).where(and(eq(channels.spaceId, spaceId), parentCondition, inArray(channels.id, orderedIds)));
-    if (existing.length !== orderedIds.length) return NextResponse.json({ code: "INVALID_CHANNEL", message: "Один из каналов не принадлежит выбранной категории." }, { status: 400 });
+    const allSiblings = await database.select({ id: channels.id }).from(channels).where(and(eq(channels.spaceId, spaceId), parentCondition));
+    const siblingIds = new Set(allSiblings.map((item) => item.id));
+    if (orderedIds.length !== allSiblings.length || orderedIds.some((id) => !siblingIds.has(id))) return NextResponse.json({ code: "INVALID_CHANNEL_ORDER", message: "Передайте полный порядок каналов выбранной категории." }, { status: 400 });
     await database.transaction(async (tx) => {
       for (const [position, id] of orderedIds.entries()) await tx.update(channels).set({ position }).where(and(eq(channels.id, id), eq(channels.spaceId, spaceId)));
     });
@@ -74,6 +76,14 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ sp
     const [parent] = await database.select({ id: channelCategories.id }).from(channelCategories).where(and(eq(channelCategories.id, parsed.data.parentId), eq(channelCategories.spaceId, spaceId))).limit(1);
     if (!parent) return NextResponse.json({ code: "INVALID_CATEGORY", message: "Категория не принадлежит этому серверу." }, { status: 400 });
   }
+  const [currentChannel] = await database.select({ parentId: channels.parentId, position: channels.position }).from(channels).where(and(eq(channels.id, parsed.data.channelId), eq(channels.spaceId, spaceId))).limit(1);
+  if (!currentChannel) return NextResponse.json({ code: "NOT_FOUND", message: "Канал не найден." }, { status: 404 });
+  let nextPosition = currentChannel.position;
+  if (currentChannel.parentId !== parsed.data.parentId) {
+    const destinationCondition = parsed.data.parentId ? eq(channels.parentId, parsed.data.parentId) : isNull(channels.parentId);
+    const [destinationMax] = await database.select({ value: max(channels.position) }).from(channels).where(and(eq(channels.spaceId, spaceId), destinationCondition));
+    nextPosition = (destinationMax?.value ?? -1) + 1;
+  }
   const [duplicate] = await database.select({ id: channels.id }).from(channels).where(and(
     eq(channels.spaceId, spaceId),
     eq(channels.name, parsed.data.name),
@@ -83,12 +93,14 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ sp
   const [channel] = await database.update(channels).set({
     name: parsed.data.name,
     parentId: parsed.data.parentId,
+    position: nextPosition,
     topic: parsed.data.topic || null,
     slowmodeSeconds: parsed.data.slowmodeSeconds,
     isNsfw: parsed.data.isNsfw,
   }).where(and(eq(channels.id, parsed.data.channelId), eq(channels.spaceId, spaceId))).returning({
     id: channels.id,
     parentId: channels.parentId,
+    position: channels.position,
     name: channels.name,
     topic: channels.topic,
     kind: channels.kind,
