@@ -5,7 +5,7 @@ import { lookup } from "node:dns/promises";
 import { isIP } from "node:net";
 import { getDatabase } from "@/db/client";
 import { developerAppInstallations, developerWebhooks } from "@/db/developer-schema";
-import { developerApps, spaces } from "@/db/schema";
+import { developerApps } from "@/db/schema";
 import { decryptDeveloperSecret, signDeveloperPayload } from "@/lib/developer-secret";
 
 export type DeveloperWebhookEvent = "message.created" | "member.joined" | "member.left" | "space.updated";
@@ -43,9 +43,6 @@ type WebhookEnvelope = {
 
 export async function dispatchDeveloperEvent(spaceId: string, event: DeveloperWebhookEvent, data: Record<string, unknown>) {
   const database = getDatabase();
-  const [space] = await database.select({ ownerId: spaces.ownerId }).from(spaces).where(eq(spaces.id, spaceId)).limit(1);
-  if (!space) return { attempted: 0, delivered: 0 };
-
   const endpoints = await database
     .select({
       id: developerWebhooks.id,
@@ -57,7 +54,6 @@ export async function dispatchDeveloperEvent(spaceId: string, event: DeveloperWe
     .innerJoin(developerApps, eq(developerApps.id, developerWebhooks.appId))
     .innerJoin(developerAppInstallations, eq(developerAppInstallations.appId, developerApps.id))
     .where(and(
-      eq(developerApps.ownerId, space.ownerId),
       eq(developerAppInstallations.spaceId, spaceId),
       eq(developerWebhooks.enabled, true),
     ));
