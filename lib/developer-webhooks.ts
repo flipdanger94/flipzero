@@ -2,33 +2,15 @@ import "server-only";
 import { and, eq } from "drizzle-orm";
 import { randomUUID } from "node:crypto";
 import { lookup } from "node:dns/promises";
-import { isIP } from "node:net";
 import { getDatabase } from "@/db/client";
 import { developerAppInstallations, developerWebhookDeliveries, developerWebhooks } from "@/db/developer-schema";
 import { developerApps } from "@/db/schema";
 import { decryptDeveloperSecret, signDeveloperPayload } from "@/lib/developer-secret";
+import { isPrivateWebhookIp } from "@/lib/developer-validation";
 
 export type DeveloperWebhookEvent = "message.created" | "member.joined" | "member.left" | "space.updated";
 type DeliverableEvent = DeveloperWebhookEvent | "webhook.test";
 type Endpoint = { id: string; url: string; secretCiphertext: string };
-
-export function isPrivateWebhookIp(address: string) {
-  if (isIP(address) === 4) {
-    const octets = address.split(".").map(Number);
-    const [a, b] = octets;
-    return a === 0 || a === 10 || a === 127 || (a === 100 && b >= 64 && b <= 127) ||
-      (a === 169 && b === 254) || (a === 172 && b >= 16 && b <= 31) ||
-      (a === 192 && b === 168) || (a === 198 && (b === 18 || b === 19)) || a >= 224;
-  }
-  const normalized = address.toLowerCase();
-  if (normalized === "::1" || normalized === "::") return true;
-  if (normalized.startsWith("fc") || normalized.startsWith("fd") || normalized.startsWith("fe8") || normalized.startsWith("fe9") || normalized.startsWith("fea") || normalized.startsWith("feb")) return true;
-  if (normalized.startsWith("::ffff:")) {
-    const mapped = normalized.slice(7);
-    return isIP(mapped) === 4 ? isPrivateWebhookIp(mapped) : true;
-  }
-  return false;
-}
 
 async function assertPublicWebhookTarget(rawUrl: string) {
   const url = new URL(rawUrl);
