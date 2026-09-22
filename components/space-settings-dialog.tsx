@@ -8,8 +8,8 @@ import { useModalA11y } from "@/hooks/use-modal-a11y";
 
 export type EditableSpace = { id: string; name: string; description: string | null; visibility?: string; accentColor: string; iconUrl?: string | null; bannerUrl?: string | null };
 
-export function SpaceSettingsDialog({
-  const dialogRef = useModalA11y(onClose); space, onClose, onSaved }: { space: EditableSpace; onClose: () => void; onSaved: (space: EditableSpace, close?: boolean) => void }) {
+export function SpaceSettingsDialog({space, onClose, onSaved }: { space: EditableSpace; onClose: () => void; onSaved: (space: EditableSpace, close?: boolean) => void }) {
+  const dialogRef = useModalA11y(onClose);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [images, setImages] = useState({ iconUrl: space.iconUrl, bannerUrl: space.bannerUrl });
