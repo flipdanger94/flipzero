@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { and, desc, eq, ilike, inArray, or, sql } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { getDatabase } from "@/db/client";
-import { memberRoles, members, moderationCases, roles, spaceJoinRequests, spaces, userBlocks } from "@/db/schema";
+import { memberRoles, members, moderationCases, notifications, roles, spaceJoinRequests, spaces, userBlocks } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
 
 export async function GET(request: Request) {
@@ -48,17 +48,35 @@ export async function POST(request: Request) {
     const message = typeof body?.message === "string" ? body.message.trim().slice(0, 500) : "";
     const [existingMember] = await database.select({ userId: members.userId }).from(members).where(and(eq(members.userId, user.id), eq(members.spaceId, space.id))).limit(1);
     if (existingMember) return NextResponse.json({ spaceId: space.id, joined: true, requestStatus: "approved" });
-    const [requestRow] = await database.insert(spaceJoinRequests).values({
-      id: randomUUID(),
-      spaceId: space.id,
-      userId: user.id,
-      message: message || null,
-      status: "pending",
-    }).onConflictDoUpdate({
-      target: [spaceJoinRequests.spaceId, spaceJoinRequests.userId],
-      set: { message: message || null, status: "pending", reviewedById: null, reviewedAt: null, createdAt: new Date() },
-    }).returning({ status: spaceJoinRequests.status });
-    return NextResponse.json({ spaceId: space.id, joined: false, requestStatus: requestRow.status }, { status: 202 });
+    const [existingRequest] = await database.select({ status: spaceJoinRequests.status }).from(spaceJoinRequests).where(and(
+      eq(spaceJoinRequests.spaceId, space.id),
+      eq(spaceJoinRequests.userId, user.id),
+    )).limit(1);
+    if (existingRequest?.status === "pending") return NextResponse.json({ spaceId: space.id, joined: false, requestStatus: "pending" }, { status: 202 });
+
+    await database.transaction(async (tx) => {
+      await tx.insert(spaceJoinRequests).values({
+        id: randomUUID(),
+        spaceId: space.id,
+        userId: user.id,
+        message: message || null,
+        status: "pending",
+      }).onConflictDoUpdate({
+        target: [spaceJoinRequests.spaceId, spaceJoinRequests.userId],
+        set: { message: message || null, status: "pending", reviewedById: null, reviewedAt: null, createdAt: new Date() },
+      });
+      await tx.insert(notifications).values({
+        id: randomUUID(),
+        userId: space.ownerId,
+        actorId: user.id,
+        type: "space_join_request",
+        title: "Новая заявка на вступление",
+        body: user.displayName + " хочет вступить в ваше сообщество.",
+        entityType: "space",
+        entityId: space.id,
+      });
+    });
+    return NextResponse.json({ spaceId: space.id, joined: false, requestStatus: "pending" }, { status: 202 });
   }
 
   const [memberRole] = await database.select({ id: roles.id }).from(roles).where(and(eq(roles.spaceId, space.id), eq(roles.name, "Участник"), eq(roles.isManaged, true))).limit(1);
