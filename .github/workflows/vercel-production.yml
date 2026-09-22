@@ -16,14 +16,14 @@ jobs:
     timeout-minutes: 20
     if: github.repository == 'flipdanger94/flipzero' && github.ref == 'refs/heads/main'
 
+    env:
+      VERCEL_TEAM_ID: team_AsHje38KtN3G35JN0zHFPSmH
+      VERCEL_PROJECT_ID: prj_a7vxV0ljAd6K0oj9yXmngYDyk4Oz
+
     steps:
-      - name: Create production deployment via Vercel API
+      - name: Validate production environment
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-          VERCEL_TEAM_ID: team_AsHje38KtN3G35JN0zHFPSmH
-          VERCEL_PROJECT_ID: prj_a7vxV0ljAd6K0oj9yXmngYDyk4Oz
-          GITHUB_REPO_ID: "1373820599"
-          RELEASE_SHA: ${{ github.sha }}
         run: |
           set -euo pipefail
 
@@ -31,6 +31,42 @@ jobs:
             echo "VERCEL_TOKEN is not configured"
             exit 1
           fi
+
+          ENV_RESPONSE=$(curl --silent --show-error \
+            --url "https://api.vercel.com/v10/projects/$VERCEL_PROJECT_ID/env?teamId=$VERCEL_TEAM_ID" \
+            --header "Authorization: Bearer $VERCEL_TOKEN")
+
+          check_required_env() {
+            KEY="$1"
+            if echo "$ENV_RESPONSE" | jq -e --arg key "$KEY" '
+              any(.envs[]?; .key == $key and ((.target // []) | index("production") != null))
+            ' >/dev/null; then
+              echo "Production env present: $KEY"
+            else
+              echo "Missing required production env: $KEY"
+              exit 1
+            fi
+          }
+
+          check_required_env "DATABASE_URL"
+          check_required_env "SESSION_SECRET"
+          check_required_env "ADMIN_EMAIL"
+
+          if echo "$ENV_RESPONSE" | jq -e '
+            any(.envs[]?; .key == "DEVELOPER_SECRET_KEY" and ((.target // []) | index("production") != null))
+          ' >/dev/null; then
+            echo "Production env present: DEVELOPER_SECRET_KEY"
+          else
+            echo "::warning::DEVELOPER_SECRET_KEY is not configured for production; developer secrets will fall back to SESSION_SECRET."
+          fi
+
+      - name: Create production deployment via Vercel API
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          GITHUB_REPO_ID: "1373820599"
+          RELEASE_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
 
           PAYLOAD=$(jq -nc \
             --arg name "flipzero.app" \
