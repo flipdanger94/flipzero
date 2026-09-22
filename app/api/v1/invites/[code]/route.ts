@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { getDatabase } from "@/db/client";
 import { invites, memberRoles, members, moderationCases, roles, spaces } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
+import { dispatchDeveloperEvent } from "@/lib/developer-webhooks";
 
 export async function GET(_: Request, { params }: { params: Promise<{ code: string }> }) {
   const { code } = await params;
@@ -29,5 +30,6 @@ export async function POST(_: Request, { params }: { params: Promise<{ code: str
     if (memberRole) await tx.insert(memberRoles).values({ userId: user.id, spaceId: invite.spaceId, roleId: memberRole.id });
     await tx.update(invites).set({ uses: sql`${invites.uses} + 1` }).where(eq(invites.code, code));
   });
+  void dispatchDeveloperEvent(invite.spaceId, "member.joined", { userId: user.id, username: user.username, displayName: user.displayName, source: "invite" }).catch(() => undefined);
   return NextResponse.json({ spaceId: invite.spaceId, joined: true });
 }
