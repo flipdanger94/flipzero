@@ -26,8 +26,14 @@ export async function GET(request: Request, { params }: { params: Promise<{ chan
   if (pinned) conditions.push(sql`${messages.pinnedAt} IS NOT NULL`);
   if (threadRootId) conditions.push(eq(messages.threadRootId, threadRootId)); else conditions.push(isNull(messages.threadRootId));
   const rows = await access.database.select({ id: messages.id, content: messages.content, attachments: messages.attachments, replyToId: messages.replyToId, threadRootId: messages.threadRootId, editedAt: messages.editedAt, pinnedAt: messages.pinnedAt, createdAt: messages.createdAt, authorId: users.id, displayName: users.displayName, username: users.username, avatarUrl: users.avatarUrl }).from(messages).innerJoin(users, eq(users.id, messages.authorId)).where(and(...conditions)).orderBy(threadRootId ? asc(messages.createdAt) : desc(messages.createdAt)).limit(100);
-  const ids = rows.map((row) => row.id); const reactionRows = ids.length ? await access.database.select().from(reactions).where(inArray(reactions.messageId, ids)) : [];
-  return NextResponse.json({ messages: (threadRootId ? rows : rows.reverse()).map((row) => ({ ...row, reactions: reactionRows.filter((item) => item.messageId === row.id) })) });
+  const ids = rows.map((row) => row.id);
+  const reactionRows = ids.length ? await access.database.select().from(reactions).where(inArray(reactions.messageId, ids)) : [];
+  const canManageMessages = access.owner || hasPermission(access.permissions, SpacePermission.MANAGE_MESSAGES);
+  const canSendMessages = (access.owner || hasPermission(access.permissions, SpacePermission.SEND_MESSAGES)) && (access.channel.kind !== "announcement" || access.owner);
+  return NextResponse.json({
+    capabilities: { sendMessages: canSendMessages, manageMessages: canManageMessages },
+    messages: (threadRootId ? rows : rows.reverse()).map((row) => ({ ...row, reactions: reactionRows.filter((item) => item.messageId === row.id) })),
+  });
 }
 
 export async function POST(request: Request, { params }: { params: Promise<{ channelId: string }> }) {
