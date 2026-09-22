@@ -15,8 +15,8 @@ const permissionOptions = [
   ["Использование микрофона", Permission.SpeakVoice], ["Запуск трансляций", Permission.Stream],
 ] as const;
 
-export function ChannelPermissionsDialog({
-  const dialogRef = useModalA11y(onClose); spaceId, channel, onClose }: { spaceId: string; channel: { id: string; name: string }; onClose: () => void }) {
+export function ChannelPermissionsDialog({spaceId, channel, onClose }: { spaceId: string; channel: { id: string; name: string }; onClose: () => void }) {
+  const dialogRef = useModalA11y(onClose);
   const [roles, setRoles] = useState<Role[]>([]);
   const [items, setItems] = useState<Override[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
