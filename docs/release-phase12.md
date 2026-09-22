@@ -13,6 +13,7 @@ Migration: `/setup/release-0015`
 - Testing Phase CI is green.
 - Preproduction Release CI is green.
 - Vercel preview provisioning errors are treated separately from application build validation.
+- Current evidence: repeated Git-based preview deployments fail before app build with `BUILD_FAILED: Resource provisioning failed`, while the same Vercel project has a known production `READY` deployment from `main` (`7048ff7dc115c4f044b1c562a2ad1f3718108543`). Treat this as a preview/provisioning issue unless production shows the same failure.
 - Production runtime errors are checked before release.
 - Production deploy workflow must be triggered from `main` only.
 - Production environment preflight must pass before deployment creation:
@@ -28,7 +29,7 @@ Migration: `/setup/release-0015`
 2. Merge PR #30 into `main`.
 3. Trigger the manual Vercel production deployment workflow from `main`.
 4. Confirm the production environment preflight passes before a deployment is created.
-5. Confirm the deployment reaches READY and points at the expected merge commit.
+5. Confirm the deployment reaches READY and points at the expected merge commit. A preview provisioning failure is not sufficient evidence of a production failure; production must be checked independently.
 6. Sign in with the configured admin account and apply `/setup/release-0015`.
 7. Confirm all developer integration tables are reported as applied.
 8. Run GitHub Actions workflow `Post-deploy Smoke` against the production base URL.
