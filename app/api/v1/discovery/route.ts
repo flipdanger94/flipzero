@@ -19,7 +19,7 @@ export async function GET(request: Request) {
   const joinedIds = new Set(joinedRows.map((row) => row.spaceId));
   const blockedIds = new Set(blockRows.map((row) => row.blockerId === user.id ? row.blockedId : row.blockerId));
   const visibleCatalog = catalog.filter((space) => !blockedIds.has(space.ownerId));
-  return NextResponse.json({ spaces: visibleCatalog.map(({ ownerId: _ownerId, ...space }) => ({ ...space, joined: joinedIds.has(space.id) })) });
+  return NextResponse.json({ spaces: visibleCatalog.map((space) => ({ id: space.id, name: space.name, slug: space.slug, description: space.description, iconUrl: space.iconUrl, bannerUrl: space.bannerUrl, accentColor: space.accentColor, memberCount: space.memberCount, createdAt: space.createdAt, joined: joinedIds.has(space.id) })) });
 }
 
 export async function POST(request: Request) {

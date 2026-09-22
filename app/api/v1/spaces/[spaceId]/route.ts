@@ -1,8 +1,9 @@
 import { and, eq } from "drizzle-orm";
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 import { getDatabase } from "@/db/client";
 import { memberRoles, members, spaces } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
+import { dispatchDeveloperEvent } from "@/lib/developer-webhooks";
 import { updateSpaceSchema } from "@/lib/space-validation";
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ spaceId: string }> }) {
@@ -23,6 +24,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ sp
     accentColor: parsed.data.accentColor,
     updatedAt: new Date(),
   }).where(eq(spaces.id, spaceId)).returning({ id: spaces.id, name: spaces.name, description: spaces.description, visibility: spaces.visibility, accentColor: spaces.accentColor });
+  after(() => dispatchDeveloperEvent(spaceId, "space.updated", { space: updated, actorId: user.id }).catch(() => undefined));
   return NextResponse.json({ space: updated });
 }
 
@@ -37,6 +39,7 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ s
     const [membership] = await database.select({ userId: members.userId }).from(members).where(and(eq(members.userId, user.id), eq(members.spaceId, spaceId))).limit(1);
     if (!membership) return NextResponse.json({ code: "NOT_MEMBER", message: "Вы не состоите в этом сервере." }, { status: 404 });
     await database.transaction(async (tx) => { await tx.delete(memberRoles).where(and(eq(memberRoles.userId, user.id), eq(memberRoles.spaceId, spaceId))); await tx.delete(members).where(and(eq(members.userId, user.id), eq(members.spaceId, spaceId))); });
+    after(() => dispatchDeveloperEvent(spaceId, "member.left", { userId: user.id, reason: "left" }).catch(() => undefined));
     return NextResponse.json({ ok: true });
   }
   if (body?.action !== "delete" || body?.name !== space.name) return NextResponse.json({ code: "CONFIRMATION_REQUIRED", message: "Введите точное название сервера." }, { status: 400 });

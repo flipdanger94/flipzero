@@ -1,0 +1,75 @@
+# Phase 12 — Production release runbook
+
+Release branch: `release/phase9-11-preprod`  
+Pull request: #30  
+Migration: `/setup/release-0015`
+
+## Preconditions
+
+- PR #30 remains mergeable with `main`.
+- Release branch is 0 commits behind `main`.
+- Developer Platform CI is green.
+- Responsive Accessibility Performance CI is green.
+- Testing Phase CI is green.
+- Preproduction Release CI is green.
+- Vercel preview provisioning errors are treated separately from application build validation.
+- Current evidence: repeated Git-based preview deployments fail before app build with `BUILD_FAILED: Resource provisioning failed`, while the same Vercel project has a known production `READY` deployment from `main` (`7048ff7dc115c4f044b1c562a2ad1f3718108543`). Treat this as a preview/provisioning issue unless production shows the same failure.
+- Production runtime errors are checked before release.
+- Production deploy workflow must be triggered from `main` only.
+- Production environment preflight must pass before deployment creation:
+  - `DATABASE_URL` is present for production.
+  - `SESSION_SECRET` is present for production.
+  - `ADMIN_EMAIL` is present for production.
+  - `DEVELOPER_SECRET_KEY` is preferred; absence produces a warning because code can fall back to `SESSION_SECRET`.
+- Environment values are never decrypted or printed by the workflow.
+
+## Release sequence
+
+1. Re-check that `main` has not moved and PR #30 is still mergeable.
+2. Merge PR #30 into `main`.
+3. Trigger the manual Vercel production deployment workflow from `main`.
+4. Confirm the production environment preflight passes before a deployment is created.
+5. Confirm the deployment reaches READY and points at the expected merge commit. A preview provisioning failure is not sufficient evidence of a production failure; production must be checked independently.
+6. Sign in with the configured admin account and apply `/setup/release-0015`.
+7. Confirm all developer integration tables are reported as applied.
+8. Run GitHub Actions workflow `Post-deploy Smoke` against the production base URL.
+9. Verify manually:
+   - OAuth authorize flow.
+   - OAuth token exchange.
+   - Bot/app install flow.
+   - Webhook Test delivery.
+   - Direct-message pagination.
+   - Space member pagination.
+   - Mobile/tablet navigation and modal keyboard behavior.
+10. Check Vercel runtime errors after release.
+
+## Required smoke results
+
+- `GET /api/health` -> HTTP 200.
+- Health payload reports `service=flipzero-web`.
+- Health payload reports `status=ok`.
+- Database health reports `ok`.
+- `GET /` -> HTTP 200.
+- `GET /login` -> HTTP 200.
+- Anonymous `GET /api/public/v1/me` -> HTTP 401.
+- Anonymous `GET /api/v1/developer/apps` -> HTTP 401.
+
+## Rollback conditions
+
+Rollback if any of the following occurs after deployment:
+
+- Production deployment does not reach READY.
+- `/api/health` is degraded or returns 503.
+- Authentication or protected-route access is broken.
+- A high-volume runtime error cluster appears.
+- Core messaging, spaces, or login become unavailable.
+
+## Rollback procedure
+
+1. Do not re-run migrations repeatedly.
+2. Use the last known-good Vercel production deployment as the rollback target.
+3. Restore production traffic to that deployment.
+4. Re-check `/api/health`, login, messaging, spaces, and runtime errors.
+5. Keep PR/release diagnostics and fix forward on a new branch.
+
+The developer integration migration is additive. Do not manually drop the new tables during an application rollback unless a separate database rollback has been explicitly reviewed.

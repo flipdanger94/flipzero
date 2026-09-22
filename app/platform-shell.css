@@ -38,7 +38,7 @@
   background: rgba(255, 177, 75, 0.16);
 }
 
-@media (max-width: 760px) {
+@media (max-width: 767px) {
   .platform-workspace {
     position: fixed;
     z-index: 70;

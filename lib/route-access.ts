@@ -4,6 +4,7 @@ export const PROTECTED_ROUTE_PREFIXES = [
   "/communities",
   "/invite",
   "/setup",
+  "/oauth",
 ] as const;
 
 export function isProtectedRoute(pathname: string) {

@@ -34,6 +34,7 @@ export const config = {
     "/communities/:path*",
     "/invite/:path*",
     "/setup/:path*",
+    "/oauth/:path*",
     "/api/:path*",
   ],
 };

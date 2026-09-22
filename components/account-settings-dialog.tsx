@@ -1,7 +1,8 @@
 "use client";
 
-import { type FormEvent, useEffect, useRef, useState } from "react";
+import { type FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useModalA11y } from "@/hooks/use-modal-a11y";
 import { AtSign, Bell, Check, Crown, Gem, Headphones, KeyRound, LoaderCircle, LogOut, Mic, Palette, RefreshCw, ShieldCheck, UserRound, Volume2, X, UserX } from "lucide-react";
 import { BrandMark } from "./brand-mark";
 import { ImageUpload } from "./image-upload";
@@ -28,6 +29,7 @@ export type AccountSettingsSection = "profile" | "security" | "privacy" | "notif
 
 export function AccountSettingsDialog({ user, initialSection = "profile", onClose, onSaved }: { user: AccountProfile; initialSection?: AccountSettingsSection; onClose: () => void; onSaved: (user: AccountProfile) => void }) {
   const router = useRouter();
+  const dialogRef = useModalA11y(onClose);
   const [section, setSection] = useState<AccountSettingsSection>(initialSection);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -35,9 +37,6 @@ export function AccountSettingsDialog({ user, initialSection = "profile", onClos
   const [bio, setBio] = useState(user.bio ?? "");
   const [media, setMedia] = useState({ avatarUrl: user.avatarUrl, bannerUrl: user.bannerUrl });
   const [superflipBioLimit, setSuperflipBioLimit] = useState(190);
-  const closeRef = useRef<HTMLButtonElement>(null);
-
-  useEffect(() => { closeRef.current?.focus(); }, []);
   useEffect(() => { void fetch("/api/superflip/status").then((response) => response.json()).then((status: { capabilities?: { profileBioLimit?: number } }) => setSuperflipBioLimit(status.capabilities?.profileBioLimit ?? 190)).catch(() => {}); }, []);
   useEffect(() => {
     const onEscape = (event: KeyboardEvent) => { if (event.key === "Escape") onClose(); };
@@ -89,7 +88,7 @@ export function AccountSettingsDialog({ user, initialSection = "profile", onClos
   const initials = user.displayName.split(/\s+/).map((part) => part[0]).join("").slice(0, 2).toLocaleUpperCase("ru");
 
   return <div className="dialog-backdrop account-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
-    <section className="account-settings" role="dialog" aria-modal="true" aria-labelledby="account-settings-title">
+    <section ref={dialogRef} tabIndex={-1} className="account-settings" role="dialog" aria-modal="true" aria-labelledby="account-settings-title">
       <aside className="account-settings-nav">
         <div className="account-settings-brand"><span className="brand-symbol-wrap"><BrandMark /></span><strong>FlipZero</strong></div>
         <small className="account-nav-label">НАСТРОЙКИ ПОЛЬЗОВАТЕЛЯ</small>
@@ -109,7 +108,7 @@ export function AccountSettingsDialog({ user, initialSection = "profile", onClos
       </aside>
 
       <div className="account-settings-content">
-        <button ref={closeRef} className="account-settings-close" onClick={onClose} aria-label="Закрыть настройки"><X size={20} /></button>
+        <button className="account-settings-close" onClick={onClose} aria-label="Закрыть настройки"><X size={20} /></button>
         {section === "profile" ? <>
           <div className="account-settings-heading"><span>ПРОФИЛЬ</span><h2 id="account-settings-title">Мой профиль</h2><p>Так вас видят другие участники FlipZero.</p></div>
           <div className="account-profile-preview"><div className="account-profile-banner" style={media.bannerUrl ? { backgroundImage: `url(${media.bannerUrl})` } : undefined} /><div className="account-profile-details"><span className="account-profile-avatar">{media.avatarUrl ? <MediaImage src={media.avatarUrl} sizes="88px" /> : initials}</span><strong>{user.displayName}</strong><small>@{user.username} · уровень {user.globalLevel}</small><p>{user.bio || "Расскажите немного о себе."}</p></div></div>

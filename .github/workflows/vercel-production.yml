@@ -3,21 +3,86 @@ name: Deploy Vercel Production
 on:
   workflow_dispatch:
 
+permissions:
+  contents: read
+
+concurrency:
+  group: vercel-production
+  cancel-in-progress: false
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    if: github.repository == 'flipdanger94/flipzero'
+    timeout-minutes: 20
+    if: github.repository == 'flipdanger94/flipzero' && github.ref == 'refs/heads/main'
+
+    env:
+      VERCEL_TEAM_ID: team_AsHje38KtN3G35JN0zHFPSmH
+      VERCEL_PROJECT_ID: prj_a7vxV0ljAd6K0oj9yXmngYDyk4Oz
+
     steps:
+      - name: Validate production environment
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "${VERCEL_TOKEN:-}" ]; then
+            echo "VERCEL_TOKEN is not configured"
+            exit 1
+          fi
+
+          ENV_RESPONSE=$(curl --silent --show-error \
+            --url "https://api.vercel.com/v10/projects/$VERCEL_PROJECT_ID/env?teamId=$VERCEL_TEAM_ID" \
+            --header "Authorization: Bearer $VERCEL_TOKEN")
+
+          check_required_env() {
+            KEY="$1"
+            if echo "$ENV_RESPONSE" | jq -e --arg key "$KEY" '
+              any(.envs[]?; .key == $key and ((.target // []) | index("production") != null))
+            ' >/dev/null; then
+              echo "Production env present: $KEY"
+            else
+              echo "Missing required production env: $KEY"
+              exit 1
+            fi
+          }
+
+          check_required_env "DATABASE_URL"
+          check_required_env "SESSION_SECRET"
+          check_required_env "ADMIN_EMAIL"
+
+          if echo "$ENV_RESPONSE" | jq -e '
+            any(.envs[]?; .key == "DEVELOPER_SECRET_KEY" and ((.target // []) | index("production") != null))
+          ' >/dev/null; then
+            echo "Production env present: DEVELOPER_SECRET_KEY"
+          else
+            echo "::warning::DEVELOPER_SECRET_KEY is not configured for production; developer secrets will fall back to SESSION_SECRET."
+          fi
+
       - name: Create production deployment via Vercel API
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-          VERCEL_TEAM_ID: team_AsHje38KtN3G35JN0zHFPSmH
-          VERCEL_PROJECT_ID: prj_a7vxV0ljAd6K0oj9yXmngYDyk4Oz
           GITHUB_REPO_ID: "1373820599"
+          RELEASE_SHA: ${{ github.sha }}
         run: |
-          PAYLOAD=$(jq -nc             --arg name "flipzero.app"             --arg project "$VERCEL_PROJECT_ID"             --arg ref "main"             --arg sha "$GITHUB_SHA"             --argjson repoId "$GITHUB_REPO_ID"             '{name:$name,project:$project,target:"production",gitSource:{type:"github",repoId:$repoId,ref:$ref,sha:$sha}}')
+          set -euo pipefail
 
-          RESPONSE=$(curl --silent --show-error             --request POST             --url "https://api.vercel.com/v13/deployments?teamId=$VERCEL_TEAM_ID&forceNew=1"             --header "Authorization: Bearer $VERCEL_TOKEN"             --header "Content-Type: application/json"             --data "$PAYLOAD"             --write-out "\n%{http_code}")
+          PAYLOAD=$(jq -nc \
+            --arg name "flipzero.app" \
+            --arg project "$VERCEL_PROJECT_ID" \
+            --arg ref "main" \
+            --arg sha "$RELEASE_SHA" \
+            --argjson repoId "$GITHUB_REPO_ID" \
+            '{name:$name,project:$project,target:"production",gitSource:{type:"github",repoId:$repoId,ref:$ref,sha:$sha}}')
+
+          RESPONSE=$(curl --silent --show-error \
+            --request POST \
+            --url "https://api.vercel.com/v13/deployments?teamId=$VERCEL_TEAM_ID&forceNew=1" \
+            --header "Authorization: Bearer $VERCEL_TOKEN" \
+            --header "Content-Type: application/json" \
+            --data "$PAYLOAD" \
+            --write-out "\n%{http_code}")
 
           HTTP_CODE=$(echo "$RESPONSE" | tail -n 1)
           BODY=$(echo "$RESPONSE" | sed '$d')
@@ -34,3 +99,34 @@ jobs:
             echo "Deployment ID missing"
             exit 1
           fi
+
+          echo "deployment_id=$DEPLOYMENT_ID" >> "$GITHUB_OUTPUT"
+
+          for attempt in $(seq 1 60); do
+            STATUS_RESPONSE=$(curl --silent --show-error \
+              --url "https://api.vercel.com/v13/deployments/$DEPLOYMENT_ID?teamId=$VERCEL_TEAM_ID" \
+              --header "Authorization: Bearer $VERCEL_TOKEN")
+
+            READY_STATE=$(echo "$STATUS_RESPONSE" | jq -r '.readyState // .state // "UNKNOWN"')
+            DEPLOYMENT_URL=$(echo "$STATUS_RESPONSE" | jq -r '.url // empty')
+            ERROR_CODE=$(echo "$STATUS_RESPONSE" | jq -r '.errorCode // .error.code // empty')
+            ERROR_MESSAGE=$(echo "$STATUS_RESPONSE" | jq -r '.errorMessage // .error.message // empty')
+
+            echo "Attempt $attempt: state=$READY_STATE url=$DEPLOYMENT_URL"
+
+            case "$READY_STATE" in
+              READY)
+                echo "Production deployment READY: https://$DEPLOYMENT_URL"
+                exit 0
+                ;;
+              ERROR|CANCELED)
+                echo "Production deployment failed: $ERROR_CODE $ERROR_MESSAGE"
+                exit 1
+                ;;
+            esac
+
+            sleep 10
+          done
+
+          echo "Timed out waiting for Vercel production deployment"
+          exit 1
