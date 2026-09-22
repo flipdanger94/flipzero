@@ -1302,3 +1302,47 @@ html[data-motion="off"] *::after {
     z-index: 4;
   }
 }
+
+
+/* Definitive mobile override for the higher-specificity desktop profile grid
+   from neon-redesign.css. Without this, the hidden 220px profile/list column
+   still consumes half of an iPhone viewport. */
+@media (max-width: 767px) {
+  .social-hub-embedded .direct-layout.has-profile,
+  .social-hub .direct-layout.has-profile {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    grid-template-rows: minmax(0, 1fr) !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  .social-hub-embedded .direct-layout.has-profile > aside:first-child,
+  .social-hub .direct-layout.has-profile > aside:first-child,
+  .social-hub-embedded .direct-layout.has-profile > .direct-profile,
+  .social-hub .direct-layout.has-profile > .direct-profile {
+    display: none !important;
+  }
+
+  .social-hub-embedded .direct-layout.has-profile > section,
+  .social-hub .direct-layout.has-profile > section {
+    grid-column: 1 / -1 !important;
+    grid-row: 1 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    height: 100% !important;
+  }
+
+  .social-hub-embedded .direct-layout.has-profile .direct-title,
+  .social-hub-embedded .direct-layout.has-profile .direct-messages,
+  .social-hub-embedded .direct-layout.has-profile .direct-composer,
+  .social-hub .direct-layout.has-profile .direct-title,
+  .social-hub .direct-layout.has-profile .direct-messages,
+  .social-hub .direct-layout.has-profile .direct-composer {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+  }
+}
