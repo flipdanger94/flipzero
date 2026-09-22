@@ -31,7 +31,13 @@ export async function GET(_: Request, { params }: { params: Promise<{ spaceId: s
   const access = await requireRoleManager(spaceId);
   if ("error" in access) return access.error;
   const items = await access.database.select().from(roles).where(eq(roles.spaceId, spaceId)).orderBy(asc(roles.position));
-  return NextResponse.json({ roles: items });
+  return NextResponse.json({
+    capabilities: { owner: access.owner, permissions: access.permissions, topPosition: access.topPosition },
+    roles: items.map((role) => ({
+      ...role,
+      manageable: !role.isManaged && (access.owner || (role.position < access.topPosition && !hasPermission(Number(role.permissions), Permission.Administrator) && (Number(role.permissions) & ~access.permissions) === 0)),
+    })),
+  });
 }
 
 export async function POST(request: Request, { params }: { params: Promise<{ spaceId: string }> }) {
@@ -54,10 +60,11 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ sp
   const body = await request.json().catch(() => null);
   const parsed = roleSchema.safeParse(body);
   if (!parsed.success || typeof body?.id !== "string") return NextResponse.json({ code: "INVALID_INPUT", message: "Проверьте данные роли." }, { status: 400 });
-  const [existing] = await access.database.select({ isManaged: roles.isManaged, position: roles.position }) .from(roles).where(and(eq(roles.id, body.id), eq(roles.spaceId, spaceId))).limit(1);
+  const [existing] = await access.database.select({ isManaged: roles.isManaged, position: roles.position, permissions: roles.permissions }) .from(roles).where(and(eq(roles.id, body.id), eq(roles.spaceId, spaceId))).limit(1);
   if (!existing) return NextResponse.json({ code: "NOT_FOUND", message: "Роль не найдена." }, { status: 404 });
   if (existing.isManaged) return NextResponse.json({ code: "PROTECTED_ROLE", message: "Системную роль нельзя изменять." }, { status: 409 });
   if (!access.owner && existing.position >= access.topPosition) return NextResponse.json({ code: "ROLE_HIERARCHY", message: "Нельзя изменять роль на уровне вашей высшей роли или выше." }, { status: 403 });
+  if (!access.owner && (hasPermission(Number(existing.permissions), Permission.Administrator) || (Number(existing.permissions) & ~access.permissions) !== 0)) return NextResponse.json({ code: "ROLE_HIERARCHY", message: "Нельзя изменять роль с правами выше ваших." }, { status: 403 });
   if (!access.owner && (hasPermission(parsed.data.permissions, Permission.Administrator) || (parsed.data.permissions & ~access.permissions) !== 0)) return NextResponse.json({ code: "ROLE_ESCALATION", message: "Нельзя выдать роли права, которых нет у вас." }, { status: 403 });
   const [updated] = await access.database.update(roles).set(parsed.data).where(and(eq(roles.id, body.id), eq(roles.spaceId, spaceId))).returning();
   return NextResponse.json({ role: updated });
@@ -69,10 +76,11 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ s
   if ("error" in access) return access.error;
   const roleId = new URL(request.url).searchParams.get("roleId");
   if (!roleId) return NextResponse.json({ code: "INVALID_INPUT", message: "Не указана роль." }, { status: 400 });
-  const [existing] = await access.database.select({ isManaged: roles.isManaged, position: roles.position }).from(roles).where(and(eq(roles.id, roleId), eq(roles.spaceId, spaceId))).limit(1);
+  const [existing] = await access.database.select({ isManaged: roles.isManaged, position: roles.position, permissions: roles.permissions }).from(roles).where(and(eq(roles.id, roleId), eq(roles.spaceId, spaceId))).limit(1);
   if (!existing) return NextResponse.json({ code: "NOT_FOUND", message: "Роль не найдена." }, { status: 404 });
   if (existing.isManaged) return NextResponse.json({ code: "PROTECTED_ROLE", message: "Системную роль нельзя удалить." }, { status: 409 });
   if (!access.owner && existing.position >= access.topPosition) return NextResponse.json({ code: "ROLE_HIERARCHY", message: "Нельзя удалить роль на уровне вашей высшей роли или выше." }, { status: 403 });
+  if (!access.owner && (hasPermission(Number(existing.permissions), Permission.Administrator) || (Number(existing.permissions) & ~access.permissions) !== 0)) return NextResponse.json({ code: "ROLE_HIERARCHY", message: "Нельзя удалить роль с правами выше ваших." }, { status: 403 });
   await access.database.delete(roles).where(and(eq(roles.id, roleId), eq(roles.spaceId, spaceId)));
   return NextResponse.json({ ok: true });
 }
