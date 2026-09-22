@@ -54,6 +54,7 @@ jobs:
           components/gamification-dialog.tsx
           components/invite-manager-dialog.tsx
           components/member-manager-dialog.tsx
+          components/persistent-chat.tsx
           components/moderation-dialog.tsx
           components/role-manager-dialog.tsx
           components/social-hub-dialog.tsx
