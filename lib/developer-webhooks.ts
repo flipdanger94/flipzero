@@ -12,7 +12,7 @@ export type DeveloperWebhookEvent = "message.created" | "member.joined" | "membe
 type DeliverableEvent = DeveloperWebhookEvent | "webhook.test";
 type Endpoint = { id: string; url: string; secretCiphertext: string };
 
-function isPrivateIp(address: string) {
+export function isPrivateWebhookIp(address: string) {
   if (isIP(address) === 4) {
     const octets = address.split(".").map(Number);
     const [a, b] = octets;
@@ -25,7 +25,7 @@ function isPrivateIp(address: string) {
   if (normalized.startsWith("fc") || normalized.startsWith("fd") || normalized.startsWith("fe8") || normalized.startsWith("fe9") || normalized.startsWith("fea") || normalized.startsWith("feb")) return true;
   if (normalized.startsWith("::ffff:")) {
     const mapped = normalized.slice(7);
-    return isIP(mapped) === 4 ? isPrivateIp(mapped) : true;
+    return isIP(mapped) === 4 ? isPrivateWebhookIp(mapped) : true;
   }
   return false;
 }
@@ -33,7 +33,7 @@ function isPrivateIp(address: string) {
 async function assertPublicWebhookTarget(rawUrl: string) {
   const url = new URL(rawUrl);
   const addresses = await lookup(url.hostname, { all: true, verbatim: true });
-  if (!addresses.length || addresses.some(({ address }) => isPrivateIp(address))) {
+  if (!addresses.length || addresses.some(({ address }) => isPrivateWebhookIp(address))) {
     throw new Error("Webhook target resolved to a private or reserved address");
   }
 }
