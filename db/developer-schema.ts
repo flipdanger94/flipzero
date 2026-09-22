@@ -1,5 +1,5 @@
 import { boolean, index, jsonb, pgTable, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
-import { developerApps, users } from "./schema";
+import { developerApps, spaces, users } from "./schema";
 
 export const developerOauthClients = pgTable("developer_oauth_clients", {
   appId: text("app_id").primaryKey().references(() => developerApps.id, { onDelete: "cascade" }),
@@ -56,4 +56,16 @@ export const developerOauthAccessTokens = pgTable("developer_oauth_access_tokens
 }, (table) => [
   uniqueIndex("developer_oauth_access_token_hash_unique").on(table.tokenHash),
   index("developer_oauth_access_token_app_user_idx").on(table.appId, table.userId),
+]);
+
+export const developerAppInstallations = pgTable("developer_app_installations", {
+  appId: text("app_id").notNull().references(() => developerApps.id, { onDelete: "cascade" }),
+  spaceId: text("space_id").notNull().references(() => spaces.id, { onDelete: "cascade" }),
+  installedById: text("installed_by_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  permissions: jsonb("permissions").$type<string[]>().default(["events:read"]).notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [
+  uniqueIndex("developer_app_installation_unique").on(table.appId, table.spaceId),
+  index("developer_app_installations_space_idx").on(table.spaceId),
 ]);
