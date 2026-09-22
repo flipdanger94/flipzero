@@ -29,7 +29,8 @@ export async function POST(_request: Request, context: { params: Promise<{ relea
   if (!config) return NextResponse.json({ message: "Неизвестная миграция." }, { status: 404 });
 
   const expectedEmail = process.env.ADMIN_EMAIL?.trim().toLowerCase();
-  if (!expectedEmail || !process.env.DATABASE_URL) return NextResponse.json({ message: "Переменные окружения не настроены." }, { status: 503 });
+  const databaseUrl = process.env.DATABASE_URL;
+  if (!expectedEmail || !databaseUrl) return NextResponse.json({ message: "Переменные окружения не настроены." }, { status: 503 });
 
   const token = (await cookies()).get(SESSION_COOKIE)?.value;
   if (!token) return NextResponse.json({ message: "Сначала войдите в аккаунт администратора." }, { status: 401 });
@@ -45,7 +46,7 @@ export async function POST(_request: Request, context: { params: Promise<{ relea
   if (!account || account.email.toLowerCase() !== expectedEmail) return NextResponse.json({ message: "Этот аккаунт не может выполнить установку." }, { status: 403 });
 
   const { default: postgres } = await import("postgres");
-  const client = postgres(process.env.DATABASE_URL, { max: 1, prepare: false });
+  const client = postgres(databaseUrl, { max: 1, prepare: false });
 
   try {
     const checkResult = await client.unsafe(config.check);
