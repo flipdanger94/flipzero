@@ -41,10 +41,17 @@ export async function POST(request: Request, { params }: { params: Promise<{ spa
       await access.database.delete(eventAttendees).where(and(eq(eventAttendees.eventId, event.id), eq(eventAttendees.userId, access.user.id)));
       return NextResponse.json({ attending: false });
     }
-    const [{ count }] = await access.database.select({ count: sql<number>`count(*)::int` }).from(eventAttendees).where(eq(eventAttendees.eventId, event.id));
-    if (event.capacity !== null && count >= event.capacity) return NextResponse.json({ code: "EVENT_FULL", message: "Все места на событие уже заняты." }, { status: 409 });
-    await access.database.insert(eventAttendees).values({ eventId: event.id, userId: access.user.id }).onConflictDoNothing();
-    return NextResponse.json({ attending: true });
+    const attendance = await access.database.transaction(async (tx) => {
+      await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${event.id}))`);
+      const [existingAttendance] = await tx.select({ userId: eventAttendees.userId }).from(eventAttendees).where(and(eq(eventAttendees.eventId, event.id), eq(eventAttendees.userId, access.user.id))).limit(1);
+      if (existingAttendance) return { full: false, joined: false };
+      const [{ count }] = await tx.select({ count: sql<number>`count(*)::int` }).from(eventAttendees).where(eq(eventAttendees.eventId, event.id));
+      if (event.capacity !== null && count >= event.capacity) return { full: true, joined: false };
+      const inserted = await tx.insert(eventAttendees).values({ eventId: event.id, userId: access.user.id }).onConflictDoNothing().returning({ userId: eventAttendees.userId });
+      return { full: false, joined: inserted.length > 0 };
+    });
+    if (attendance.full) return NextResponse.json({ code: "EVENT_FULL", message: "Все места на событие уже заняты." }, { status: 409 });
+    return NextResponse.json({ attending: true, joined: attendance.joined });
   }
   if (!access.canManage) return NextResponse.json({ code: "FORBIDDEN", message: "Недостаточно прав для создания событий." }, { status: 403 });
   const title = typeof body?.title === "string" ? body.title.trim().slice(0, 80) : "";
