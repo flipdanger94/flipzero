@@ -970,3 +970,75 @@ html[data-motion="off"] *::after {
     flex: none;
   }
 }
+
+
+/* iPhone DM composer hard pin: platform-workspace already ends above the
+   mobile tab bar, so anchoring to the chat section keeps the input visible. */
+@media (max-width: 767px) {
+  .direct-layout.has-profile > section {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+    overflow: hidden;
+    padding-bottom: 70px;
+  }
+
+  .direct-layout.has-profile .direct-title {
+    flex: 0 0 58px;
+  }
+
+  .direct-layout.has-profile .direct-messages {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    padding-bottom: 84px;
+  }
+
+  .direct-layout.has-profile .direct-composer {
+    position: absolute !important;
+    left: 0;
+    right: 0;
+    bottom: 0 !important;
+    z-index: 20;
+    display: flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    width: 100%;
+    min-height: 62px;
+    margin: 0;
+    padding: 8px 10px;
+    border-top: 1px solid var(--border);
+    background: #17161c;
+    box-shadow: 0 -10px 28px rgba(0,0,0,.28);
+  }
+
+  .direct-layout.has-profile .direct-composer input {
+    display: block !important;
+    flex: 1 1 auto;
+    width: auto;
+    min-width: 0;
+    height: 46px;
+    min-height: 46px;
+    font-size: 16px !important;
+  }
+
+  .direct-layout.has-profile .direct-composer button {
+    display: flex !important;
+    flex: 0 0 46px;
+    width: 46px;
+    height: 46px;
+    min-height: 46px;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .direct-layout.has-profile .direct-notice {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 62px;
+    z-index: 21;
+  }
+}
