@@ -7,6 +7,7 @@ import { channels, memberRoles, members, messages, moderationCases, moderationFl
 import { getCurrentUser } from "@/lib/auth";
 import { hasPermission, Permission } from "@/lib/permissions";
 import { evictParticipantFromSpaceVoice } from "@/lib/livekit-admin";
+import { writeSpaceAuditLog } from "@/lib/space-audit";
 
 const actionSchema = z.object({
   targetUserId: z.string().min(1),
@@ -82,6 +83,14 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ sp
     if (parsed.data.action === "remove") await tx.update(messages).set({ deletedAt: reviewedAt }).where(eq(messages.id, flag.messageId));
     if (parsed.data.action === "dismiss" && flag.autoHidden) await tx.update(messages).set({ deletedAt: null }).where(eq(messages.id, flag.messageId));
   });
+  await writeSpaceAuditLog({
+    spaceId,
+    actorId: access.user.id,
+    action: "moderation.flag." + parsed.data.action,
+    targetType: "message",
+    targetId: flag.messageId,
+    metadata: { flagId: flag.id },
+  });
   return NextResponse.json({ status: parsed.data.action === "remove" ? "actioned" : "dismissed", reviewedAt });
 }
 
@@ -119,5 +128,13 @@ export async function POST(request: Request, { params }: { params: Promise<{ spa
     }
   });
   if (parsed.data.action === "kick" || parsed.data.action === "ban" || parsed.data.action === "timeout") await evictParticipantFromSpaceVoice(spaceId, target.id);
+  await writeSpaceAuditLog({
+    spaceId,
+    actorId: access.user.id,
+    action: "moderation." + parsed.data.action,
+    targetType: "user",
+    targetId: target.id,
+    metadata: { reason: parsed.data.reason || null, durationMinutes: parsed.data.durationMinutes ?? null },
+  });
   return NextResponse.json({ case: moderationCase }, { status: 201 });
 }
