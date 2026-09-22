@@ -13,7 +13,7 @@ export function CommunityActions({ spaceId, slug, channelId, visibility, joinReq
   const [requestStatus, setRequestStatus] = useState(joinRequestStatus);
   const canonicalCommunityPath = `/communities/${encodeURIComponent(slug)}`;
   const communityPath = requestedChannelId ? `${canonicalCommunityPath}?channel=${encodeURIComponent(requestedChannelId)}` : canonicalCommunityPath;
-  const channelPath = channelId ? `/channels/${encodeURIComponent(spaceId)}/${encodeURIComponent(channelId)}` : "/app";
+  const channelPath = channelId ? `/channels/${encodeURIComponent(spaceId)}/${encodeURIComponent(channelId)}` : `/app?space=${encodeURIComponent(spaceId)}`;
 
   async function join() {
     let message = "";
