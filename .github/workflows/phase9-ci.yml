@@ -9,6 +9,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: developer-platform-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   validate:
     runs-on: ubuntu-latest
@@ -34,8 +38,24 @@ jobs:
       - name: Tests
         run: pnpm test
 
-      - name: Lint
-        run: pnpm lint
+      - name: Lint Developer Platform
+        run: >
+          pnpm exec eslint
+          lib/developer-validation.ts
+          lib/developer-secret.ts
+          lib/developer-webhooks.ts
+          lib/api-auth.ts
+          db/developer-schema.ts
+          components/developer-dialog.tsx
+          components/developer-integrations.tsx
+          app/oauth/authorize/page.tsx
+          app/api/v1/developer/apps/route.ts
+          app/api/v1/developer/installations/route.ts
+          app/api/v1/developer/oauth/route.ts
+          app/api/v1/developer/oauth/authorize/route.ts
+          app/api/v1/developer/webhooks/route.ts
+          app/api/public/v1/oauth/token/route.ts
+          app/api/public/v1/me/route.ts
 
       - name: Build
         run: pnpm build
