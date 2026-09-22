@@ -40,8 +40,14 @@ export async function GET() {
     parentId: channels.parentId,
   }).from(channels).where(inArray(channels.spaceId, spaceIds)).orderBy(asc(channels.position)) : [];
   const categories = spaceIds.length ? await database.select().from(channelCategories).where(inArray(channelCategories.spaceId, spaceIds)).orderBy(asc(channelCategories.position)) : [];
+  const assignments = spaceIds.length ? await database.select({ spaceId: memberRoles.spaceId, permissions: roles.permissions }).from(memberRoles).innerJoin(roles, eq(roles.id, memberRoles.roleId)).where(eq(memberRoles.userId, user.id)) : [];
 
-  return NextResponse.json({ spaces: joinedSpaces.map((space) => ({ ...space, categories: categories.filter((category) => category.spaceId === space.id), channels: spaceChannels.filter((channel) => channel.spaceId === space.id) })) });
+  return NextResponse.json({ spaces: joinedSpaces.map((space) => ({
+    ...space,
+    permissions: space.ownerId === user.id ? Permission.Administrator : assignments.filter((item) => item.spaceId === space.id).reduce((value, item) => value | Number(item.permissions), 0),
+    categories: categories.filter((category) => category.spaceId === space.id),
+    channels: spaceChannels.filter((channel) => channel.spaceId === space.id),
+  })) });
 }
 
 export async function POST(request: Request) {
