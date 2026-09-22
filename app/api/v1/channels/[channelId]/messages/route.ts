@@ -32,8 +32,16 @@ export async function GET(request: Request, { params }: { params: Promise<{ chan
   const reactionRows = ids.length ? await access.database.select().from(reactions).where(inArray(reactions.messageId, ids)) : [];
   const canManageMessages = !access.timedOutUntil && (access.owner || hasPermission(access.permissions, SpacePermission.MANAGE_MESSAGES));
   const canSendMessages = !access.timedOutUntil && (access.owner || hasPermission(access.permissions, SpacePermission.SEND_MESSAGES)) && (access.channel.kind !== "announcement" || access.owner);
+  let slowmodeRetryAfterSeconds = 0;
+  if (canSendMessages && access.channel.slowmodeSeconds > 0 && !access.owner && !canManageMessages) {
+    const [latestMessage] = await access.database.select({ createdAt: messages.createdAt }).from(messages)
+      .where(and(eq(messages.channelId, channelId), eq(messages.authorId, access.user.id)))
+      .orderBy(desc(messages.createdAt))
+      .limit(1);
+    if (latestMessage?.createdAt) slowmodeRetryAfterSeconds = Math.max(0, Math.ceil((latestMessage.createdAt.getTime() + access.channel.slowmodeSeconds * 1000 - Date.now()) / 1000));
+  }
   return NextResponse.json({
-    capabilities: { sendMessages: canSendMessages, manageMessages: canManageMessages, timedOutUntil: access.timedOutUntil, slowmodeSeconds: access.channel.slowmodeSeconds },
+    capabilities: { sendMessages: canSendMessages, manageMessages: canManageMessages, timedOutUntil: access.timedOutUntil, slowmodeSeconds: access.channel.slowmodeSeconds, slowmodeRetryAfterSeconds },
     messages: (threadRootId ? rows : rows.reverse()).map((row) => ({ ...row, reactions: reactionRows.filter((item) => item.messageId === row.id) })),
   });
 }
