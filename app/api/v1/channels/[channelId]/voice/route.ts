@@ -5,6 +5,7 @@ import { channels, users, voiceStates } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
 import { getChannelPermissions } from "@/lib/space-permissions";
 import { hasPermission, Permission } from "@/lib/permissions";
+import { getActiveTimeout } from "@/lib/moderation-access";
 
 async function accessVoice(channelId: string) {
   const user = await getCurrentUser();
@@ -14,7 +15,8 @@ async function accessVoice(channelId: string) {
   if (!channel || !["voice", "stage"].includes(channel.kind)) return { error: NextResponse.json({ code: "NOT_FOUND", message: "Голосовой канал не найден." }, { status: 404 }) };
   const state = await getChannelPermissions(channelId, user.id);
   if (!state.spaceId || !hasPermission(state.permissions, Permission.ViewChannels)) return { error: NextResponse.json({ code: "FORBIDDEN", message: "Голосовой канал недоступен." }, { status: 403 }) };
-  return { db, user, state };
+  const timedOutUntil = state.owner ? null : await getActiveTimeout(state.spaceId, user.id);
+  return { db, user, state, timedOutUntil };
 }
 
 export async function GET(_: Request, { params }: { params: Promise<{ channelId: string }> }) {
@@ -27,6 +29,7 @@ export async function GET(_: Request, { params }: { params: Promise<{ channelId:
 
 export async function POST(_: Request, { params }: { params: Promise<{ channelId: string }> }) {
   const { channelId } = await params; const access = await accessVoice(channelId); if ("error" in access) return access.error;
+  if (access.timedOutUntil) return NextResponse.json({ code: "TIMED_OUT", message: `Доступ к голосовым каналам ограничен до ${access.timedOutUntil.toLocaleString("ru-RU")}.` }, { status: 403 });
   if (!hasPermission(access.state.permissions, Permission.ConnectVoice)) return NextResponse.json({ code: "FORBIDDEN", message: "Нет права подключаться к голосовому каналу." }, { status: 403 });
   const canSpeak = hasPermission(access.state.permissions, Permission.SpeakVoice);
   const canStream = hasPermission(access.state.permissions, Permission.Stream);
@@ -36,6 +39,7 @@ export async function POST(_: Request, { params }: { params: Promise<{ channelId
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ channelId: string }> }) {
   const { channelId } = await params; const access = await accessVoice(channelId); if ("error" in access) return access.error;
+  if (access.timedOutUntil) { await access.db.delete(voiceStates).where(eq(voiceStates.userId, access.user.id)); return NextResponse.json({ code: "TIMED_OUT", message: `Доступ к голосовым каналам ограничен до ${access.timedOutUntil.toLocaleString("ru-RU")}.` }, { status: 403 }); }
   if (!hasPermission(access.state.permissions, Permission.ConnectVoice)) return NextResponse.json({ code: "FORBIDDEN", message: "Нет права оставаться в голосовом канале." }, { status: 403 });
   const canSpeak = hasPermission(access.state.permissions, Permission.SpeakVoice);
   const canStream = hasPermission(access.state.permissions, Permission.Stream);
