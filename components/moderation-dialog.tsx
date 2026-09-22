@@ -10,8 +10,8 @@ type Flag = { id: string; messageId: string; authorId: string; category: string;
 const labels = { warn: "Предупреждение", timeout: "Таймаут", kick: "Исключение", ban: "Блокировка", unban: "Разблокировка" } as const;
 const statusLabels = { pending: "Ожидает решения", dismissed: "Разрешено", actioned: "Удалено" } as const;
 
-export function ModerationDialog({
-  const dialogRef = useModalA11y(onClose); spaceId, onClose }: { spaceId: string; onClose: () => void }) {
+export function ModerationDialog({spaceId, onClose }: { spaceId: string; onClose: () => void }) {
+  const dialogRef = useModalA11y(onClose);
   const [members, setMembers] = useState<Person[]>([]);
   const [cases, setCases] = useState<Case[]>([]);
   const [flags, setFlags] = useState<Flag[]>([]);
