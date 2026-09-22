@@ -1,11 +1,12 @@
 import { randomUUID } from "node:crypto";
-import { and, asc, desc, eq, gt, ilike, inArray, isNull, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, ilike, inArray, isNull, or, sql } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { getDatabase } from "@/db/client";
-import { channels, channelNotificationSettings, members, messages, moderationCases, moderationFlags, reactions, spaces, users } from "@/db/schema";
+import { channels, channelNotificationSettings, members, messages, moderationFlags, reactions, spaces, users } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
 import { assessMessageSafety } from "@/lib/trust-safety";
 import { getChannelPermissions, hasPermission, SpacePermission } from "@/lib/space-permissions";
+import { getActiveTimeout } from "@/lib/moderation-access";
 
 async function accessChannel(channelId: string) {
   const user = await getCurrentUser();
@@ -15,7 +16,8 @@ async function accessChannel(channelId: string) {
   if (!channel) return { error: NextResponse.json({ code: "FORBIDDEN", message: "Канал недоступен." }, { status: 403 }) };
   const permissionState = await getChannelPermissions(channelId, user.id);
   if (!permissionState.owner && !hasPermission(permissionState.permissions, SpacePermission.ViewChannels)) return { error: NextResponse.json({ code: "FORBIDDEN", message: "Нет права на просмотр канала." }, { status: 403 }) };
-  return { database, user, channel, permissions: permissionState.permissions, owner: permissionState.owner };
+  const timedOutUntil = permissionState.owner ? null : await getActiveTimeout(channel.spaceId, user.id);
+  return { database, user, channel, permissions: permissionState.permissions, owner: permissionState.owner, timedOutUntil };
 }
 
 export async function GET(request: Request, { params }: { params: Promise<{ channelId: string }> }) {
@@ -29,9 +31,9 @@ export async function GET(request: Request, { params }: { params: Promise<{ chan
   const ids = rows.map((row) => row.id);
   const reactionRows = ids.length ? await access.database.select().from(reactions).where(inArray(reactions.messageId, ids)) : [];
   const canManageMessages = access.owner || hasPermission(access.permissions, SpacePermission.MANAGE_MESSAGES);
-  const canSendMessages = (access.owner || hasPermission(access.permissions, SpacePermission.SEND_MESSAGES)) && (access.channel.kind !== "announcement" || access.owner);
+  const canSendMessages = !access.timedOutUntil && (access.owner || hasPermission(access.permissions, SpacePermission.SEND_MESSAGES)) && (access.channel.kind !== "announcement" || access.owner);
   return NextResponse.json({
-    capabilities: { sendMessages: canSendMessages, manageMessages: canManageMessages },
+    capabilities: { sendMessages: canSendMessages, manageMessages: canManageMessages, timedOutUntil: access.timedOutUntil },
     messages: (threadRootId ? rows : rows.reverse()).map((row) => ({ ...row, reactions: reactionRows.filter((item) => item.messageId === row.id) })),
   });
 }
@@ -39,6 +41,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ chan
 export async function POST(request: Request, { params }: { params: Promise<{ channelId: string }> }) {
   const { channelId } = await params; const access = await accessChannel(channelId); if ("error" in access) return access.error; const body = await request.json().catch(() => null);
   if (body?.action === "react") {
+    if (access.timedOutUntil) return NextResponse.json({ code: "TIMED_OUT", message: `Взаимодействие с сообщениями ограничено до ${access.timedOutUntil.toLocaleString("ru-RU")}.` }, { status: 403 });
     if (!access.owner && !hasPermission(access.permissions, SpacePermission.SEND_MESSAGES)) return NextResponse.json({ code: "FORBIDDEN", message: "Нет права взаимодействовать с сообщениями." }, { status: 403 });
     const emoji = String(body.emoji ?? "").slice(0, 16);
     const messageId = String(body.messageId ?? "");
@@ -50,6 +53,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ cha
     else await access.database.insert(reactions).values({ messageId, userId: access.user.id, emoji });
     return NextResponse.json({ active: !existing.length });
   }
+  if (access.timedOutUntil) return NextResponse.json({ code: "TIMED_OUT", message: `Отправка сообщений ограничена до ${access.timedOutUntil.toLocaleString("ru-RU")}.` }, { status: 403 });
   if (!access.owner && !hasPermission(access.permissions, SpacePermission.SEND_MESSAGES)) return NextResponse.json({ code: "FORBIDDEN", message: "Нет права отправлять сообщения." }, { status: 403 });
   const content = typeof body?.content === "string" ? body.content.trim().slice(0, 4000) : "";
   const attachments = Array.isArray(body?.attachments) ? body.attachments.filter((item: unknown) => { if (!item || typeof item !== "object") return false; const attachment = item as Record<string, unknown>; return attachment.type === "voice" && typeof attachment.url === "string" && attachment.url.startsWith("data:audio/") && attachment.url.length <= 3_000_000 && typeof attachment.duration === "number" && attachment.duration > 0 && attachment.duration <= 65; }).slice(0, 1) : [];
@@ -66,10 +70,6 @@ export async function POST(request: Request, { params }: { params: Promise<{ cha
   }
   if (access.channel.kind === "announcement" && access.channel.ownerId !== access.user.id) return NextResponse.json({ code: "READ_ONLY", message: "Публиковать объявления может только владелец." }, { status: 403 });
   if (!content && !attachments.length) return NextResponse.json({ code: "EMPTY_MESSAGE", message: "Сообщение пустое." }, { status: 400 });
-  if (access.channel.ownerId !== access.user.id) {
-    const [timeout] = await access.database.select({ expiresAt: moderationCases.expiresAt }).from(moderationCases).where(and(eq(moderationCases.spaceId, access.channel.spaceId), eq(moderationCases.targetUserId, access.user.id), eq(moderationCases.action, "timeout"), gt(moderationCases.expiresAt, new Date()))).orderBy(desc(moderationCases.createdAt)).limit(1);
-    if (timeout?.expiresAt) return NextResponse.json({ code: "TIMED_OUT", message: `Отправка сообщений ограничена до ${timeout.expiresAt.toLocaleString("ru-RU")}.` }, { status: 403 });
-  }
   const assessment = assessMessageSafety(content);
   const id = randomUUID();
   await access.database.transaction(async (tx) => {
@@ -83,6 +83,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ cha
 export async function PATCH(request: Request, { params }: { params: Promise<{ channelId: string }> }) {
   const { channelId } = await params; const access = await accessChannel(channelId); if ("error" in access) return access.error; const body = await request.json().catch(() => null);
   if (body?.action === "notifications") { const mode = ["all", "mentions", "none"].includes(body.mode) ? body.mode : "mentions"; await access.database.insert(channelNotificationSettings).values({ userId: access.user.id, channelId, mode }).onConflictDoUpdate({ target: [channelNotificationSettings.userId, channelNotificationSettings.channelId], set: { mode, updatedAt: new Date() } }); return NextResponse.json({ mode }); }
+  if (access.timedOutUntil && body?.action !== "notifications") return NextResponse.json({ code: "TIMED_OUT", message: `Изменение сообщений ограничено до ${access.timedOutUntil.toLocaleString("ru-RU")}.` }, { status: 403 });
   const messageId = String(body?.messageId ?? ""); const [message] = await access.database.select().from(messages).where(and(eq(messages.id, messageId), eq(messages.channelId, channelId))).limit(1); if (!message) return NextResponse.json({ message: "Сообщение не найдено." }, { status: 404 });
   if (body?.action === "pin") { if (!access.owner && !hasPermission(access.permissions, SpacePermission.MANAGE_MESSAGES)) return NextResponse.json({ message: "Недостаточно прав для закрепления сообщений." }, { status: 403 }); await access.database.update(messages).set({ pinnedAt: message.pinnedAt ? null : new Date(), pinnedById: message.pinnedAt ? null : access.user.id }).where(eq(messages.id, messageId)); return NextResponse.json({ pinned: !message.pinnedAt }); }
   if (message.authorId !== access.user.id) return NextResponse.json({ message: "Можно редактировать только свои сообщения." }, { status: 403 }); const content = String(body?.content ?? "").trim().slice(0, 4000); if (!content) return NextResponse.json({ message: "Сообщение пустое." }, { status: 400 });
