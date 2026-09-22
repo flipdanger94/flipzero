@@ -13,8 +13,8 @@ type GamificationData = {
   leaderboard: Array<{ userId: string; displayName: string; username: string; xp: number; level: number; rank: number; isCurrentUser: boolean }>;
 };
 
-export function GamificationDialog({
-  const dialogRef = useModalA11y(onClose); spaceId, isOwner, onClose }: { spaceId: string; isOwner: boolean; onClose: () => void }) {
+export function GamificationDialog({spaceId, isOwner, onClose }: { spaceId: string; isOwner: boolean; onClose: () => void }) {
+  const dialogRef = useModalA11y(onClose);
   const [data, setData] = useState<GamificationData | null>(null);
   const [tab, setTab] = useState<"profile" | "achievements" | "leaderboard" | "create">("profile");
   const [error, setError] = useState("");
