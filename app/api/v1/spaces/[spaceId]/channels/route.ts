@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { and, count, eq, max } from "drizzle-orm";
+import { and, count, eq, inArray, isNull, max } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { getDatabase } from "@/db/client";
 import { channelCategories, channels, spaces } from "@/db/schema";
@@ -41,7 +41,6 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ sp
   const [user, { spaceId }] = await Promise.all([getCurrentUser(), params]);
   if (!user) return NextResponse.json({ code: "UNAUTHENTICATED", message: "Требуется вход." }, { status: 401 });
   const body = await request.json().catch(() => null);
-  if (!parsed.success) return NextResponse.json({ code: "INVALID_INPUT", message: "Проверьте настройки канала.", issues: parsed.error.flatten() }, { status: 400 });
 
   const database = getDatabase();
   const [space] = await database.select({ ownerId: spaces.ownerId }).from(spaces).where(eq(spaces.id, spaceId)).limit(1);
