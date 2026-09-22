@@ -8,8 +8,8 @@ import { useModalA11y } from "@/hooks/use-modal-a11y";
 type Token = { id: string; appId: string; name: string; prefix: string; scopes: string[]; lastUsedAt: string | null; revokedAt: string | null; createdAt: string };
 type DeveloperApp = { id: string; name: string; description: string | null; createdAt: string; tokens: Token[] };
 
-export function DeveloperDialog({
-  const dialogRef = useModalA11y(onClose); onClose }: { onClose: () => void }) {
+export function DeveloperDialog({onClose }: { onClose: () => void }) {
+  const dialogRef = useModalA11y(onClose);
   const [apps, setApps] = useState<DeveloperApp[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
