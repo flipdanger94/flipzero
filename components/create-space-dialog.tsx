@@ -2,10 +2,12 @@
 
 import { type FormEvent, useState } from "react";
 import { LoaderCircle, Sparkles, X } from "lucide-react";
+import { useModalA11y } from "@/hooks/use-modal-a11y";
 
 type CreatedSpace = { id: string; name: string; slug: string; description: string | null; accentColor: string; categories: Array<{ id: string; spaceId: string; name: string; position: number }>; channels: Array<{ id: string; name: string; kind: string; topic: string | null; parentId: string | null }> };
 
-export function CreateSpaceDialog({ onClose, onCreated }: { onClose: () => void; onCreated: (space: CreatedSpace) => void }) {
+export function CreateSpaceDialog({
+  const dialogRef = useModalA11y(onClose); onClose, onCreated }: { onClose: () => void; onCreated: (space: CreatedSpace) => void }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -21,7 +23,7 @@ export function CreateSpaceDialog({ onClose, onCreated }: { onClose: () => void;
   }
 
   return <div className="dialog-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
-    <section className="space-dialog" role="dialog" aria-modal="true" aria-labelledby="create-space-title">
+    <section ref={dialogRef} tabIndex={-1} className="space-dialog" role="dialog" aria-modal="true" aria-labelledby="create-space-title">
       <button className="dialog-close" onClick={onClose} aria-label="Закрыть"><X size={19} /></button>
       <div className="dialog-symbol"><Sparkles size={23} /></div>
       <h2 id="create-space-title">Новое пространство</h2>
