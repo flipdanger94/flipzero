@@ -95,6 +95,9 @@ export default function Home({ initialSpaceId, initialChannelId }: { initialSpac
   const [serverMenuOpen, setServerMenuOpen] = useState(false);
   const [spaceMembers, setSpaceMembers] = useState<SpaceMember[]>([]);
   const [membersLoading, setMembersLoading] = useState(false);
+  const [membersLoadingMore, setMembersLoadingMore] = useState(false);
+  const [membersCursor, setMembersCursor] = useState<string | null>(null);
+  const [membersTotal, setMembersTotal] = useState(0);
   const [appNotice, setAppNotice] = useState<AppNotice | null>(null);
 
   useEffect(() => {
@@ -160,13 +163,42 @@ export default function Home({ initialSpaceId, initialChannelId }: { initialSpac
     if (!activeSpaceId || !showMembers) return;
     let cancelled = false;
     queueMicrotask(() => { if (!cancelled) setMembersLoading(true); });
-    fetch(`/api/v1/spaces/${encodeURIComponent(activeSpaceId)}/members`, { cache: "no-store" })
-      .then((response) => response.ok ? response.json() : { members: [] })
-      .then((data) => { if (!cancelled) setSpaceMembers((data.members ?? []) as SpaceMember[]); })
-      .catch(() => { if (!cancelled) setSpaceMembers([]); })
+    fetch(`/api/v1/spaces/${encodeURIComponent(activeSpaceId)}/members?limit=80`, { cache: "no-store" })
+      .then((response) => response.ok ? response.json() : { members: [], total: 0, nextCursor: null })
+      .then((data) => {
+        if (cancelled) return;
+        setSpaceMembers((data.members ?? []) as SpaceMember[]);
+        setMembersTotal(Number(data.total ?? data.members?.length ?? 0));
+        setMembersCursor(data.nextCursor ?? null);
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setSpaceMembers([]);
+          setMembersTotal(0);
+          setMembersCursor(null);
+        }
+      })
       .finally(() => { if (!cancelled) setMembersLoading(false); });
     return () => { cancelled = true; };
   }, [activeSpaceId, showMembers]);
+
+  async function loadMoreMembers() {
+    if (!activeSpaceId || !membersCursor || membersLoadingMore) return;
+    setMembersLoadingMore(true);
+    try {
+      const response = await fetch(`/api/v1/spaces/${encodeURIComponent(activeSpaceId)}/members?limit=80&cursor=${encodeURIComponent(membersCursor)}`, { cache: "no-store" });
+      if (!response.ok) return;
+      const data = await response.json();
+      setSpaceMembers((current) => {
+        const known = new Set(current.map((member) => member.userId));
+        return [...current, ...((data.members ?? []) as SpaceMember[]).filter((member) => !known.has(member.userId))];
+      });
+      setMembersTotal(Number(data.total ?? membersTotal));
+      setMembersCursor(data.nextCursor ?? null);
+    } finally {
+      setMembersLoadingMore(false);
+    }
+  }
   useEffect(() => {
     if (!activeSpaceId) return;
     let cancelled = false;
@@ -359,7 +391,7 @@ export default function Home({ initialSpaceId, initialChannelId }: { initialSpac
       </section>
 
       <aside className="member-panel">
-        <div className="member-section real-member-list"><h2>УЧАСТНИКИ — {spaceMembers.length}</h2>{membersLoading ? <div className="members-loading">Загрузка участников…</div> : spaceMembers.length ? spaceMembers.map((member) => <button className="member" key={member.userId}><span className="mini-avatar avatar-coral">{member.avatarUrl ? <MediaImage src={member.avatarUrl} /> : (member.displayName || member.username || "?").slice(0, 2).toLocaleUpperCase("ru")}<i /></span><span><strong>{member.nickname || member.displayName}</strong><small>@{member.username || "участник"}</small></span><b>{member.level}</b></button>) : <div className="members-loading">В этом сервере пока нет участников.</div>}</div>
+        <div className="member-section real-member-list"><h2>УЧАСТНИКИ — {membersTotal || spaceMembers.length}</h2>{membersLoading ? <div className="members-loading">Загрузка участников…</div> : spaceMembers.length ? <>{spaceMembers.map((member) => <button className="member" key={member.userId}><span className="mini-avatar avatar-coral">{member.avatarUrl ? <MediaImage src={member.avatarUrl} /> : (member.displayName || member.username || "?").slice(0, 2).toLocaleUpperCase("ru")}<i /></span><span><strong>{member.nickname || member.displayName}</strong><small>@{member.username || "участник"}</small></span><b>{member.level}</b></button>)}{membersCursor ? <button className="members-load-more" onClick={() => void loadMoreMembers()} disabled={membersLoadingMore}>{membersLoadingMore ? <><LoaderCircle className="spin" size={14} /> Загружаем…</> : "Показать ещё"}</button> : null}</> : <div className="members-loading">В этом сервере пока нет участников.</div>}</div>
         <div className="achievement"><div className="achievement-icon">✦</div><div><small>ПОЧТИ ПОЛУЧЕНО</small><strong>Ранний участник</strong><span>92% выполнено</span></div></div>
       </aside>
       <button className="mobile-drawer-backdrop" aria-label="Закрыть меню каналов" onClick={() => setMobileChannelsOpen(false)} />
