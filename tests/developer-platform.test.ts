@@ -59,7 +59,9 @@ describe("developer platform validation", () => {
     process.env.DEVELOPER_SECRET_KEY = "phase11-test-developer-secret";
     const encrypted = encryptDeveloperSecret("sensitive-secret");
     const parts = encrypted.split(".");
-    parts[2] = `${parts[2].slice(0, -1)}${parts[2].endsWith("A") ? "B" : "A"}`;
+    const tag = Buffer.from(parts[1], "base64url");
+    tag[0] ^= 1;
+    parts[1] = tag.toString("base64url");
     expect(() => decryptDeveloperSecret(parts.join("."))).toThrow();
   });
 
