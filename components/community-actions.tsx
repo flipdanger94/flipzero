@@ -44,6 +44,25 @@ export function CommunityActions({ spaceId, slug, channelId, visibility, joinReq
     }
   }
 
+  async function cancelApplication() {
+    if (joining) return;
+    setJoining(true);
+    setError("");
+    try {
+      const response = await fetch(`/api/v1/discovery?spaceId=${encodeURIComponent(spaceId)}`, { method: "DELETE" });
+      const result = await response.json().catch(() => null);
+      if (!response.ok) {
+        setError(result?.message ?? "Не удалось отменить заявку.");
+        return;
+      }
+      setRequestStatus(null);
+    } catch {
+      setError("Нет соединения. Попробуйте ещё раз.");
+    } finally {
+      setJoining(false);
+    }
+  }
+
   async function copy() {
     const url = `${window.location.origin}${canonicalCommunityPath}`;
     if (typeof navigator.share === "function") {
@@ -64,7 +83,7 @@ export function CommunityActions({ spaceId, slug, channelId, visibility, joinReq
   }
 
   return <div className="community-actions">
-    {isMember ? <Link className="community-primary" href={channelPath}>Открыть сообщество <ArrowRight size={18} /></Link> : isAuthenticated ? <button className="community-primary" onClick={join} disabled={joining || requestStatus === "pending"}>{joining ? <><LoaderCircle className="spin" size={18} /> Отправляем...</> : requestStatus === "pending" ? <>Заявка отправлена <Check size={18} /></> : visibility === "application" ? <>Подать заявку <ArrowRight size={18} /></> : <>Вступить в сообщество <ArrowRight size={18} /></>}</button> : <Link className="community-primary" href={`/login?next=${encodeURIComponent(communityPath)}`}>{visibility === "application" ? "Войти и подать заявку" : "Войти и вступить"} <ArrowRight size={18} /></Link>}
+    {isMember ? <Link className="community-primary" href={channelPath}>Открыть сообщество <ArrowRight size={18} /></Link> : isAuthenticated ? <button className="community-primary" onClick={requestStatus === "pending" ? cancelApplication : join} disabled={joining}>{joining ? <><LoaderCircle className="spin" size={18} /> Обрабатываем...</> : requestStatus === "pending" ? <>Отменить заявку <Check size={18} /></> : visibility === "application" ? <>Подать заявку <ArrowRight size={18} /></> : <>Вступить в сообщество <ArrowRight size={18} /></>}</button> : <Link className="community-primary" href={`/login?next=${encodeURIComponent(communityPath)}`}>{visibility === "application" ? "Войти и подать заявку" : "Войти и вступить"} <ArrowRight size={18} /></Link>}
     <button className="community-copy" onClick={copy}>{copied ? <Check size={17} /> : <Share2 size={17} />}{copied ? "Ссылка скопирована" : "Поделиться ссылкой"}</button>
     {error ? <p className="community-action-error" role="alert">{error}</p> : null}
   </div>;
