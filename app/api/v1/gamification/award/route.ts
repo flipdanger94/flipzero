@@ -1,8 +1,8 @@
 import { randomUUID } from "node:crypto";
-import { and, desc, eq, gte, sql } from "drizzle-orm";
+import { and, desc, eq, gte, isNull, sql } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { getDatabase } from "@/db/client";
-import { achievementDefinitions, members, pathProgress, userAchievements, users, xpEvents } from "@/db/schema";
+import { achievementDefinitions, channels, members, messages, pathProgress, userAchievements, users, xpEvents } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
 import { levelFromXp, pathForSource, SOURCE_XP } from "@/lib/gamification";
 
@@ -12,13 +12,24 @@ export async function POST(request: Request) {
   const body = await request.json().catch(() => null);
   const source = typeof body?.source === "string" ? body.source : "";
   const spaceId = typeof body?.spaceId === "string" ? body.spaceId : null;
-  const idempotencyKey = typeof body?.idempotencyKey === "string" ? body.idempotencyKey.slice(0, 120) : randomUUID();
-  const amount = SOURCE_XP[source];
-  if (!amount || !spaceId) return NextResponse.json({ code: "INVALID_INPUT", message: "Неизвестное действие." }, { status: 400 });
+  if (source !== "message") return NextResponse.json({ code: "SERVER_EVENT_REQUIRED", message: "Этот тип XP начисляется только подтверждённым серверным событием." }, { status: 403 });
+  if (!spaceId) return NextResponse.json({ code: "INVALID_INPUT", message: "Не указано пространство." }, { status: 400 });
+
+  const requestedKey = typeof body?.idempotencyKey === "string" ? body.idempotencyKey.slice(0, 120) : "";
+  const match = requestedKey.match(/^message:([a-zA-Z0-9-]+)$/);
+  if (!match) return NextResponse.json({ code: "INVALID_INPUT", message: "Неверный идентификатор сообщения." }, { status: 400 });
+  const messageId = match[1];
+  const idempotencyKey = `message:${messageId}`;
+  const amount = SOURCE_XP.message;
 
   const database = getDatabase();
   const [membership] = await database.select({ userId: members.userId }).from(members).where(and(eq(members.userId, user.id), eq(members.spaceId, spaceId))).limit(1);
   if (!membership) return NextResponse.json({ code: "FORBIDDEN", message: "Вы не состоите в этом пространстве." }, { status: 403 });
+  const [verifiedMessage] = await database.select({ id: messages.id }).from(messages)
+    .innerJoin(channels, eq(channels.id, messages.channelId))
+    .where(and(eq(messages.id, messageId), eq(messages.authorId, user.id), eq(channels.spaceId, spaceId), isNull(messages.deletedAt)))
+    .limit(1);
+  if (!verifiedMessage) return NextResponse.json({ code: "UNVERIFIED_EVENT", message: "Сообщение для начисления XP не найдено." }, { status: 403 });
 
   if (source === "message") {
     const [recent] = await database.select({ id: xpEvents.id }).from(xpEvents).where(and(eq(xpEvents.userId, user.id), eq(xpEvents.spaceId, spaceId), eq(xpEvents.source, source), gte(xpEvents.createdAt, new Date(Date.now() - 30_000)))).orderBy(desc(xpEvents.createdAt)).limit(1);
