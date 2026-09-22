@@ -47,8 +47,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ spa
   if ("error" in access) return access.error;
   const parsed = roleSchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ code: "INVALID_INPUT", message: "Проверьте название, цвет и права роли." }, { status: 400 });
+  const managedRoles = await access.database.select({ name: roles.name, position: roles.position }).from(roles).where(and(eq(roles.spaceId, spaceId), eq(roles.isManaged, true)));
+  if (managedRoles.some((role) => role.name.toLocaleLowerCase("ru") === parsed.data.name.toLocaleLowerCase("ru"))) return NextResponse.json({ code: "RESERVED_ROLE_NAME", message: "Название системной роли зарезервировано." }, { status: 409 });
   if (!access.owner && (hasPermission(parsed.data.permissions, Permission.Administrator) || (parsed.data.permissions & ~access.permissions) !== 0)) return NextResponse.json({ code: "ROLE_ESCALATION", message: "Нельзя создать роль с правами, которых нет у вас." }, { status: 403 });
-  const hierarchyCeiling = access.owner ? 100 : access.topPosition;
+  const hierarchyCeiling = access.owner ? Math.max(1, ...managedRoles.map((role) => role.position)) : access.topPosition;
   if (hierarchyCeiling <= 1) return NextResponse.json({ code: "ROLE_HIERARCHY", message: "Нет доступного уровня ниже вашей роли для создания новой роли." }, { status: 403 });
   const [position] = await access.database.select({ value: max(roles.position) }).from(roles).where(and(eq(roles.spaceId, spaceId), eq(roles.isManaged, false), lt(roles.position, hierarchyCeiling)));
   const nextPosition = Math.min(hierarchyCeiling - 1, Math.max(1, (position.value ?? 0) + 1));
@@ -63,6 +65,8 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ sp
   const body = await request.json().catch(() => null);
   const parsed = roleSchema.safeParse(body);
   if (!parsed.success || typeof body?.id !== "string") return NextResponse.json({ code: "INVALID_INPUT", message: "Проверьте данные роли." }, { status: 400 });
+  const managedNameCollision = await access.database.select({ id: roles.id, name: roles.name }).from(roles).where(and(eq(roles.spaceId, spaceId), eq(roles.isManaged, true)));
+  if (managedNameCollision.some((role) => role.name.toLocaleLowerCase("ru") === parsed.data.name.toLocaleLowerCase("ru"))) return NextResponse.json({ code: "RESERVED_ROLE_NAME", message: "Название системной роли зарезервировано." }, { status: 409 });
   const [existing] = await access.database.select({ isManaged: roles.isManaged, position: roles.position, permissions: roles.permissions }) .from(roles).where(and(eq(roles.id, body.id), eq(roles.spaceId, spaceId))).limit(1);
   if (!existing) return NextResponse.json({ code: "NOT_FOUND", message: "Роль не найдена." }, { status: 404 });
   if (existing.isManaged) return NextResponse.json({ code: "PROTECTED_ROLE", message: "Системную роль нельзя изменять." }, { status: 409 });
