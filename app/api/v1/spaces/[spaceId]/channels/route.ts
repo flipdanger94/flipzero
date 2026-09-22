@@ -5,7 +5,7 @@ import { getDatabase } from "@/db/client";
 import { channelCategories, channels, spaces } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
 import { createChannelSchema } from "@/lib/space-validation";
-import { getChannelPermissions } from "@/lib/space-permissions";
+import { getChannelPermissions, getSpacePermissions } from "@/lib/space-permissions";
 import { hasPermission, Permission } from "@/lib/permissions";
 
 export async function POST(request: Request, { params }: { params: Promise<{ spaceId: string }> }) {
@@ -18,9 +18,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ spa
   const [space] = await database.select({ ownerId: spaces.ownerId }).from(spaces).where(eq(spaces.id, spaceId)).limit(1);
   if (!space) return NextResponse.json({ code: "NOT_FOUND", message: "Пространство не найдено." }, { status: 404 });
   if (space.ownerId !== user.id) {
-    const [probe] = await database.select({ id: channels.id }).from(channels).where(eq(channels.spaceId, spaceId)).limit(1);
-    const permissionState = probe ? await getChannelPermissions(probe.id, user.id) : null;
-    if (!permissionState || !hasPermission(permissionState.permissions, Permission.ManageChannels)) return NextResponse.json({ code: "FORBIDDEN", message: "Недостаточно прав для создания каналов." }, { status: 403 });
+    const permissionState = await getSpacePermissions(spaceId, user.id);
+    if (!permissionState.spaceId || !hasPermission(permissionState.permissions, Permission.ManageChannels)) return NextResponse.json({ code: "FORBIDDEN", message: "Недостаточно прав для создания каналов." }, { status: 403 });
   }
 
   if (parsed.data.parentId) {
