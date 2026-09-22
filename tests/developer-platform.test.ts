@@ -25,6 +25,12 @@ describe("developer platform validation", () => {
     expect(validateWebhookUrl("http://hooks.example.com/flipzero").ok).toBe(false);
   });
 
+  it("rejects local webhook targets", () => {
+    expect(validateWebhookUrl("https://localhost/hooks").ok).toBe(false);
+    expect(validateWebhookUrl("https://127.0.0.1/hooks").ok).toBe(false);
+    expect(validateWebhookUrl("https://service.internal/hooks").ok).toBe(false);
+  });
+
   it("filters webhook event names", () => {
     expect(normalizeWebhookEvents(["message.created", "root.shell", "space.updated"])).toEqual(["message.created", "space.updated"]);
   });
