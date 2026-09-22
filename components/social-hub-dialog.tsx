@@ -1,7 +1,7 @@
 "use client";
 
 import { type FormEvent, useCallback, useEffect, useRef, useState } from "react";
-import { Award, Crown, FileText, Gamepad2, ImageIcon, Link2, LoaderCircle, MapPin, MessageCircle, Mic2, Search, SendHorizontal, ShieldCheck, Sparkles, Star, UserPlus, Users, X } from "lucide-react";
+import { Crown, LoaderCircle, MapPin, MessageCircle, Search, SendHorizontal, ShieldCheck, Star, UserPlus, Users, X } from "lucide-react";
 import { MediaImage } from "./media-image";
 import { useModalA11y } from "@/hooks/use-modal-a11y";
 
@@ -61,17 +61,34 @@ export function SocialHubDialog({ currentUserId, initialTab = "messages", initia
       setLoading(false);
     }
   }, [loadConversations, loadFriends]);
-  useEffect(() => { void loadInitial(); }, [loadInitial]);
-  useEffect(() => { if (!initialUserId || loading) return; const existing=conversations.find(item=>item.other.id===initialUserId); if(existing){setActive(existing);setTab("messages");return} fetch(`/api/v1/users/${initialUserId}/profile`).then(r=>r.json()).then(d=>{if(d.profile){setActive({id:"",other:{id:d.profile.id,username:d.profile.username,displayName:d.profile.displayName,avatarUrl:d.profile.avatarUrl,presence:d.profile.presence},unread:0,lastMessage:null});setTab("messages")}}); }, [initialUserId, loading, conversations]);
+  useEffect(() => { const task = window.setTimeout(() => { void loadInitial(); }, 0); return () => window.clearTimeout(task); }, [loadInitial]);
+  useEffect(() => {
+    if (!initialUserId || loading) return;
+    const existing = conversations.find((item) => item.other.id === initialUserId);
+    if (existing) {
+      const task = window.setTimeout(() => { setActive(existing); setTab("messages"); }, 0);
+      return () => window.clearTimeout(task);
+    }
+    const controller = new AbortController();
+    fetch(`/api/v1/users/${initialUserId}/profile`, { signal: controller.signal }).then((response) => response.json()).then((data) => {
+      if (data.profile) {
+        setActive({ id: "", other: { id: data.profile.id, username: data.profile.username, displayName: data.profile.displayName, avatarUrl: data.profile.avatarUrl, presence: data.profile.presence }, unread: 0, lastMessage: null });
+        setTab("messages");
+      }
+    }).catch(() => undefined);
+    return () => controller.abort();
+  }, [initialUserId, loading, conversations]);
   useEffect(() => {
     if (!active) return;
     const selected = active;
-    setMessages([]);
-    setMessageCursor(null);
-    followLatestRef.current = true;
-    void loadMessages(selected);
+    const initialTask = window.setTimeout(() => {
+      setMessages([]);
+      setMessageCursor(null);
+      followLatestRef.current = true;
+      void loadMessages(selected);
+    }, 0);
     const timer = window.setInterval(() => { void loadMessages(selected, { mergeLatest: true }); }, 4000);
-    return () => window.clearInterval(timer);
+    return () => { window.clearTimeout(initialTask); window.clearInterval(timer); };
   }, [active, loadMessages]);
   useEffect(() => { const list = directMessagesRef.current; if (list && followLatestRef.current) list.scrollTop = list.scrollHeight; }, [messages]);
   useEffect(() => {
