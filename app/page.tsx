@@ -114,7 +114,7 @@ export default function LandingPage() {
             <a href="#voice">Голос и видео</a>
             <a href="#communities">Сообщества</a>
             <Link href="/download">Скачать</Link>
-            <a className="fz-nav-super" href="#superflip"><Crown size={14} /> SUPER FLIP</a>
+            <Link className="fz-nav-super" href="/superflip"><Crown size={14} /> SUPER FLIP</Link>
             <Link href="/developers">Для разработчиков</Link>
           </nav>
           <div className="fz-locale"><Globe2 size={17} /><span>RU</span></div>
@@ -126,7 +126,7 @@ export default function LandingPage() {
               <a href="#voice">Голос и видео</a>
               <a href="#communities">Сообщества</a>
               <Link href="/download">Скачать</Link>
-              <a className="fz-nav-super" href="#superflip"><Crown size={14} /> SUPER FLIP</a>
+              <Link className="fz-nav-super" href="/superflip"><Crown size={14} /> SUPER FLIP</Link>
               <Link href="/developers">Для разработчиков</Link>
               <Link href="/app">Открыть FlipZero</Link>
             </nav>
@@ -193,7 +193,7 @@ export default function LandingPage() {
         <div className="fz-container">
           <div className="fz-superflip-mark"><Crown size={34} /></div>
           <div><span className="fz-eyebrow">SUPER FLIP</span><h2>SUPER FLIP</h2><p>Раздел SuperFlip доступен внутри FlipZero. Публичное описание возможностей будет добавлено после утверждения контента.</p></div>
-          <Link className="fz-button fz-button-super" href="/app">Открыть FlipZero <ArrowRight size={17} /></Link>
+          <Link className="fz-button fz-button-super" href="/superflip">Подробнее о SUPER FLIP <ArrowRight size={17} /></Link>
         </div>
       </section>
 
