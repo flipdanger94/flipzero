@@ -63,6 +63,21 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ sp
   const access = await requireRoleManager(spaceId);
   if ("error" in access) return access.error;
   const body = await request.json().catch(() => null);
+
+  if (body?.action === "reorder") {
+    const orderedIds: string[] = Array.isArray(body.orderedIds) ? Array.from(new Set((body.orderedIds as unknown[]).filter((id): id is string => typeof id === "string"))) : [];
+    const customRoles = await access.database.select({ id: roles.id, position: roles.position, permissions: roles.permissions, isManaged: roles.isManaged }).from(roles).where(and(eq(roles.spaceId, spaceId), eq(roles.isManaged, false)));
+    const manageableRoles = customRoles.filter((role) => access.owner || (role.position < access.topPosition && !hasPermission(Number(role.permissions), Permission.Administrator) && (Number(role.permissions) & ~access.permissions) === 0));
+    const manageableIds = new Set(manageableRoles.map((role) => role.id));
+    if (orderedIds.length !== manageableRoles.length || orderedIds.some((id) => !manageableIds.has(id))) return NextResponse.json({ code: "INVALID_ROLE_ORDER", message: "Передайте полный порядок доступных вам ролей." }, { status: 400 });
+    const slots = manageableRoles.map((role) => role.position).sort((a, b) => a - b);
+    await access.database.transaction(async (tx) => {
+      for (const [index, roleId] of orderedIds.entries()) await tx.update(roles).set({ position: slots[index] }).where(and(eq(roles.id, roleId), eq(roles.spaceId, spaceId), eq(roles.isManaged, false)));
+    });
+    const reordered = await access.database.select().from(roles).where(eq(roles.spaceId, spaceId)).orderBy(asc(roles.position));
+    return NextResponse.json({ roles: reordered });
+  }
+
   const parsed = roleSchema.safeParse(body);
   if (!parsed.success || typeof body?.id !== "string") return NextResponse.json({ code: "INVALID_INPUT", message: "Проверьте данные роли." }, { status: 400 });
   const managedNameCollision = await access.database.select({ id: roles.id, name: roles.name }).from(roles).where(and(eq(roles.spaceId, spaceId), eq(roles.isManaged, true)));
