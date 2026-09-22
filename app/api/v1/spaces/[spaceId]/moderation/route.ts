@@ -6,6 +6,7 @@ import { getDatabase } from "@/db/client";
 import { channels, memberRoles, members, messages, moderationCases, moderationFlags, roles, spaces, users } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
 import { hasPermission, Permission } from "@/lib/permissions";
+import { evictParticipantFromSpaceVoice } from "@/lib/livekit-admin";
 
 const actionSchema = z.object({
   targetUserId: z.string().min(1),
@@ -116,5 +117,6 @@ export async function POST(request: Request, { params }: { params: Promise<{ spa
       await tx.delete(members).where(and(eq(members.userId, target.id), eq(members.spaceId, spaceId)));
     }
   });
+  if (parsed.data.action === "kick" || parsed.data.action === "ban") await evictParticipantFromSpaceVoice(spaceId, target.id);
   return NextResponse.json({ case: moderationCase }, { status: 201 });
 }
