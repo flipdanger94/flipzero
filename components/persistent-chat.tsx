@@ -15,7 +15,7 @@ function LinkPreview({ content }: { content: string }) {
   return <a className="link-unfurl" href={url.href} target="_blank" rel="noreferrer"><span>{url.hostname.replace(/^www\./, "")}</span><strong>{url.pathname === "/" ? "Открыть ссылку" : url.pathname.replace(/\/$/, "")}</strong><small>{url.href}</small><ExternalLink size={15} /></a>;
 }
 
-export function PersistentChat({ channelId, channelName, spaceId, currentUserId, ownerId, searchQuery, onOpenDirect }: { channelId: string; channelName: string; spaceId: string; currentUserId: string; ownerId?: string; searchQuery: string; onOpenDirect?: (userId:string)=>void }) {
+export function PersistentChat({ channelId, channelName, spaceId, currentUserId, searchQuery, onOpenDirect }: { channelId: string; channelName: string; spaceId: string; currentUserId: string; searchQuery: string; onOpenDirect?: (userId:string)=>void }) {
   const [messages, setMessages] = useState<ChatMessage[]>([]); const [profile, setProfile] = useState<ChatMessage | null>(null); const [draft, setDraft] = useState(""); const [reply, setReply] = useState<ChatMessage | null>(null); const [loading, setLoading] = useState(true); const [error, setError] = useState(""); const [recording, setRecording] = useState(false); const [recordSeconds, setRecordSeconds] = useState(0); const [capabilities, setCapabilities] = useState({ sendMessages: false, manageMessages: false });
   const recorderRef = useRef<MediaRecorder | null>(null); const streamRef = useRef<MediaStream | null>(null); const chunksRef = useRef<Blob[]>([]); const startedRef = useRef(0);
   const messageListRef = useRef<HTMLDivElement | null>(null); const followLatestRef = useRef(true); const mutationRef = useRef(false); const revisionRef = useRef(0);
