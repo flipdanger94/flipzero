@@ -6,7 +6,7 @@ import { roles, spaces } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
 import { roleSchema } from "@/lib/role-validation";
 import { memberRoles, members } from "@/db/schema";
-import { hasPermission, Permission } from "@/lib/permissions";
+import { expandPermissions, hasPermission, Permission } from "@/lib/permissions";
 
 async function requireRoleManager(spaceId: string) {
   const user = await getCurrentUser();
@@ -22,7 +22,7 @@ async function requireRoleManager(spaceId: string) {
     const assignedPermissions = assigned.reduce((value, role) => value | Number(role.permissions), 0);
     if (!hasPermission(assignedPermissions, Permission.ManageRoles)) return { error: NextResponse.json({ code: "FORBIDDEN", message: "Недостаточно прав для управления ролями." }, { status: 403 }) };
   }
-  const permissions = space.ownerId === user.id ? Permission.Administrator : assigned.reduce((value, role) => value | Number(role.permissions), 0);
+  const permissions = space.ownerId === user.id ? expandPermissions(Permission.Administrator) : expandPermissions(assigned.reduce((value, role) => value | Number(role.permissions), 0));
   return { database, user, space, owner: space.ownerId === user.id, topPosition: space.ownerId === user.id ? Number.MAX_SAFE_INTEGER : Math.max(0, ...assigned.map((role) => role.position)), permissions };
 }
 
