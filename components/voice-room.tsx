@@ -83,10 +83,13 @@ export function VoiceRoom({
   const joinAttemptRef = useRef(0);
   const soundPlayingRef = useRef(false);
   const joinRef = useRef<() => Promise<void>>(async () => {});
+  const heartbeatRef = useRef<number | null>(null);
 
   useEffect(
     () => () => {
       joinAttemptRef.current++;
+      if (heartbeatRef.current !== null) window.clearInterval(heartbeatRef.current);
+      heartbeatRef.current = null;
       roomRef.current?.disconnect();
       roomRef.current = null;
     },
@@ -238,6 +241,8 @@ export function VoiceRoom({
       room.on(RoomEvent.Disconnected, () => {
         if (roomRef.current !== connectedRoom) return;
         roomRef.current = null;
+        if (heartbeatRef.current !== null) window.clearInterval(heartbeatRef.current);
+        heartbeatRef.current = null;
         setStatus("idle");
         setParticipantCount(0);
         setCamera(false);
@@ -277,6 +282,10 @@ export function VoiceRoom({
       setOutputDevices(speakers);
       setOutputDeviceId(room.getActiveDevice("audiooutput") ?? preferredOutput ?? speakers[0]?.deviceId ?? "");
       refresh();
+      if (heartbeatRef.current !== null) window.clearInterval(heartbeatRef.current);
+      heartbeatRef.current = window.setInterval(() => {
+        void fetch(`/api/v1/channels/${channelId}/voice`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({}) });
+      }, 30000);
       setStatus("connected");
     } catch (cause) {
       if (room) void room.disconnect();
@@ -452,6 +461,8 @@ export function VoiceRoom({
   }
   function leave() {
     joinAttemptRef.current++;
+    if (heartbeatRef.current !== null) window.clearInterval(heartbeatRef.current);
+    heartbeatRef.current = null;
     roomRef.current?.disconnect();
     roomRef.current = null;
     [audioRef, remoteVideoRef, localCameraRef, localScreenRef].forEach((ref) =>
