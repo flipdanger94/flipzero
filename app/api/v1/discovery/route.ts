@@ -37,7 +37,7 @@ export async function POST(request: Request) {
   if (ownerBlock) return NextResponse.json({ code: "BLOCKED", message: "Это сообщество недоступно из-за настроек блокировки." }, { status: 403 });
   const [latestBanAction] = await database.select({ action: moderationCases.action }).from(moderationCases).where(and(eq(moderationCases.spaceId, space.id), eq(moderationCases.targetUserId, user.id), or(eq(moderationCases.action, "ban"), eq(moderationCases.action, "unban")))).orderBy(desc(moderationCases.createdAt)).limit(1);
   if (latestBanAction?.action === "ban") return NextResponse.json({ code: "BANNED", message: "Вы заблокированы в этом сообществе." }, { status: 403 });
-  const [memberRole] = await database.select({ id: roles.id }).from(roles).where(and(eq(roles.spaceId, space.id), eq(roles.name, "Участник"))).limit(1);
+  const [memberRole] = await database.select({ id: roles.id }).from(roles).where(and(eq(roles.spaceId, space.id), eq(roles.name, "Участник"), eq(roles.isManaged, true))).limit(1);
   const inserted = await database.transaction(async (tx) => {
     const created = await tx.insert(members).values({ userId: user.id, spaceId: space.id }).onConflictDoNothing().returning({ userId: members.userId });
     if (memberRole) await tx.insert(memberRoles).values({ userId: user.id, spaceId: space.id, roleId: memberRole.id }).onConflictDoNothing();
