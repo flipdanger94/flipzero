@@ -6,6 +6,7 @@ import { memberRoles, members, moderationCases, notifications, roles, spaceJoinR
 import { getCurrentUser } from "@/lib/auth";
 import { getSpacePermissions } from "@/lib/space-permissions";
 import { hasPermission, Permission } from "@/lib/permissions";
+import { writeSpaceAuditLog } from "@/lib/space-audit";
 
 async function requireJoinRequestManager(spaceId: string) {
   const user = await getCurrentUser();
@@ -98,6 +99,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ sp
       return true;
     });
     if (!approved) return NextResponse.json({ code: "ALREADY_REVIEWED", message: "Заявка уже рассмотрена." }, { status: 409 });
+    await writeSpaceAuditLog({ spaceId, actorId: access.user.id, action: "join_request.approve", targetType: "user", targetId: joinRequest.userId, metadata: { requestId } });
     return NextResponse.json({ ok: true, status: "approved", userId: joinRequest.userId });
   }
 
@@ -118,5 +120,6 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ sp
     entityId: spaceId,
   });
 
+  await writeSpaceAuditLog({ spaceId, actorId: access.user.id, action: "join_request.reject", targetType: "user", targetId: joinRequest.userId, metadata: { requestId } });
   return NextResponse.json({ ok: true, status: "rejected", userId: joinRequest.userId });
 }
