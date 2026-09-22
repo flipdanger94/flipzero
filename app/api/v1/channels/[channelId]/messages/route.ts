@@ -32,9 +32,32 @@ export async function GET(request: Request, { params }: { params: Promise<{ chan
 
 export async function POST(request: Request, { params }: { params: Promise<{ channelId: string }> }) {
   const { channelId } = await params; const access = await accessChannel(channelId); if ("error" in access) return access.error; const body = await request.json().catch(() => null);
-  if (body?.action === "react") { if (!access.owner && !hasPermission(access.permissions, SpacePermission.SEND_MESSAGES)) return NextResponse.json({ code: "FORBIDDEN", message: "Нет права взаимодействовать с сообщениями." }, { status: 403 }); const emoji = String(body.emoji ?? "").slice(0, 16); const messageId = String(body.messageId ?? ""); if (!emoji || !messageId) return NextResponse.json({ message: "Реакция не указана." }, { status: 400 }); const existing = await access.database.select().from(reactions).where(and(eq(reactions.messageId, messageId), eq(reactions.userId, access.user.id), eq(reactions.emoji, emoji))).limit(1); if (existing.length) await access.database.delete(reactions).where(and(eq(reactions.messageId, messageId), eq(reactions.userId, access.user.id), eq(reactions.emoji, emoji))); else await access.database.insert(reactions).values({ messageId, userId: access.user.id, emoji }); return NextResponse.json({ active: !existing.length }); }
+  if (body?.action === "react") {
+    if (!access.owner && !hasPermission(access.permissions, SpacePermission.SEND_MESSAGES)) return NextResponse.json({ code: "FORBIDDEN", message: "Нет права взаимодействовать с сообщениями." }, { status: 403 });
+    const emoji = String(body.emoji ?? "").slice(0, 16);
+    const messageId = String(body.messageId ?? "");
+    if (!emoji || !messageId) return NextResponse.json({ code: "INVALID_INPUT", message: "Реакция не указана." }, { status: 400 });
+    const [targetMessage] = await access.database.select({ id: messages.id }).from(messages).where(and(eq(messages.id, messageId), eq(messages.channelId, channelId), isNull(messages.deletedAt))).limit(1);
+    if (!targetMessage) return NextResponse.json({ code: "NOT_FOUND", message: "Сообщение не найдено в этом канале." }, { status: 404 });
+    const existing = await access.database.select().from(reactions).where(and(eq(reactions.messageId, messageId), eq(reactions.userId, access.user.id), eq(reactions.emoji, emoji))).limit(1);
+    if (existing.length) await access.database.delete(reactions).where(and(eq(reactions.messageId, messageId), eq(reactions.userId, access.user.id), eq(reactions.emoji, emoji)));
+    else await access.database.insert(reactions).values({ messageId, userId: access.user.id, emoji });
+    return NextResponse.json({ active: !existing.length });
+  }
   if (!access.owner && !hasPermission(access.permissions, SpacePermission.SEND_MESSAGES)) return NextResponse.json({ code: "FORBIDDEN", message: "Нет права отправлять сообщения." }, { status: 403 });
-  const content = typeof body?.content === "string" ? body.content.trim().slice(0, 4000) : ""; const attachments = Array.isArray(body?.attachments) ? body.attachments.filter((item: unknown) => { if (!item || typeof item !== "object") return false; const attachment = item as Record<string, unknown>; return attachment.type === "voice" && typeof attachment.url === "string" && attachment.url.startsWith("data:audio/") && attachment.url.length <= 3_000_000 && typeof attachment.duration === "number" && attachment.duration > 0 && attachment.duration <= 65; }).slice(0, 1) : [];
+  const content = typeof body?.content === "string" ? body.content.trim().slice(0, 4000) : "";
+  const attachments = Array.isArray(body?.attachments) ? body.attachments.filter((item: unknown) => { if (!item || typeof item !== "object") return false; const attachment = item as Record<string, unknown>; return attachment.type === "voice" && typeof attachment.url === "string" && attachment.url.startsWith("data:audio/") && attachment.url.length <= 3_000_000 && typeof attachment.duration === "number" && attachment.duration > 0 && attachment.duration <= 65; }).slice(0, 1) : [];
+  const replyToId = typeof body?.replyToId === "string" && body.replyToId ? body.replyToId : null;
+  const threadRootId = typeof body?.threadRootId === "string" && body.threadRootId ? body.threadRootId : null;
+  const referenceIds = [...new Set([replyToId, threadRootId].filter((id): id is string => Boolean(id)))];
+  if (referenceIds.length) {
+    const referenced = await access.database.select({ id: messages.id, threadRootId: messages.threadRootId }).from(messages).where(and(eq(messages.channelId, channelId), inArray(messages.id, referenceIds), isNull(messages.deletedAt)));
+    if (referenced.length !== referenceIds.length) return NextResponse.json({ code: "INVALID_REFERENCE", message: "Ответ или ветка должны ссылаться на сообщение из этого канала." }, { status: 400 });
+    if (threadRootId) {
+      const root = referenced.find((item) => item.id === threadRootId);
+      if (root?.threadRootId) return NextResponse.json({ code: "INVALID_THREAD", message: "Нельзя создать ветку от сообщения, которое уже находится внутри другой ветки." }, { status: 400 });
+    }
+  }
   if (access.channel.kind === "announcement" && access.channel.ownerId !== access.user.id) return NextResponse.json({ code: "READ_ONLY", message: "Публиковать объявления может только владелец." }, { status: 403 });
   if (!content && !attachments.length) return NextResponse.json({ code: "EMPTY_MESSAGE", message: "Сообщение пустое." }, { status: 400 });
   if (access.channel.ownerId !== access.user.id) {
@@ -44,11 +67,11 @@ export async function POST(request: Request, { params }: { params: Promise<{ cha
   const assessment = assessMessageSafety(content);
   const id = randomUUID();
   await access.database.transaction(async (tx) => {
-    await tx.insert(messages).values({ id, channelId, authorId: access.user.id, content, attachments, replyToId: body?.replyToId || null, threadRootId: body?.threadRootId || null, deletedAt: assessment.autoHide ? new Date() : null });
+    await tx.insert(messages).values({ id, channelId, authorId: access.user.id, content, attachments, replyToId, threadRootId, deletedAt: assessment.autoHide ? new Date() : null });
     if (assessment.flagged) await tx.insert(moderationFlags).values({ id: randomUUID(), spaceId: access.channel.spaceId, channelId, messageId: id, authorId: access.user.id, category: assessment.category!, severity: assessment.severity, confidence: assessment.confidence, summary: assessment.summary, evidence: assessment.signals, autoHidden: assessment.autoHide });
   });
   if (assessment.autoHide) return NextResponse.json({ code: "MODERATION_HELD", message: "Сообщение временно скрыто автоматической защитой и отправлено на проверку модератору." }, { status: 422 });
-  return NextResponse.json({ message: { id, channelId, authorId: access.user.id, displayName: access.user.displayName, username: access.user.username, avatarUrl: access.user.avatarUrl, content, attachments, replyToId: body?.replyToId || null, threadRootId: body?.threadRootId || null, reactions: [], createdAt: new Date().toISOString() }, moderation: assessment.flagged ? { status: "pending", severity: assessment.severity } : null }, { status: 201 });
+  return NextResponse.json({ message: { id, channelId, authorId: access.user.id, displayName: access.user.displayName, username: access.user.username, avatarUrl: access.user.avatarUrl, content, attachments, replyToId, threadRootId, reactions: [], createdAt: new Date().toISOString() }, moderation: assessment.flagged ? { status: "pending", severity: assessment.severity } : null }, { status: 201 });
 }
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ channelId: string }> }) {
