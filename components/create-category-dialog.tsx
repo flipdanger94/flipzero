@@ -6,8 +6,8 @@ import { useModalA11y } from "@/hooks/use-modal-a11y";
 
 export type CreatedCategory = { id: string; spaceId: string; name: string; position: number };
 
-export function CreateCategoryDialog({
-  const dialogRef = useModalA11y(onClose); spaceId, onClose, onCreated }: { spaceId: string; onClose: () => void; onCreated: (category: CreatedCategory) => void }) {
+export function CreateCategoryDialog({spaceId, onClose, onCreated }: { spaceId: string; onClose: () => void; onCreated: (category: CreatedCategory) => void }) {
+  const dialogRef = useModalA11y(onClose);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   async function submit(event: FormEvent<HTMLFormElement>) {
