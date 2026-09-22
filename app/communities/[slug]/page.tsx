@@ -8,6 +8,8 @@ import { getDatabase } from "@/db/client";
 import { MediaImage } from "@/components/media-image";
 import { channels, members, spaceJoinRequests, spaces } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
+import { getSpaceChannelPermissions } from "@/lib/space-permissions";
+import { hasPermission, Permission } from "@/lib/permissions";
 import { loginPathFor } from "@/lib/route-access";
 
 export default async function CommunityPage({ params, searchParams }: { params: Promise<{ slug: string }>; searchParams: Promise<{ channel?: string | string[] }> }) {
@@ -21,15 +23,23 @@ export default async function CommunityPage({ params, searchParams }: { params: 
   const space = spaceRows[0];
   if (!space) notFound();
 
-  const [membershipRows, channelRows, requestedChannelRows, joinRequestRows] = await Promise.all([
+  const [membershipRows, joinRequestRows] = await Promise.all([
     database.select({ userId: members.userId }).from(members).where(and(eq(members.spaceId, space.id), eq(members.userId, user.id))).limit(1),
-    database.select({ id: channels.id }).from(channels).where(eq(channels.spaceId, space.id)).orderBy(asc(channels.position)).limit(1),
-    requestedChannelId ? database.select({ id: channels.id }).from(channels).where(and(eq(channels.id, requestedChannelId), eq(channels.spaceId, space.id))).limit(1) : Promise.resolve([]),
     database.select({ status: spaceJoinRequests.status }).from(spaceJoinRequests).where(and(eq(spaceJoinRequests.spaceId, space.id), eq(spaceJoinRequests.userId, user.id))).limit(1),
   ]);
   const isMember = membershipRows.length > 0;
   if (!["public", "application"].includes(space.visibility) && !isMember) notFound();
-  const selectedChannel = requestedChannelRows[0] ?? channelRows[0] ?? null;
+
+  let selectedChannel: { id: string } | null = null;
+  let visibleRequestedChannelId: string | null = null;
+  if (isMember) {
+    const channelRows = await database.select({ id: channels.id }).from(channels).where(eq(channels.spaceId, space.id)).orderBy(asc(channels.position));
+    const permissionMap = await getSpaceChannelPermissions(space.id, user.id, channelRows.map((channel) => channel.id));
+    const visibleChannels = channelRows.filter((channel) => hasPermission(permissionMap.get(channel.id) ?? 0, Permission.ViewChannels));
+    const requestedChannel = requestedChannelId ? visibleChannels.find((channel) => channel.id === requestedChannelId) ?? null : null;
+    selectedChannel = requestedChannel ?? visibleChannels[0] ?? null;
+    visibleRequestedChannelId = requestedChannel?.id ?? null;
+  }
 
   return <main className="community-page">
     <nav className="community-nav"><Link href="/" className="community-logo"><span className="brand-symbol-wrap"><BrandMark /></span><strong>FlipZero</strong></Link><Link href="/app">Открыть приложение</Link></nav>
@@ -43,7 +53,7 @@ export default async function CommunityPage({ params, searchParams }: { params: 
         <h1>{space.name}</h1>
         <p>{space.description || "Открытое пространство для общения, событий и совместных идей."}</p>
         <div className="community-stats"><span><Users size={17} /> {space.memberCount.toLocaleString("ru-RU")} участников</span><span><Hash size={17} /> @{space.slug}</span><span><ShieldCheck size={17} /> {space.visibility === "public" ? "Открытое" : space.visibility === "application" ? "Вступление по заявке" : "По приглашению"}</span></div>
-        <CommunityActions spaceId={space.id} slug={space.slug} channelId={selectedChannel?.id ?? null} visibility={space.visibility} joinRequestStatus={joinRequestRows[0]?.status ?? null} isMember={isMember} isAuthenticated={Boolean(user)} requestedChannelId={requestedChannelRows[0]?.id ?? null} />
+        <CommunityActions spaceId={space.id} slug={space.slug} channelId={selectedChannel?.id ?? null} visibility={space.visibility} joinRequestStatus={joinRequestRows[0]?.status ?? null} isMember={isMember} isAuthenticated={Boolean(user)} requestedChannelId={visibleRequestedChannelId} />
       </div>
     </section>
     <section className="community-info"><article><strong>Живое общение</strong><p>Текстовые, голосовые и тематические каналы в одном пространстве.</p></article><article><strong>События и знания</strong><p>Встречи, база знаний, форум и доски сообщества всегда рядом.</p></article><article><strong>Свои правила</strong><p>Роли, права доступа и прозрачная модерация для комфортного общения.</p></article></section>
