@@ -1,5 +1,5 @@
 import { createHash, randomUUID } from "node:crypto";
-import { and, asc, desc, eq, isNull, ne, or, sql } from "drizzle-orm";
+import { and, desc, eq, isNull, lt, ne, or, sql } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { getDatabase } from "@/db/client";
 import { directConversationMembers, directConversations, directMessages, friends, notifications, userBlocks, userPrivacySettings, users } from "@/db/schema";
@@ -11,17 +11,45 @@ const conversationIdFor = (left: string, right: string) => createHash("sha256").
 
 export async function GET(request: Request) {
   const user = await getCurrentUser(); if (!user) return NextResponse.json({ message: "Требуется вход." }, { status: 401 });
-  const database = getDatabase(); const conversationId = new URL(request.url).searchParams.get("conversationId");
+  const database = getDatabase();
+  const params = new URL(request.url).searchParams;
+  const conversationId = params.get("conversationId");
   if (conversationId) {
     const [membership] = await database.select().from(directConversationMembers).where(and(eq(directConversationMembers.conversationId, conversationId), eq(directConversationMembers.userId, user.id))).limit(1);
     if (!membership) return NextResponse.json({ message: "Диалог недоступен." }, { status: 403 });
     const [otherMember] = await database.select({ userId: directConversationMembers.userId }).from(directConversationMembers).where(and(eq(directConversationMembers.conversationId,conversationId),ne(directConversationMembers.userId,user.id))).limit(1);
     if (otherMember) { const [blocked] = await database.select({ blockerId:userBlocks.blockerId }).from(userBlocks).where(or(and(eq(userBlocks.blockerId,user.id),eq(userBlocks.blockedId,otherMember.userId)),and(eq(userBlocks.blockerId,otherMember.userId),eq(userBlocks.blockedId,user.id)))).limit(1); if(blocked)return NextResponse.json({message:"Диалог недоступен из-за блокировки."},{status:403}); }
-    const rows = await database.select({ id: directMessages.id, conversationId: directMessages.conversationId, senderId: directMessages.senderId, receiverId: directMessages.receiverId, text: directMessages.text, createdAt: directMessages.createdAt, readAt: directMessages.readAt }).from(directMessages).where(and(eq(directMessages.conversationId, conversationId), isNull(directMessages.deletedAt))).orderBy(asc(directMessages.createdAt)).limit(200);
+    const requestedLimit = Number(params.get("limit") ?? 50);
+    const limit = Number.isFinite(requestedLimit) ? Math.min(100, Math.max(20, Math.trunc(requestedLimit))) : 50;
+    const cursorValue = params.get("cursor");
+    const cursor = cursorValue ? new Date(cursorValue) : null;
+    if (cursorValue && (!cursor || Number.isNaN(cursor.getTime()))) {
+      return NextResponse.json({ message: "Некорректный cursor." }, { status: 400 });
+    }
+    const conditions = [
+      eq(directMessages.conversationId, conversationId),
+      isNull(directMessages.deletedAt),
+      ...(cursor ? [lt(directMessages.createdAt, cursor)] : []),
+    ];
+    const rows = await database.select({
+      id: directMessages.id,
+      conversationId: directMessages.conversationId,
+      senderId: directMessages.senderId,
+      receiverId: directMessages.receiverId,
+      text: directMessages.text,
+      createdAt: directMessages.createdAt,
+      readAt: directMessages.readAt,
+    }).from(directMessages).where(and(...conditions)).orderBy(desc(directMessages.createdAt)).limit(limit + 1);
+    const hasMore = rows.length > limit;
+    const page = rows.slice(0, limit).reverse();
     await database.update(directMessages).set({ readAt: new Date() }).where(and(eq(directMessages.conversationId, conversationId), eq(directMessages.receiverId, user.id), isNull(directMessages.readAt)));
-    return NextResponse.json({ messages: rows });
+    return NextResponse.json({
+      messages: page,
+      nextCursor: hasMore && page[0] ? page[0].createdAt.toISOString() : null,
+      hasMore,
+    });
   }
-  const memberships = await database.select({ conversationId: directConversationMembers.conversationId }).from(directConversationMembers).where(eq(directConversationMembers.userId, user.id));
+  const memberships = await database.select({ conversationId: directConversationMembers.conversationId }).from(directConversationMembers).where(eq(directConversationMembers.userId, user.id)).limit(100);
   const conversations = await Promise.all(memberships.map(async ({ conversationId: id }) => {
     const [otherMember] = await database.select({ userId: directConversationMembers.userId }).from(directConversationMembers).where(and(eq(directConversationMembers.conversationId, id), ne(directConversationMembers.userId, user.id))).limit(1);
     if (!otherMember) return null;
