@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { getDatabase } from "@/db/client";
 import { memberRoles, members, roles, spaces } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
-import { expandPermissions, Permission } from "@/lib/permissions";
+import { expandPermissions } from "@/lib/permissions";
 import { evictParticipantsFromSpaceVoice } from "@/lib/livekit-admin";
 
 export async function POST(request: Request, { params }: { params: Promise<{ spaceId: string }> }) {
