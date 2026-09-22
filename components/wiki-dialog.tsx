@@ -7,8 +7,8 @@ import { useModalA11y } from "@/hooks/use-modal-a11y";
 type WikiPage = { id: string; slug: string; title: string; summary: string | null; content: string; revision: number; createdAt: string; updatedAt: string };
 type Revision = { id: string; revision: number; title: string; createdAt: string };
 
-export function WikiDialog({
-  const dialogRef = useModalA11y(onClose); spaceId, onClose }: { spaceId: string; onClose: () => void }) {
+export function WikiDialog({spaceId, onClose }: { spaceId: string; onClose: () => void }) {
+  const dialogRef = useModalA11y(onClose);
   const [pages, setPages] = useState<WikiPage[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [isOwner, setIsOwner] = useState(false);
