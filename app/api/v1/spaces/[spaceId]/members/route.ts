@@ -35,7 +35,32 @@ export async function GET(_: Request, { params }: { params: Promise<{ spaceId: s
     database.select().from(roles).where(eq(roles.spaceId, spaceId)).orderBy(asc(roles.position)),
     database.select().from(memberRoles).where(eq(memberRoles.spaceId, spaceId)),
   ]);
-  return NextResponse.json({ ownerId: space.ownerId, roles: spaceRoles, members: spaceMembers.map((member) => ({ ...member, roleIds: assignments.filter((item) => item.userId === member.userId).map((item) => item.roleId) })) });
+  const roleMap = new Map(spaceRoles.map((role) => [role.id, role]));
+  const viewerRoleIds = assignments.filter((item) => item.userId === viewer.id).map((item) => item.roleId);
+  const viewerRoles = viewerRoleIds.map((id) => roleMap.get(id)).filter((role): role is NonNullable<typeof role> => Boolean(role));
+  const viewerPermissions = space.ownerId === viewer.id ? Permission.Administrator : viewerRoles.reduce((value, role) => value | Number(role.permissions), 0);
+  const viewerTopPosition = space.ownerId === viewer.id ? Number.MAX_SAFE_INTEGER : Math.max(0, ...viewerRoles.map((role) => role.position));
+  const canManageRoles = space.ownerId === viewer.id || hasPermission(viewerPermissions, Permission.ManageRoles);
+  const canKickMembers = space.ownerId === viewer.id || hasPermission(viewerPermissions, Permission.KickMembers);
+  return NextResponse.json({
+    ownerId: space.ownerId,
+    capabilities: { manageRoles: canManageRoles, kickMembers: canKickMembers },
+    roles: spaceRoles.map((role) => ({
+      ...role,
+      assignable: !role.isManaged && (space.ownerId === viewer.id || (canManageRoles && role.position < viewerTopPosition && !hasPermission(Number(role.permissions), Permission.Administrator) && (Number(role.permissions) & ~viewerPermissions) === 0)),
+    })),
+    members: spaceMembers.map((member) => {
+      const roleIds = assignments.filter((item) => item.userId === member.userId).map((item) => item.roleId);
+      const memberTopPosition = Math.max(0, ...roleIds.map((id) => roleMap.get(id)?.position ?? 0));
+      const hierarchyAllows = space.ownerId === viewer.id || memberTopPosition < viewerTopPosition;
+      return {
+        ...member,
+        roleIds,
+        canEditRoles: canManageRoles && member.userId !== viewer.id && member.userId !== space.ownerId && hierarchyAllows,
+        canKick: canKickMembers && member.userId !== viewer.id && member.userId !== space.ownerId && hierarchyAllows,
+      };
+    }),
+  });
 }
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ spaceId: string }> }) {
