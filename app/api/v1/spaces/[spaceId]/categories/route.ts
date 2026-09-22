@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { and, eq, inArray, max } from "drizzle-orm";
+import { and, eq, max } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { getDatabase } from "@/db/client";
 import { channelCategories, channels, spaces } from "@/db/schema";
@@ -44,8 +44,9 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ sp
   if (body?.action === "reorder") {
     const orderedIds: string[] = Array.isArray(body.orderedIds) ? Array.from(new Set((body.orderedIds as unknown[]).filter((id): id is string => typeof id === "string"))) : [];
     if (!orderedIds.length || orderedIds.length > 100) return NextResponse.json({ code: "INVALID_INPUT", message: "Некорректный порядок категорий." }, { status: 400 });
-    const existing = await access.database.select({ id: channelCategories.id }).from(channelCategories).where(and(eq(channelCategories.spaceId, spaceId), inArray(channelCategories.id, orderedIds)));
-    if (existing.length !== orderedIds.length) return NextResponse.json({ code: "INVALID_CATEGORY", message: "Одна из категорий не принадлежит серверу." }, { status: 400 });
+    const allCategories = await access.database.select({ id: channelCategories.id }).from(channelCategories).where(eq(channelCategories.spaceId, spaceId));
+    const existingIds = new Set(allCategories.map((item) => item.id));
+    if (orderedIds.length !== allCategories.length || orderedIds.some((id) => !existingIds.has(id))) return NextResponse.json({ code: "INVALID_CATEGORY_ORDER", message: "Передайте полный порядок категорий сервера." }, { status: 400 });
     await access.database.transaction(async (tx) => {
       for (const [position, id] of orderedIds.entries()) await tx.update(channelCategories).set({ position }).where(and(eq(channelCategories.id, id), eq(channelCategories.spaceId, spaceId)));
     });
