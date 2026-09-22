@@ -103,7 +103,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ spa
     const [membership] = await access.database.select({ userId: members.userId }).from(members).where(and(eq(members.spaceId, spaceId), eq(members.userId, target.id))).limit(1);
     if (!membership) return NextResponse.json({ code: "NOT_MEMBER", message: "Пользователь не является участником пространства." }, { status: 409 });
     if (!access.owner) {
-      const targetRoles = await access.database.select({ position: roles.position }).from(memberRoles).innerJoin(roles, eq(roles.id, memberRoles.roleId)).where(and(eq(memberRoles.spaceId, spaceId), eq(memberRoles.userId, target.id)));
+      const targetRoles = await access.database.select({ position: roles.position, permissions: roles.permissions }).from(memberRoles).innerJoin(roles, eq(roles.id, memberRoles.roleId)).where(and(eq(memberRoles.spaceId, spaceId), eq(memberRoles.userId, target.id)));
+      if (targetRoles.some((role) => hasPermission(Number(role.permissions), Permission.Administrator))) return NextResponse.json({ code: "ROLE_HIERARCHY", message: "Нельзя модерировать участника с правами администратора." }, { status: 403 });
       const targetTop = Math.max(0, ...targetRoles.map((role) => role.position));
       if (targetTop >= access.topPosition) return NextResponse.json({ code: "ROLE_HIERARCHY", message: "Нельзя модерировать участника с равной или более высокой ролью." }, { status: 403 });
     }
