@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { getDatabase } from "@/db/client";
 import { memberRoles, members, roles, spaces, users } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
-import { hasPermission, Permission } from "@/lib/permissions";
+import { expandPermissions, hasPermission, Permission } from "@/lib/permissions";
 
 async function requireMemberManager(spaceId: string, requiredPermission: number) {
   const user = await getCurrentUser();
@@ -11,11 +11,11 @@ async function requireMemberManager(spaceId: string, requiredPermission: number)
   const database = getDatabase();
   const [space] = await database.select({ ownerId: spaces.ownerId }).from(spaces).where(eq(spaces.id, spaceId)).limit(1);
   if (!space) return { error: NextResponse.json({ code: "NOT_FOUND", message: "Пространство не найдено." }, { status: 404 }) };
-  if (space.ownerId === user.id) return { database, space, user, owner: true, topPosition: Number.MAX_SAFE_INTEGER, permissions: Permission.Administrator };
+  if (space.ownerId === user.id) return { database, space, user, owner: true, topPosition: Number.MAX_SAFE_INTEGER, permissions: expandPermissions(Permission.Administrator) };
   const assigned = await database.select({ position: roles.position, permissions: roles.permissions }).from(memberRoles)
     .innerJoin(roles, eq(roles.id, memberRoles.roleId))
     .where(and(eq(memberRoles.spaceId, spaceId), eq(memberRoles.userId, user.id)));
-  const permissions = assigned.reduce((value, role) => value | Number(role.permissions), 0);
+  const permissions = expandPermissions(assigned.reduce((value, role) => value | Number(role.permissions), 0));
   if (!hasPermission(permissions, requiredPermission)) return { error: NextResponse.json({ code: "FORBIDDEN", message: "Недостаточно прав." }, { status: 403 }) };
   return { database, space, user, owner: false, topPosition: Math.max(0, ...assigned.map((role) => role.position)), permissions };
 }
@@ -38,7 +38,7 @@ export async function GET(_: Request, { params }: { params: Promise<{ spaceId: s
   const roleMap = new Map(spaceRoles.map((role) => [role.id, role]));
   const viewerRoleIds = assignments.filter((item) => item.userId === viewer.id).map((item) => item.roleId);
   const viewerRoles = viewerRoleIds.map((id) => roleMap.get(id)).filter((role): role is NonNullable<typeof role> => Boolean(role));
-  const viewerPermissions = space.ownerId === viewer.id ? Permission.Administrator : viewerRoles.reduce((value, role) => value | Number(role.permissions), 0);
+  const viewerPermissions = space.ownerId === viewer.id ? expandPermissions(Permission.Administrator) : expandPermissions(viewerRoles.reduce((value, role) => value | Number(role.permissions), 0));
   const viewerTopPosition = space.ownerId === viewer.id ? Number.MAX_SAFE_INTEGER : Math.max(0, ...viewerRoles.map((role) => role.position));
   const canManageRoles = space.ownerId === viewer.id || hasPermission(viewerPermissions, Permission.ManageRoles);
   const canKickMembers = space.ownerId === viewer.id || hasPermission(viewerPermissions, Permission.KickMembers);
