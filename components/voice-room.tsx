@@ -284,7 +284,26 @@ export function VoiceRoom({
       refresh();
       if (heartbeatRef.current !== null) window.clearInterval(heartbeatRef.current);
       heartbeatRef.current = window.setInterval(() => {
-        void fetch(`/api/v1/channels/${channelId}/voice`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({}) });
+        void fetch(`/api/v1/channels/${channelId}/voice`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({}) })
+          .then(async (heartbeatResponse) => {
+            const heartbeatData = await heartbeatResponse.json().catch(() => null);
+            if (!heartbeatResponse.ok) {
+              if ([403, 404, 409].includes(heartbeatResponse.status)) {
+                setError(heartbeatData?.message ?? "Доступ к голосовому каналу изменился. Подключитесь заново.");
+                connectedRoom.disconnect();
+              }
+              return;
+            }
+            const heartbeatCapabilities = {
+              speak: Boolean(heartbeatData?.capabilities?.speak),
+              stream: Boolean(heartbeatData?.capabilities?.stream),
+            };
+            if (heartbeatCapabilities.speak !== nextCapabilities.speak || heartbeatCapabilities.stream !== nextCapabilities.stream) {
+              setError("Права голосового канала изменились. Подключитесь заново, чтобы применить их.");
+              connectedRoom.disconnect();
+            }
+          })
+          .catch(() => undefined);
       }, 30000);
       setStatus("connected");
     } catch (cause) {
@@ -331,6 +350,7 @@ export function VoiceRoom({
   async function playSound(frequency: number) {
     const room = roomRef.current;
     if (!room || soundPlayingRef.current) return;
+    if (!capabilities.speak) { setError("У вас нет права воспроизводить звуки в этом голосовом канале."); return; }
     soundPlayingRef.current = true;
     setSoundPlaying(true);
     let context: AudioContext | null = null;
@@ -354,7 +374,7 @@ export function VoiceRoom({
       mediaTrack = output.stream.getAudioTracks()[0];
       await room.localParticipant.publishTrack(mediaTrack, {
         name: "soundboard",
-        source: Track.Source.Unknown,
+        source: Track.Source.Microphone,
       });
       oscillator.start();
       oscillator.stop(context.currentTime + 1.2);
@@ -430,6 +450,7 @@ export function VoiceRoom({
     const room = roomRef.current;
     if (!room) return;
     const next = !camera;
+    if (next && !capabilities.stream) { setError("У вас нет права включать камеру в этом голосовом канале."); return; }
     try {
       await room.localParticipant.setCameraEnabled(next);
       setCamera(next);
@@ -558,6 +579,8 @@ export function VoiceRoom({
               <button
                 className={camera ? "is-active" : ""}
                 onClick={toggleCamera}
+                disabled={!capabilities.stream}
+                title={!capabilities.stream ? "Нет права включать камеру" : undefined}
               >
                 {camera ? <VideoOff size={20} /> : <Video size={20} />}
                 <span>{camera ? "Выключить" : "Камера"}</span>
@@ -575,7 +598,7 @@ export function VoiceRoom({
                 <Settings2 size={20} />
                 <span>Устройства</span>
               </button>
-              <button onClick={() => setSoundboard((value) => !value)}>
+              <button onClick={() => setSoundboard((value) => !value)} disabled={!capabilities.speak} title={!capabilities.speak ? "Нет права воспроизводить звуки" : undefined}>
                 <Music2 size={20} />
                 <span>Soundboard</span>
               </button>
