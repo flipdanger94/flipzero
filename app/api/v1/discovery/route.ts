@@ -83,6 +83,7 @@ export async function POST(request: Request) {
   const inserted = await database.transaction(async (tx) => {
     const created = await tx.insert(members).values({ userId: user.id, spaceId: space.id }).onConflictDoNothing().returning({ userId: members.userId });
     if (memberRole) await tx.insert(memberRoles).values({ userId: user.id, spaceId: space.id, roleId: memberRole.id }).onConflictDoNothing();
+    await tx.delete(spaceJoinRequests).where(and(eq(spaceJoinRequests.spaceId, space.id), eq(spaceJoinRequests.userId, user.id)));
     return created.length > 0;
   });
   return NextResponse.json({ spaceId: space.id, joined: inserted });
