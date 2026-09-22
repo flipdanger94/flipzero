@@ -1,8 +1,8 @@
 import "server-only";
 import { randomUUID } from "node:crypto";
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq, inArray, or } from "drizzle-orm";
 import { getDatabase } from "@/db/client";
-import { channelNotificationSettings, members, notifications, spaceNotificationSettings, users } from "@/db/schema";
+import { channelNotificationSettings, members, notifications, spaceNotificationSettings, userBlocks, users } from "@/db/schema";
 import { getChannelPermissions } from "@/lib/space-permissions";
 import { hasPermission, Permission } from "@/lib/permissions";
 
@@ -43,6 +43,12 @@ export async function createChannelMessageNotifications(input: {
   ].filter((id) => id !== input.sender.id))];
   if (!candidateIds.length) return;
 
+  const blockedRelationships = await db.select({ blockerId: userBlocks.blockerId, blockedId: userBlocks.blockedId }).from(userBlocks).where(or(
+    and(eq(userBlocks.blockerId, input.sender.id), inArray(userBlocks.blockedId, candidateIds)),
+    and(inArray(userBlocks.blockerId, candidateIds), eq(userBlocks.blockedId, input.sender.id)),
+  ));
+  const blockedRecipientIds = new Set(blockedRelationships.map((row) => row.blockerId === input.sender.id ? row.blockedId : row.blockerId));
+
   const [spaceModes, channelModes] = await Promise.all([
     db.select({ userId: spaceNotificationSettings.userId, mode: spaceNotificationSettings.mode }).from(spaceNotificationSettings).where(and(
       eq(spaceNotificationSettings.spaceId, input.spaceId),
@@ -58,6 +64,7 @@ export async function createChannelMessageNotifications(input: {
 
   const recipients: Array<{ userId: string; mentioned: boolean }> = [];
   for (const userId of candidateIds) {
+    if (blockedRecipientIds.has(userId)) continue;
     const serverMode = spaceModeMap.get(userId) ?? "mentions";
     const channelMode = channelModeMap.get(userId);
     const effectiveMode = channelMode === "none" ? "off" : channelMode ?? serverMode;
