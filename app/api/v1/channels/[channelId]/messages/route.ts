@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { and, asc, desc, eq, gt, ilike, inArray, isNull, or, sql } from "drizzle-orm";
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 import { getDatabase } from "@/db/client";
 import { channels, channelNotificationSettings, members, messages, moderationCases, moderationFlags, reactions, spaces, users } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
@@ -50,7 +50,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ cha
   });
   if (assessment.autoHide) return NextResponse.json({ code: "MODERATION_HELD", message: "Сообщение временно скрыто автоматической защитой и отправлено на проверку модератору." }, { status: 422 });
   const createdAt = new Date().toISOString();
-  void dispatchDeveloperEvent(access.channel.spaceId, "message.created", { message: { id, channelId, spaceId: access.channel.spaceId, authorId: access.user.id, username: access.user.username, displayName: access.user.displayName, content, attachments, replyToId: body?.replyToId || null, threadRootId: body?.threadRootId || null, createdAt } }).catch(() => undefined);
+  after(() => dispatchDeveloperEvent(access.channel.spaceId, "message.created", { message: { id, channelId, spaceId: access.channel.spaceId, authorId: access.user.id, username: access.user.username, displayName: access.user.displayName, content, attachments, replyToId: body?.replyToId || null, threadRootId: body?.threadRootId || null, createdAt } }).catch(() => undefined));
   return NextResponse.json({ message: { id, channelId, authorId: access.user.id, displayName: access.user.displayName, username: access.user.username, avatarUrl: access.user.avatarUrl, content, attachments, replyToId: body?.replyToId || null, threadRootId: body?.threadRootId || null, reactions: [], createdAt }, moderation: assessment.flagged ? { status: "pending", severity: assessment.severity } : null }, { status: 201 });
 }
 
