@@ -196,6 +196,21 @@ export const members = pgTable("members", {
   joinedAt: timestamp("joined_at", { withTimezone: true }).defaultNow().notNull(),
 }, (table) => [primaryKey({ columns: [table.userId, table.spaceId] }), index("members_space_level_idx").on(table.spaceId, table.level)]);
 
+export const spaceJoinRequests = pgTable("space_join_requests", {
+  id: text("id").primaryKey(),
+  spaceId: text("space_id").notNull().references(() => spaces.id, { onDelete: "cascade" }),
+  userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  message: text("message"),
+  status: text("status").default("pending").notNull(),
+  reviewedById: text("reviewed_by_id").references(() => users.id, { onDelete: "set null" }),
+  reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [
+  uniqueIndex("space_join_requests_space_user_unique").on(table.spaceId, table.userId),
+  index("space_join_requests_space_status_idx").on(table.spaceId, table.status, table.createdAt),
+  index("space_join_requests_user_status_idx").on(table.userId, table.status),
+]);
+
 export const memberRoles = pgTable("member_roles", {
   userId: text("user_id").notNull(),
   spaceId: text("space_id").notNull(),
