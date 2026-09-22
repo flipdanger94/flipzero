@@ -11,7 +11,8 @@ const permissionOptions = [
   ["Управление ролями", Permission.ManageRoles], ["Настройки пространства", Permission.ManageSpace],
   ["Создание приглашений", Permission.CreateInvites], ["Исключение участников", Permission.KickMembers],
   ["Блокировка участников", Permission.BanMembers], ["Модерация участников", Permission.ModerateMembers],
-  ["Подключение к голосу", Permission.ConnectVoice], ["Голос и трансляции", Permission.SpeakVoice | Permission.Stream],
+  ["Подключение к голосу", Permission.ConnectVoice], ["Разрешить говорить", Permission.SpeakVoice],
+  ["Камера и демонстрация экрана", Permission.Stream],
 ] as const;
 
 export function RoleManagerDialog({ spaceId, onClose }: { spaceId: string; onClose: () => void }) {
