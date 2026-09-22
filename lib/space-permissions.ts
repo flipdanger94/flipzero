@@ -1,7 +1,7 @@
 import { and, eq, inArray } from "drizzle-orm";
 import { getDatabase } from "@/db/client";
 import { channelOverrides, channels, memberRoles, members, roles, spaces } from "@/db/schema";
-import { Permission, hasPermission } from "@/lib/permissions";
+import { CHANNEL_PERMISSION_MASK, Permission, hasPermission } from "@/lib/permissions";
 
 export const SpacePermission = Permission;
 
@@ -58,12 +58,12 @@ export async function getSpaceChannelPermissions(spaceId: string, userId: string
     let roleDeny = 0;
     for (const item of overrides) {
       if (item.channelId !== channelId || item.targetType !== "role" || !roleIds.includes(item.targetId)) continue;
-      roleAllow |= Number(item.allow);
-      roleDeny |= Number(item.deny);
+      roleAllow |= Number(item.allow) & CHANNEL_PERMISSION_MASK;
+      roleDeny |= Number(item.deny) & CHANNEL_PERMISSION_MASK;
     }
     permissions = (permissions & ~roleDeny) | roleAllow;
     const memberOverride = overrides.find((item) => item.channelId === channelId && item.targetType === "member" && item.targetId === userId);
-    if (memberOverride) permissions = (permissions & ~Number(memberOverride.deny)) | Number(memberOverride.allow);
+    if (memberOverride) permissions = (permissions & ~(Number(memberOverride.deny) & CHANNEL_PERMISSION_MASK)) | (Number(memberOverride.allow) & CHANNEL_PERMISSION_MASK);
     result.set(channelId, permissions);
   }
   return result;
@@ -89,10 +89,10 @@ export async function getChannelPermissions(channelId: string, userId: string) {
   if ((permissions & Permission.Administrator) !== 0) return { spaceId: base.spaceId, owner: false, permissions };
   const overrides = await db.select().from(channelOverrides).where(eq(channelOverrides.channelId, channelId));
   let roleAllow = 0, roleDeny = 0;
-  for (const item of overrides) if (item.targetType === "role" && roleIds.includes(item.targetId)) { roleAllow |= Number(item.allow); roleDeny |= Number(item.deny); }
+  for (const item of overrides) if (item.targetType === "role" && roleIds.includes(item.targetId)) { roleAllow |= Number(item.allow) & CHANNEL_PERMISSION_MASK; roleDeny |= Number(item.deny) & CHANNEL_PERMISSION_MASK; }
   permissions = (permissions & ~roleDeny) | roleAllow;
   const memberOverride = overrides.find((item) => item.targetType === "member" && item.targetId === userId);
-  if (memberOverride) permissions = (permissions & ~Number(memberOverride.deny)) | Number(memberOverride.allow);
+  if (memberOverride) permissions = (permissions & ~(Number(memberOverride.deny) & CHANNEL_PERMISSION_MASK)) | (Number(memberOverride.allow) & CHANNEL_PERMISSION_MASK);
   return { spaceId: base.spaceId, owner: false, permissions };
 }
 
