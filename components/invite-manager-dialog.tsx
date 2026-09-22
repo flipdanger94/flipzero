@@ -6,8 +6,8 @@ import { useModalA11y } from "@/hooks/use-modal-a11y";
 
 type Invite = { code: string; uses: number; maxUses: number | null; expiresAt: string | null; createdAt: string };
 
-export function InviteManagerDialog({
-  const dialogRef = useModalA11y(onClose); spaceId, onClose }: { spaceId: string; onClose: () => void }) {
+export function InviteManagerDialog({spaceId, onClose }: { spaceId: string; onClose: () => void }) {
+  const dialogRef = useModalA11y(onClose);
   const [items, setItems] = useState<Invite[]>([]);
   const [loading, setLoading] = useState(true);
   const [working, setWorking] = useState(false);
