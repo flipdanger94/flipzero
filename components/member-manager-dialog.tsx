@@ -8,8 +8,8 @@ import { useModalA11y } from "@/hooks/use-modal-a11y";
 type Role = { id: string; name: string; color: string; isManaged: boolean };
 type Member = { userId: string; username: string; displayName: string; nickname: string | null; level: number; joinedAt: string; avatarUrl?: string | null; roleIds: string[] };
 
-export function MemberManagerDialog({
-  const dialogRef = useModalA11y(onClose); spaceId, onClose }: { spaceId: string; onClose: () => void }) {
+export function MemberManagerDialog({spaceId, onClose }: { spaceId: string; onClose: () => void }) {
+  const dialogRef = useModalA11y(onClose);
   const [items, setItems] = useState<Member[]>([]);
   const [roles, setRoles] = useState<Role[]>([]);
   const [ownerId, setOwnerId] = useState("");
