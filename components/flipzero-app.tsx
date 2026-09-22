@@ -119,7 +119,7 @@ export default function Home({ initialSpaceId, initialChannelId }: { initialSpac
   const canManageServer = Boolean(activeSpace && (isSpaceOwner || hasPermission(spacePermissions, Permission.ManageSpace)));
   const canManageMembers = Boolean(activeSpace && (isSpaceOwner || hasPermission(spacePermissions, Permission.ManageRoles) || hasPermission(spacePermissions, Permission.KickMembers)));
   const canModerate = Boolean(activeSpace && (isSpaceOwner || hasPermission(spacePermissions, Permission.ModerateMembers) || hasPermission(spacePermissions, Permission.KickMembers) || hasPermission(spacePermissions, Permission.BanMembers)));
-  const canInvite = Boolean(activeSpace && (isSpaceOwner || hasPermission(spacePermissions, Permission.CreateInvites)));
+  const canInvite = Boolean(activeSpace && (isSpaceOwner || hasPermission(spacePermissions, Permission.CreateInvites) || hasPermission(spacePermissions, Permission.ManageSpace)));
   useEffect(() => {
     if (!activeSpaceId || !showMembers) return;
     let cancelled = false;
