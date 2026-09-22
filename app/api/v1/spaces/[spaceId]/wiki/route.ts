@@ -4,6 +4,8 @@ import { NextResponse } from "next/server";
 import { getDatabase } from "@/db/client";
 import { members, spaces, wikiPages, wikiRevisions } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
+import { getSpacePermissions } from "@/lib/space-permissions";
+import { hasPermission, Permission } from "@/lib/permissions";
 
 async function requireMember(spaceId: string) {
   const user = await getCurrentUser();
@@ -11,7 +13,9 @@ async function requireMember(spaceId: string) {
   const database = getDatabase();
   const [membership] = await database.select({ ownerId: spaces.ownerId }).from(members).innerJoin(spaces, eq(spaces.id, members.spaceId)).where(and(eq(members.spaceId, spaceId), eq(members.userId, user.id))).limit(1);
   if (!membership) return { error: NextResponse.json({ code: "FORBIDDEN", message: "Вы не состоите в этом сообществе." }, { status: 403 }) };
-  return { database, user, isOwner: membership.ownerId === user.id };
+  const isOwner = membership.ownerId === user.id;
+  const permissionState = isOwner ? { permissions: Permission.Administrator } : await getSpacePermissions(spaceId, user.id);
+  return { database, user, isOwner, canManage: isOwner || hasPermission(permissionState.permissions, Permission.ManageSpace) };
 }
 
 function pageInput(body: Record<string, unknown> | null) {
@@ -36,14 +40,14 @@ export async function GET(request: Request, { params }: { params: Promise<{ spac
     return NextResponse.json({ revisions });
   }
   const pages = await access.database.select().from(wikiPages).where(eq(wikiPages.spaceId, spaceId)).orderBy(desc(wikiPages.updatedAt)).limit(100);
-  return NextResponse.json({ pages, isOwner: access.isOwner });
+  return NextResponse.json({ pages, canManage: access.canManage });
 }
 
 export async function POST(request: Request, { params }: { params: Promise<{ spaceId: string }> }) {
   const { spaceId } = await params;
   const access = await requireMember(spaceId);
   if ("error" in access) return access.error;
-  if (!access.isOwner) return NextResponse.json({ code: "FORBIDDEN", message: "Создавать статьи может только владелец." }, { status: 403 });
+  if (!access.canManage) return NextResponse.json({ code: "FORBIDDEN", message: "Недостаточно прав для создания статей." }, { status: 403 });
   const input = pageInput(await request.json().catch(() => null));
   if (input.title.length < 2 || input.content.length < 10) return NextResponse.json({ code: "INVALID_INPUT", message: "Добавьте название и текст статьи." }, { status: 400 });
   const pageId = randomUUID();
@@ -59,7 +63,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ sp
   const { spaceId } = await params;
   const access = await requireMember(spaceId);
   if ("error" in access) return access.error;
-  if (!access.isOwner) return NextResponse.json({ code: "FORBIDDEN", message: "Редактировать статьи может только владелец." }, { status: 403 });
+  if (!access.canManage) return NextResponse.json({ code: "FORBIDDEN", message: "Недостаточно прав для редактирования статей." }, { status: 403 });
   const body = await request.json().catch(() => null) as Record<string, unknown> | null;
   const input = pageInput(body);
   if (typeof body?.id !== "string" || input.title.length < 2 || input.content.length < 10) return NextResponse.json({ code: "INVALID_INPUT", message: "Добавьте название и текст статьи." }, { status: 400 });
@@ -78,7 +82,7 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ s
   const { spaceId } = await params;
   const access = await requireMember(spaceId);
   if ("error" in access) return access.error;
-  if (!access.isOwner) return NextResponse.json({ code: "FORBIDDEN", message: "Удалять статьи может только владелец." }, { status: 403 });
+  if (!access.canManage) return NextResponse.json({ code: "FORBIDDEN", message: "Недостаточно прав для удаления статей." }, { status: 403 });
   const pageId = new URL(request.url).searchParams.get("pageId");
   if (!pageId) return NextResponse.json({ code: "INVALID_INPUT", message: "Статья не выбрана." }, { status: 400 });
   await access.database.delete(wikiPages).where(and(eq(wikiPages.id, pageId), eq(wikiPages.spaceId, spaceId)));
