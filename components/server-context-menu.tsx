@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Activity, Bell, BookOpen, CalendarDays, ChevronRight, Copy, FolderPlus, Gavel, Hash, Image as ImageIcon, Link2, LogOut, Settings2, ShieldCheck, Trash2, Trophy, Users } from "lucide-react";
 
-type Props = { name: string; canManage: boolean; isOwner: boolean; onClose: () => void; onSettings: () => void; onRoles: () => void; onInvite: () => void; onCommunityLink: () => void; onProgress: () => void; onEvents: () => void; onWiki: () => void; onMembers: () => void; onModeration: () => void; onSystem: () => void; onCreateChannel: () => void; onCreateCategory: () => void; onAppearance: () => void; onLeave: () => void; onDelete: () => void };
+type Props = { name: string; canManageServer: boolean; canManageChannels: boolean; canManageRoles: boolean; canManageMembers: boolean; canModerate: boolean; canInvite: boolean; isOwner: boolean; onClose: () => void; onSettings: () => void; onRoles: () => void; onInvite: () => void; onCommunityLink: () => void; onProgress: () => void; onEvents: () => void; onWiki: () => void; onMembers: () => void; onModeration: () => void; onSystem: () => void; onCreateChannel: () => void; onCreateCategory: () => void; onAppearance: () => void; onLeave: () => void; onDelete: () => void };
 
 export function ServerContextMenu(props: Props) {
   const menuRef = useRef<HTMLDivElement>(null);
@@ -21,21 +21,21 @@ export function ServerContextMenu(props: Props) {
   }, [props]);
   const item = (label: string, icon: React.ReactNode, action: () => void, danger = false) => <button role="menuitem" className={danger ? "danger" : ""} onClick={() => { action(); props.onClose(); }}>{icon}<span>{label}</span></button>;
   return <><button className="server-menu-overlay" aria-label="Закрыть меню" onClick={props.onClose} /><div ref={menuRef} className="server-context-menu" role="menu" aria-label={`Меню ${props.name}`}>
-    {props.canManage ? item("Настройки сервера", <Settings2 size={17} />, props.onSettings) : null}
-    {props.canManage ? item("Роли и права", <ShieldCheck size={17} />, props.onRoles) : null}
-    {item("Пригласить участников", <Link2 size={17} />, props.onInvite)}
+    {props.canManageServer ? item("Настройки сервера", <Settings2 size={17} />, props.onSettings) : null}
+    {props.canManageRoles ? item("Роли и права", <ShieldCheck size={17} />, props.onRoles) : null}
+    {props.canInvite ? item("Пригласить участников", <Link2 size={17} />, props.onInvite) : null}
     {item("Ссылка сообщества", <Copy size={17} />, props.onCommunityLink)}
     {item("Прогресс и награды", <Trophy size={17} />, props.onProgress)}
     {item("События сообщества", <CalendarDays size={17} />, props.onEvents)}
     {item("База знаний", <BookOpen size={17} />, props.onWiki)}
-    {props.canManage ? item("Управление участниками", <Users size={17} />, props.onMembers) : null}
-    {props.canManage ? item("Модерация и журнал", <Gavel size={17} />, props.onModeration) : null}
+    {props.canManageMembers ? item("Управление участниками", <Users size={17} />, props.onMembers) : null}
+    {props.canModerate ? item("Модерация и журнал", <Gavel size={17} />, props.onModeration) : null}
     {item("Состояние системы", <Activity size={17} />, props.onSystem)}
     <button role="menuitem" aria-expanded={notificationsOpen} onClick={() => setNotificationsOpen((value) => !value)}><Bell size={17} /><span>Уведомления сервера</span><ChevronRight className={notificationsOpen ? "rotated" : ""} size={15} /></button>
     {notificationsOpen ? <div className="server-notification-submenu" role="group" aria-label="Режим уведомлений">{[["all", "Все"], ["mentions", "Только упоминания"], ["off", "Отключить"]].map(([value, label]) => <button role="menuitem" className={notificationMode === value ? "selected" : ""} key={value} onClick={() => setNotificationMode(value)}>{label}</button>)}</div> : null}
-    {props.canManage ? item("Создать канал", <Hash size={17} />, props.onCreateChannel) : null}
-    {props.canManage ? item("Создать категорию", <FolderPlus size={17} />, props.onCreateCategory) : null}
-    {props.canManage ? item("Изменить баннер/иконку", <ImageIcon size={17} />, props.onAppearance) : null}
+    {props.canManageChannels ? item("Создать канал", <Hash size={17} />, props.onCreateChannel) : null}
+    {props.canManageChannels ? item("Создать категорию", <FolderPlus size={17} />, props.onCreateCategory) : null}
+    {props.canManageServer ? item("Изменить баннер/иконку", <ImageIcon size={17} />, props.onAppearance) : null}
     <div className="server-menu-divider" />
     {!props.isOwner ? item("Выйти из сообщества", <LogOut size={17} />, props.onLeave, true) : null}
     {props.isOwner ? item("Удалить сервер", <Trash2 size={17} />, props.onDelete, true) : null}
