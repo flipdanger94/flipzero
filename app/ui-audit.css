@@ -15,3 +15,5 @@
 .app-shell .channel-group,.app-shell .channel-row{min-width:0}
 .app-shell>.member-panel{overflow-y:auto}
 @media (min-width:768px) and (max-height:700px){.app-shell .typing{display:none}.app-shell .composer-wrap{padding-bottom:9px}.app-shell .message-list{padding-top:14px;padding-bottom:10px}.app-shell .channel-intro{padding-top:18px;padding-bottom:12px}}
+
+.fz-profile-state-actions{display:flex;flex-wrap:wrap;justify-content:center;gap:8px}.fz-profile-state-actions button{min-height:38px;border:1px solid rgba(255,255,255,.1);border-radius:9px;background:#20242d;color:#d7dde6;padding:0 13px;font-size:.6rem;font-weight:700;cursor:pointer}
