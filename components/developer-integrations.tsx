@@ -24,6 +24,7 @@ export function DeveloperIntegrations({ appId }: { appId: string }) {
   const [secret, setSecret] = useState<SecretNotice>(null);
   const [copied, setCopied] = useState(false);
   const [authorizeCopied, setAuthorizeCopied] = useState(false);
+  const [installCopied, setInstallCopied] = useState(false);
   const [loading, setLoading] = useState(true);
   const [working, setWorking] = useState(false);
   const [error, setError] = useState("");
@@ -119,7 +120,14 @@ export function DeveloperIntegrations({ appId }: { appId: string }) {
     window.setTimeout(() => setCopied(false), 1500);
   }
 
+  const installPath = `/oauth/install?app_id=${encodeURIComponent(appId)}`;
   const authorizePath = oauth?.redirectUris[0] ? `/oauth/authorize?client_id=${encodeURIComponent(oauth.clientId)}&redirect_uri=${encodeURIComponent(oauth.redirectUris[0])}&response_type=code&scope=${encodeURIComponent(oauth.scopes.join(" "))}` : "";
+
+  async function copyInstallUrl() {
+    await navigator.clipboard.writeText(`${window.location.origin}${installPath}`);
+    setInstallCopied(true);
+    window.setTimeout(() => setInstallCopied(false), 1500);
+  }
 
   async function copyAuthorizeUrl() {
     if (!authorizePath) return;
@@ -140,7 +148,7 @@ export function DeveloperIntegrations({ appId }: { appId: string }) {
     {secret ? <div className="secret-reveal"><ShieldCheck size={18} /><div><strong>{secret.title}</strong><span>Скопируйте сейчас: повторно secret не показывается.</span><code>{secret.value}</code></div><button onClick={copySecret}>{copied ? <Check size={15} /> : <Copy size={15} />}</button></div> : null}
 
     {tab === "bot" ? <div className="developer-section">
-      <div className="developer-section-head"><div><small>BOT INSTALLATIONS</small><h4>Установка приложения</h4><p>Подключите приложение только к тем серверам, события которых оно должно получать. Пока приложение не установлено, webhooks сервера ему не отправляются.</p></div></div>
+      <div className="developer-section-head"><div><small>BOT INSTALLATIONS</small><h4>Установка приложения</h4><p>Подключите приложение только к тем серверам, события которых оно должно получать. Пока приложение не установлено, webhooks сервера ему не отправляются.</p></div></div><div className="bot-install-link"><div><span>Install link</span><code>{installPath}</code></div><button onClick={copyInstallUrl} title="Копировать ссылку установки">{installCopied ? <Check size={14} /> : <Copy size={14} />}</button></div>
       <div className="bot-install-list">{spaces.map((space) => <article key={space.id} className={space.installation ? "installed" : ""}><span className="bot-space-icon" style={{ background: space.accentColor }}>{space.name.slice(0, 2).toLocaleUpperCase("ru")}</span><div><strong>{space.name}</strong><small>{space.installation ? "Приложение установлено · events:read" : "Нет доступа к событиям сервера"}</small></div><button disabled={working} onClick={() => toggleInstallation(space)}>{space.installation ? "Удалить" : "Установить"}</button></article>)}{!spaces.length ? <div className="developer-empty">Для установки нужен сервер, владельцем которого вы являетесь.</div> : null}</div>
     </div> : null}
 
