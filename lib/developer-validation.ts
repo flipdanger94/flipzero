@@ -57,7 +57,7 @@ export function validateRedirectUris(input: unknown): ValidationResult<string[]>
   return { ok: true, value: unique };
 }
 
-export function isPrivateWebhookIp(address: string) {
+export function isPrivateWebhookIp(address: string): boolean {
   if (isIP(address) === 4) {
     const octets = address.split(".").map(Number);
     const [a, b] = octets;
