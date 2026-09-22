@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, lt } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { getDatabase } from "@/db/client";
 import { channels, users, voiceStates } from "@/db/schema";
@@ -19,8 +19,10 @@ async function accessVoice(channelId: string) {
 
 export async function GET(_: Request, { params }: { params: Promise<{ channelId: string }> }) {
   const { channelId } = await params; const access = await accessVoice(channelId); if ("error" in access) return access.error;
+  const staleBefore = new Date(Date.now() - 2 * 60 * 1000);
+  await access.db.delete(voiceStates).where(lt(voiceStates.updatedAt, staleBefore));
   const participants = await access.db.select({ userId: voiceStates.userId, displayName: users.displayName, username: users.username, avatarUrl: users.avatarUrl, selfMuted: voiceStates.selfMuted, selfDeafened: voiceStates.selfDeafened, streaming: voiceStates.streaming, joinedAt: voiceStates.joinedAt }).from(voiceStates).innerJoin(users, eq(users.id, voiceStates.userId)).where(eq(voiceStates.channelId, channelId));
-  return NextResponse.json({ participants });
+  return NextResponse.json({ participants }, { headers: { "cache-control": "no-store" } });
 }
 
 export async function POST(_: Request, { params }: { params: Promise<{ channelId: string }> }) {
