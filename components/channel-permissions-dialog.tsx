@@ -9,7 +9,7 @@ type Override = { roleId: string; allow: number; deny: number };
 type State = "inherit" | "allow" | "deny";
 const permissionOptions = [
   ["Просмотр канала", Permission.ViewChannels], ["Отправка сообщений", Permission.SendMessages],
-  ["Управление сообщениями", Permission.ManageMessages], ["Управление каналом", Permission.ManageChannels],
+  ["Управление сообщениями", Permission.ManageMessages],
   ["Подключение к голосу", Permission.ConnectVoice],
   ["Использование микрофона", Permission.SpeakVoice], ["Запуск трансляций", Permission.Stream],
 ] as const;
