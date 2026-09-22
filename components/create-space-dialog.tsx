@@ -6,8 +6,8 @@ import { useModalA11y } from "@/hooks/use-modal-a11y";
 
 type CreatedSpace = { id: string; name: string; slug: string; description: string | null; accentColor: string; categories: Array<{ id: string; spaceId: string; name: string; position: number }>; channels: Array<{ id: string; name: string; kind: string; topic: string | null; parentId: string | null }> };
 
-export function CreateSpaceDialog({
-  const dialogRef = useModalA11y(onClose); onClose, onCreated }: { onClose: () => void; onCreated: (space: CreatedSpace) => void }) {
+export function CreateSpaceDialog({onClose, onCreated }: { onClose: () => void; onCreated: (space: CreatedSpace) => void }) {
+  const dialogRef = useModalA11y(onClose);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
