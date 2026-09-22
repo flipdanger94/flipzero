@@ -38,6 +38,10 @@ export const ALL_PERMISSION_MASK =
   Permission.Stream |
   Permission.Administrator;
 
+export function expandPermissions(value: number) {
+  return (value & Permission.Administrator) === Permission.Administrator ? ALL_PERMISSION_MASK : value;
+}
+
 export function hasPermission(value: number, permission: number) {
   return (value & Permission.Administrator) === Permission.Administrator || (value & permission) === permission;
 }
