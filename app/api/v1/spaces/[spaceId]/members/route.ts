@@ -106,7 +106,8 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ s
   if (!targetMember) return NextResponse.json({ code: "NOT_FOUND", message: "Участник не найден." }, { status: 404 });
   if (userId === access.user.id) return NextResponse.json({ code: "SELF_KICK", message: "Нельзя исключить самого себя этим действием." }, { status: 409 });
   if (userId === access.space.ownerId) return NextResponse.json({ code: "OWNER_PROTECTED", message: "Владельца нельзя исключить." }, { status: 409 });
-  const targetRoles = await access.database.select({ position: roles.position }).from(memberRoles).innerJoin(roles, eq(roles.id, memberRoles.roleId)).where(and(eq(memberRoles.spaceId, spaceId), eq(memberRoles.userId, userId)));
+  const targetRoles = await access.database.select({ position: roles.position, permissions: roles.permissions }).from(memberRoles).innerJoin(roles, eq(roles.id, memberRoles.roleId)).where(and(eq(memberRoles.spaceId, spaceId), eq(memberRoles.userId, userId)));
+  if (!access.owner && targetRoles.some((role) => hasPermission(Number(role.permissions), Permission.Administrator))) return NextResponse.json({ code: "ROLE_HIERARCHY", message: "Нельзя исключить участника с правами администратора." }, { status: 403 });
   const targetTop = Math.max(0, ...targetRoles.map((role) => role.position));
   if (!access.owner && targetTop >= access.topPosition) return NextResponse.json({ code: "ROLE_HIERARCHY", message: "Нельзя исключить участника с равной или более высокой ролью." }, { status: 403 });
   await access.database.transaction(async (tx) => {
