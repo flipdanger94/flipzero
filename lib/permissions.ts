@@ -22,6 +22,22 @@ export const Permission = {
 
 export type PermissionName = keyof typeof Permission;
 
+export const ALL_PERMISSION_MASK =
+  Permission.ViewChannels |
+  Permission.SendMessages |
+  Permission.ManageMessages |
+  Permission.ManageChannels |
+  Permission.ManageRoles |
+  Permission.ManageSpace |
+  Permission.CreateInvites |
+  Permission.KickMembers |
+  Permission.BanMembers |
+  Permission.ModerateMembers |
+  Permission.ConnectVoice |
+  Permission.SpeakVoice |
+  Permission.Stream |
+  Permission.Administrator;
+
 export function hasPermission(value: number, permission: number) {
   return (value & Permission.Administrator) === Permission.Administrator || (value & permission) === permission;
 }
