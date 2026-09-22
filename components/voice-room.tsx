@@ -298,11 +298,12 @@ export function VoiceRoom({
   function saveDevicePreference(key: "inputId" | "outputId", value: string) {
     try { const current = JSON.parse(localStorage.getItem("flipzero:audio-devices:v1") ?? "{}"); localStorage.setItem("flipzero:audio-devices:v1", JSON.stringify({ ...current, [key]: value })); } catch {}
   }
-  function toggleDeafen() {
+  async function toggleDeafen() {
     const next = !deafenedRef.current;
     deafenedRef.current = next;
     audioRef.current?.querySelectorAll("audio").forEach((audio) => { audio.muted = next; });
     setDeafened(next);
+    void fetch(`/api/v1/channels/${channelId}/voice`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ selfDeafened: next }) });
   }
   async function enableAudio() {
     const room = roomRef.current;
@@ -399,7 +400,7 @@ export function VoiceRoom({
     const room = roomRef.current;
     if (!room) return;
     const next = !muted;
-    try { await room.localParticipant.setMicrophoneEnabled(!next); setMuted(next); setError(""); }
+    try { await room.localParticipant.setMicrophoneEnabled(!next); setMuted(next); void fetch(`/api/v1/channels/${channelId}/voice`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ selfMuted: next }) }); setError(""); }
     catch { setError("Не удалось включить микрофон. Разрешите доступ в настройках браузера."); }
   }
   async function toggleCamera() {
@@ -424,6 +425,7 @@ export function VoiceRoom({
     try {
       await room.localParticipant.setScreenShareEnabled(next);
       setSharing(next);
+      void fetch(`/api/v1/channels/${channelId}/voice`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ streaming: next }) });
       if (next) attachLocal(Track.Source.ScreenShare, localScreenRef.current);
       else clearMedia(localScreenRef.current);
       setError("");
