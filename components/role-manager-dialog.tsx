@@ -15,8 +15,8 @@ const permissionOptions = [
   ["Подключение к голосу", Permission.ConnectVoice], ["Голос и трансляции", Permission.SpeakVoice | Permission.Stream],
 ] as const;
 
-export function RoleManagerDialog({
-  const dialogRef = useModalA11y(onClose); spaceId, onClose }: { spaceId: string; onClose: () => void }) {
+export function RoleManagerDialog({spaceId, onClose }: { spaceId: string; onClose: () => void }) {
+  const dialogRef = useModalA11y(onClose);
   const [items, setItems] = useState<Role[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
