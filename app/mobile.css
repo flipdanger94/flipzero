@@ -1346,3 +1346,5 @@ html[data-motion="off"] *::after {
     min-width: 0 !important;
   }
 }
+
+/* production refresh: mobile DM composer viewport fix */
