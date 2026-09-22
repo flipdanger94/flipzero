@@ -54,3 +54,14 @@ CREATE TABLE IF NOT EXISTS "developer_oauth_access_tokens" (
 );
 CREATE UNIQUE INDEX IF NOT EXISTS "developer_oauth_access_token_hash_unique" ON "developer_oauth_access_tokens" ("token_hash");
 CREATE INDEX IF NOT EXISTS "developer_oauth_access_token_app_user_idx" ON "developer_oauth_access_tokens" ("app_id", "user_id");
+
+CREATE TABLE IF NOT EXISTS "developer_app_installations" (
+  "app_id" text NOT NULL REFERENCES "developer_apps"("id") ON DELETE cascade,
+  "space_id" text NOT NULL REFERENCES "spaces"("id") ON DELETE cascade,
+  "installed_by_id" text NOT NULL REFERENCES "users"("id") ON DELETE cascade,
+  "permissions" jsonb DEFAULT '["events:read"]'::jsonb NOT NULL,
+  "created_at" timestamp with time zone DEFAULT now() NOT NULL,
+  "updated_at" timestamp with time zone DEFAULT now() NOT NULL
+);
+CREATE UNIQUE INDEX IF NOT EXISTS "developer_app_installation_unique" ON "developer_app_installations" ("app_id", "space_id");
+CREATE INDEX IF NOT EXISTS "developer_app_installations_space_idx" ON "developer_app_installations" ("space_id");
