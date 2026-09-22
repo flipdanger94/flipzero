@@ -22,7 +22,8 @@ async function requireRoleManager(spaceId: string) {
     if (!hasPermission(permissions, Permission.ManageRoles)) return { error: NextResponse.json({ code: "FORBIDDEN", message: "Недостаточно прав для управления ролями." }, { status: 403 }) };
   }
   const assigned = space.ownerId === user.id ? [] : await database.select({ permissions: roles.permissions, position: roles.position }).from(memberRoles).innerJoin(roles, eq(roles.id, memberRoles.roleId)).where(and(eq(memberRoles.spaceId, spaceId), eq(memberRoles.userId, user.id)));
-  return { database, user, space, owner: space.ownerId === user.id, topPosition: space.ownerId === user.id ? Number.MAX_SAFE_INTEGER : Math.max(0, ...assigned.map((role) => role.position)) };
+  const permissions = space.ownerId === user.id ? Permission.Administrator : assigned.reduce((value, role) => value | Number(role.permissions), 0);
+  return { database, user, space, owner: space.ownerId === user.id, topPosition: space.ownerId === user.id ? Number.MAX_SAFE_INTEGER : Math.max(0, ...assigned.map((role) => role.position)), permissions };
 }
 
 export async function GET(_: Request, { params }: { params: Promise<{ spaceId: string }> }) {
@@ -39,7 +40,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ spa
   if ("error" in access) return access.error;
   const parsed = roleSchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ code: "INVALID_INPUT", message: "Проверьте название, цвет и права роли." }, { status: 400 });
-  if (!access.owner && hasPermission(parsed.data.permissions, Permission.Administrator)) return NextResponse.json({ code: "ROLE_ESCALATION", message: "Только владелец может создавать роль администратора." }, { status: 403 });
+  if (!access.owner && (hasPermission(parsed.data.permissions, Permission.Administrator) || (parsed.data.permissions & ~access.permissions) !== 0)) return NextResponse.json({ code: "ROLE_ESCALATION", message: "Нельзя создать роль с правами, которых нет у вас." }, { status: 403 });
   const [position] = await access.database.select({ value: max(roles.position) }).from(roles).where(eq(roles.spaceId, spaceId));
   const nextPosition = access.owner ? Math.max(1, (position.value ?? 0) + 1) : Math.max(1, access.topPosition - 1);
   const [created] = await access.database.insert(roles).values({ id: randomUUID(), spaceId, ...parsed.data, position: nextPosition, isManaged: false }).returning();
@@ -57,7 +58,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ sp
   if (!existing) return NextResponse.json({ code: "NOT_FOUND", message: "Роль не найдена." }, { status: 404 });
   if (existing.isManaged) return NextResponse.json({ code: "PROTECTED_ROLE", message: "Системную роль нельзя изменять." }, { status: 409 });
   if (!access.owner && existing.position >= access.topPosition) return NextResponse.json({ code: "ROLE_HIERARCHY", message: "Нельзя изменять роль на уровне вашей высшей роли или выше." }, { status: 403 });
-  if (!access.owner && hasPermission(parsed.data.permissions, Permission.Administrator)) return NextResponse.json({ code: "ROLE_ESCALATION", message: "Только владелец может выдавать право администратора." }, { status: 403 });
+  if (!access.owner && (hasPermission(parsed.data.permissions, Permission.Administrator) || (parsed.data.permissions & ~access.permissions) !== 0)) return NextResponse.json({ code: "ROLE_ESCALATION", message: "Нельзя выдать роли права, которых нет у вас." }, { status: 403 });
   const [updated] = await access.database.update(roles).set(parsed.data).where(and(eq(roles.id, body.id), eq(roles.spaceId, spaceId))).returning();
   return NextResponse.json({ role: updated });
 }
