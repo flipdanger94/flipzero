@@ -2,10 +2,11 @@ import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { and, desc, eq, sql } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { getDatabase } from "@/db/client";
-import { developerWebhooks } from "@/db/developer-schema";
+import { developerWebhookDeliveries, developerWebhooks } from "@/db/developer-schema";
 import { developerApps } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
 import { encryptDeveloperSecret } from "@/lib/developer-secret";
+import { testDeveloperWebhook } from "@/lib/developer-webhooks";
 import { normalizeWebhookEvents, validateWebhookUrl } from "@/lib/developer-validation";
 
 async function requireOwnedApp(appId: string | null) {
@@ -45,7 +46,23 @@ export async function GET(request: Request) {
     createdAt: developerWebhooks.createdAt,
     updatedAt: developerWebhooks.updatedAt,
   }).from(developerWebhooks).where(eq(developerWebhooks.appId, access.app.id)).orderBy(desc(developerWebhooks.createdAt));
-  return NextResponse.json({ webhooks });
+  const deliveries = webhooks.length ? await access.database.select({
+    id: developerWebhookDeliveries.id,
+    webhookId: developerWebhookDeliveries.webhookId,
+    eventId: developerWebhookDeliveries.eventId,
+    eventType: developerWebhookDeliveries.eventType,
+    status: developerWebhookDeliveries.status,
+    responseStatus: developerWebhookDeliveries.responseStatus,
+    durationMs: developerWebhookDeliveries.durationMs,
+    error: developerWebhookDeliveries.error,
+    createdAt: developerWebhookDeliveries.createdAt,
+    completedAt: developerWebhookDeliveries.completedAt,
+  }).from(developerWebhookDeliveries)
+    .innerJoin(developerWebhooks, eq(developerWebhooks.id, developerWebhookDeliveries.webhookId))
+    .where(eq(developerWebhooks.appId, access.app.id))
+    .orderBy(desc(developerWebhookDeliveries.createdAt))
+    .limit(100) : [];
+  return NextResponse.json({ webhooks: webhooks.map((webhook) => ({ ...webhook, deliveries: deliveries.filter((delivery) => delivery.webhookId === webhook.id).slice(0, 5) })) });
 }
 
 export async function POST(request: Request) {
@@ -53,6 +70,14 @@ export async function POST(request: Request) {
   const appId = typeof body?.appId === "string" ? body.appId : null;
   const access = await requireOwnedApp(appId);
   if ("error" in access) return access.error;
+
+  if (body?.action === "test_delivery") {
+    if (typeof body.webhookId !== "string") return NextResponse.json({ code: "INVALID_INPUT", message: "Webhook не выбран." }, { status: 400 });
+    const webhook = await findOwnedWebhook(access.database, access.app.id, body.webhookId);
+    if (!webhook) return NextResponse.json({ code: "NOT_FOUND", message: "Webhook не найден." }, { status: 404 });
+    const result = await testDeveloperWebhook(webhook.id);
+    return NextResponse.json({ delivered: result.ok, message: result.ok ? "Тестовый webhook доставлен." : "Endpoint не подтвердил доставку." });
+  }
 
   if (body?.action === "regenerate_secret") {
     if (typeof body.webhookId !== "string") return NextResponse.json({ code: "INVALID_INPUT", message: "Webhook не выбран." }, { status: 400 });
