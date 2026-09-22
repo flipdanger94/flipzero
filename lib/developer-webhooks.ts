@@ -1,12 +1,38 @@
 import "server-only";
 import { and, eq } from "drizzle-orm";
 import { randomUUID } from "node:crypto";
+import { lookup } from "node:dns/promises";
+import { isIP } from "node:net";
 import { getDatabase } from "@/db/client";
 import { developerAppInstallations, developerWebhooks } from "@/db/developer-schema";
 import { developerApps, spaces } from "@/db/schema";
 import { decryptDeveloperSecret, signDeveloperPayload } from "@/lib/developer-secret";
 
 export type DeveloperWebhookEvent = "message.created" | "member.joined" | "member.left" | "space.updated";
+
+function isPrivateIp(address: string) {
+  if (isIP(address) === 4) {
+    const octets = address.split(".").map(Number);
+    const [a, b] = octets;
+    return a === 0 || a === 10 || a === 127 || (a === 100 && b >= 64 && b <= 127) ||
+      (a === 169 && b === 254) || (a === 172 && b >= 16 && b <= 31) ||
+      (a === 192 && b === 168) || (a === 198 && (b === 18 || b === 19)) || a >= 224;
+  }
+  const normalized = address.toLowerCase();
+  if (normalized === "::1" || normalized === "::") return true;
+  if (normalized.startsWith("fc") || normalized.startsWith("fd") || normalized.startsWith("fe8") || normalized.startsWith("fe9") || normalized.startsWith("fea") || normalized.startsWith("feb")) return true;
+  if (normalized.startsWith("::ffff:")) {
+    const mapped = normalized.slice(7);
+    return isIP(mapped) === 4 ? isPrivateIp(mapped) : true;
+  }
+  return false;
+}
+
+async function assertPublicWebhookTarget(rawUrl: string) {
+  const url = new URL(rawUrl);
+  const addresses = await lookup(url.hostname, { all: true, verbatim: true });
+  if (!addresses.length || addresses.some(({ address }) => isPrivateIp(address))) throw new Error("Webhook target resolved to a private or reserved address");
+}
 
 type WebhookEnvelope = {
   id: string;
@@ -49,6 +75,7 @@ export async function dispatchDeveloperEvent(spaceId: string, event: DeveloperWe
   const timestamp = Math.floor(Date.now() / 1000).toString();
 
   const results = await Promise.allSettled(matching.map(async (endpoint) => {
+    await assertPublicWebhookTarget(endpoint.url);
     const secret = decryptDeveloperSecret(endpoint.secretCiphertext);
     const signature = signDeveloperPayload(secret, `${timestamp}.${payload}`);
     const response = await fetch(endpoint.url, {
