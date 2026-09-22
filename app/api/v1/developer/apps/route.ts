@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import { getDatabase } from "@/db/client";
 import { apiTokens, developerApps } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
+import { normalizeApiTokenScopes } from "@/lib/developer-validation";
 
 async function requireUser() {
   const user = await getCurrentUser();
@@ -31,7 +32,7 @@ export async function POST(request: Request) {
     if (count >= 5) return NextResponse.json({ code: "TOKEN_LIMIT", message: "Можно иметь не более пяти активных ключей." }, { status: 409 });
     const rawToken = `fz_live_${randomBytes(32).toString("base64url")}`;
     const tokenHash = createHash("sha256").update(rawToken).digest("hex");
-    const [token] = await access.database.insert(apiTokens).values({ id: randomUUID(), appId: app.id, name: typeof body.name === "string" ? body.name.trim().slice(0, 50) || "Основной ключ" : "Основной ключ", tokenHash, prefix: `${rawToken.slice(0, 16)}…`, scopes: ["profile:read", "spaces:read"] }).returning({ id: apiTokens.id, appId: apiTokens.appId, name: apiTokens.name, prefix: apiTokens.prefix, scopes: apiTokens.scopes, createdAt: apiTokens.createdAt });
+    const [token] = await access.database.insert(apiTokens).values({ id: randomUUID(), appId: app.id, name: typeof body.name === "string" ? body.name.trim().slice(0, 50) || "Основной ключ" : "Основной ключ", tokenHash, prefix: `${rawToken.slice(0, 16)}…`, scopes: normalizeApiTokenScopes(body.scopes) }).returning({ id: apiTokens.id, appId: apiTokens.appId, name: apiTokens.name, prefix: apiTokens.prefix, scopes: apiTokens.scopes, createdAt: apiTokens.createdAt });
     return NextResponse.json({ token, secret: rawToken }, { status: 201 });
   }
   const name = typeof body?.name === "string" ? body.name.trim().slice(0, 60) : "";
