@@ -1,0 +1,57 @@
+name: Testing Phase CI
+
+on:
+  push:
+    branches:
+      - feat/testing-phase11
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: phase11-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Tests
+        run: pnpm test
+
+      - name: Lint tests and core validation
+        run: >
+          pnpm exec eslint
+          tests/core.test.ts
+          tests/developer-platform.test.ts
+          tests/validation-permissions.test.ts
+          tests/trust-safety.test.ts
+          lib/auth-validation.ts
+          lib/account-validation.ts
+          lib/space-validation.ts
+          lib/permissions.ts
+          lib/direct-message.ts
+          lib/route-access.ts
+          lib/trust-safety.ts
+
+      - name: Build
+        run: pnpm build
