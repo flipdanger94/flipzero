@@ -6,6 +6,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { getSpacePermissions } from "@/lib/space-permissions";
 import { CHANNEL_PERMISSION_MASK, hasPermission, Permission } from "@/lib/permissions";
 import { resetChannelVoiceRooms } from "@/lib/livekit-admin";
+import { writeSpaceAuditLog } from "@/lib/space-audit";
 
 async function requireManager(channelId: string) {
   const user = await getCurrentUser();
@@ -48,6 +49,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ chan
   await access.db.insert(channelOverrides).values({ channelId, targetId, targetType, allow, deny })
     .onConflictDoUpdate({ target: [channelOverrides.channelId, channelOverrides.targetId], set: { targetType, allow, deny } });
   if (["voice", "stage"].includes(access.channel.kind)) await resetChannelVoiceRooms(access.channel.spaceId, channelId);
+  await writeSpaceAuditLog({ spaceId: access.channel.spaceId, actorId: access.user.id, action: "channel.override.set", targetType, targetId, metadata: { channelId, allow, deny } });
   return NextResponse.json({ targetId, targetType, allow, deny });
 }
 
@@ -58,5 +60,6 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ c
   if (!targetId) return NextResponse.json({ code: "INVALID_INPUT", message: "Не указана роль или участник." }, { status: 400 });
   await access.db.delete(channelOverrides).where(and(eq(channelOverrides.channelId, channelId), eq(channelOverrides.targetId, targetId)));
   if (["voice", "stage"].includes(access.channel.kind)) await resetChannelVoiceRooms(access.channel.spaceId, channelId);
+  await writeSpaceAuditLog({ spaceId: access.channel.spaceId, actorId: access.user.id, action: "channel.override.delete", targetType: "override", targetId, metadata: { channelId } });
   return NextResponse.json({ ok: true });
 }
