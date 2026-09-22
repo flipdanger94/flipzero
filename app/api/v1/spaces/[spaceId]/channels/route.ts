@@ -5,7 +5,7 @@ import { getDatabase } from "@/db/client";
 import { channelCategories, channels, spaces } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
 import { createChannelSchema } from "@/lib/space-validation";
-import { getChannelPermissions, getSpacePermissions } from "@/lib/space-permissions";
+import { getSpacePermissions } from "@/lib/space-permissions";
 import { hasPermission, Permission } from "@/lib/permissions";
 
 export async function POST(request: Request, { params }: { params: Promise<{ spaceId: string }> }) {
@@ -46,7 +46,7 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ s
   if (!space) return NextResponse.json({ code: "NOT_FOUND", message: "Пространство не найдено." }, { status: 404 });
   const [channel] = await database.select({ id: channels.id, kind: channels.kind }).from(channels).where(and(eq(channels.id, channelId), eq(channels.spaceId, spaceId))).limit(1);
   if (!channel) return NextResponse.json({ code: "NOT_FOUND", message: "Канал не найден." }, { status: 404 });
-  if (space.ownerId !== user.id) { const permissionState = await getChannelPermissions(channelId, user.id); if (!hasPermission(permissionState.permissions, Permission.ManageChannels)) return NextResponse.json({ code: "FORBIDDEN", message: "Недостаточно прав для удаления каналов." }, { status: 403 }); }
+  if (space.ownerId !== user.id) { const permissionState = await getSpacePermissions(spaceId, user.id); if (!permissionState.spaceId || !hasPermission(permissionState.permissions, Permission.ManageChannels)) return NextResponse.json({ code: "FORBIDDEN", message: "Недостаточно прав для удаления каналов." }, { status: 403 }); }
   if (channel.kind === "text") {
     const [textCount] = await database.select({ value: count() }).from(channels).where(and(eq(channels.spaceId, spaceId), eq(channels.kind, "text")));
     if (textCount.value <= 1) return NextResponse.json({ code: "LAST_TEXT_CHANNEL", message: "Нельзя удалить последний текстовый канал." }, { status: 409 });
