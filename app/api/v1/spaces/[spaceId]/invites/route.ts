@@ -15,7 +15,7 @@ async function requireInviteManager(spaceId: string) {
   if (!space) return { error: NextResponse.json({ code: "NOT_FOUND", message: "Пространство не найдено." }, { status: 404 }) };
   if (space.ownerId === user.id) return { database, user, owner: true, permissions: Permission.Administrator };
   const state = await getSpacePermissions(spaceId, user.id);
-  if (!state.spaceId || !hasPermission(state.permissions, Permission.CreateInvites)) return { error: NextResponse.json({ code: "FORBIDDEN", message: "Недостаточно прав для создания приглашений." }, { status: 403 }) };
+  if (!state.spaceId || (!hasPermission(state.permissions, Permission.CreateInvites) && !hasPermission(state.permissions, Permission.ManageSpace))) return { error: NextResponse.json({ code: "FORBIDDEN", message: "Недостаточно прав для управления приглашениями." }, { status: 403 }) };
   return { database, user, owner: false, permissions: state.permissions };
 }
 
