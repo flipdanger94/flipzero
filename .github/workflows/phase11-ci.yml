@@ -45,6 +45,7 @@ jobs:
           tests/developer-platform.test.ts
           tests/validation-permissions.test.ts
           tests/trust-safety.test.ts
+          tests/security-premium-boundaries.test.ts
           lib/auth-validation.ts
           lib/account-validation.ts
           lib/space-validation.ts
@@ -52,6 +53,8 @@ jobs:
           lib/direct-message.ts
           lib/route-access.ts
           lib/trust-safety.ts
+          lib/security-controls.ts
+          lib/superflip.ts
 
       - name: Build
         run: pnpm build
