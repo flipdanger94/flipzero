@@ -4,6 +4,8 @@ import { getDatabase } from "@/db/client";
 import { memberRoles, members, spaces } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
 import { updateSpaceSchema } from "@/lib/space-validation";
+import { getSpacePermissions } from "@/lib/space-permissions";
+import { hasPermission, Permission } from "@/lib/permissions";
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ spaceId: string }> }) {
   const [user, { spaceId }] = await Promise.all([getCurrentUser(), params]);
@@ -14,7 +16,10 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ sp
   const database = getDatabase();
   const [space] = await database.select({ ownerId: spaces.ownerId }).from(spaces).where(eq(spaces.id, spaceId)).limit(1);
   if (!space) return NextResponse.json({ code: "NOT_FOUND", message: "Пространство не найдено." }, { status: 404 });
-  if (space.ownerId !== user.id && user.platformRole !== "admin") return NextResponse.json({ code: "FORBIDDEN", message: "Недостаточно прав для изменения пространства." }, { status: 403 });
+  if (space.ownerId !== user.id && user.platformRole !== "admin") {
+    const state = await getSpacePermissions(spaceId, user.id);
+    if (!state.spaceId || !hasPermission(state.permissions, Permission.ManageSpace)) return NextResponse.json({ code: "FORBIDDEN", message: "Недостаточно прав для изменения пространства." }, { status: 403 });
+  }
 
   const [updated] = await database.update(spaces).set({
     name: parsed.data.name,
