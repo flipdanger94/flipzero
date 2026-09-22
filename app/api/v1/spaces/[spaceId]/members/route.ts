@@ -4,6 +4,7 @@ import { getDatabase } from "@/db/client";
 import { memberRoles, members, roles, spaces, users } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
 import { expandPermissions, hasPermission, Permission } from "@/lib/permissions";
+import { evictParticipantFromSpaceVoice } from "@/lib/livekit-admin";
 
 async function requireMemberManager(spaceId: string, requiredPermission: number) {
   const user = await getCurrentUser();
@@ -110,5 +111,6 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ s
     await tx.delete(memberRoles).where(and(eq(memberRoles.userId, userId), eq(memberRoles.spaceId, spaceId)));
     await tx.delete(members).where(and(eq(members.userId, userId), eq(members.spaceId, spaceId)));
   });
+  await evictParticipantFromSpaceVoice(spaceId, userId);
   return NextResponse.json({ ok: true });
 }
