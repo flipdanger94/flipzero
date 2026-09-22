@@ -1348,3 +1348,12 @@ html[data-motion="off"] *::after {
 }
 
 /* production refresh: mobile DM composer viewport fix */
+
+
+/* Production publish marker for the iPhone DM full-width/composer fix.
+   Keep this after all responsive overrides so Vercel rebuilds the exact CSS. */
+@media (max-width: 767px) {
+  .social-hub .direct-layout.has-profile {
+    grid-template-columns: 100% !important;
+  }
+}
