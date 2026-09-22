@@ -45,6 +45,7 @@ jobs:
           lib/developer-secret.ts
           lib/developer-webhooks.ts
           lib/api-auth.ts
+          lib/oauth-pkce.ts
           db/developer-schema.ts
           components/developer-dialog.tsx
           components/developer-integrations.tsx
