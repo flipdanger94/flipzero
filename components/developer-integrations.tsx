@@ -30,7 +30,6 @@ export function DeveloperIntegrations({ appId }: { appId: string }) {
 
   useEffect(() => {
     let cancelled = false;
-    setLoading(true); setError(""); setSecret(null);
     Promise.all([
       fetch(`/api/v1/developer/oauth?appId=${encodeURIComponent(appId)}`, { cache: "no-store" }).then(async (response) => ({ response, data: await json(response) })),
       fetch(`/api/v1/developer/webhooks?appId=${encodeURIComponent(appId)}`, { cache: "no-store" }).then(async (response) => ({ response, data: await json(response) })),
