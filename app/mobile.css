@@ -36,7 +36,7 @@ a {
   touch-action: manipulation;
 }
 
-@media (max-width: 760px) {
+@media (max-width: 767px) {
   :root {
     --mobile-bottom-nav: calc(66px + env(safe-area-inset-bottom));
     --mobile-page-padding: clamp(14px, 4vw, 20px);
@@ -596,7 +596,7 @@ a {
 
 /* Tablet portrait and compact laptop windows keep the desktop information
    architecture, but reduce the rails and turn dense panels into touch UI. */
-@media (min-width: 761px) and (max-width: 1024px) {
+@media (min-width: 768px) and (max-width: 1023px) {
   .app-shell,
   .app-shell.members-hidden {
     grid-template-columns: 64px 220px minmax(0, 1fr);
@@ -693,7 +693,7 @@ a {
   }
 }
 
-@media (max-width: 760px) and (max-height: 520px) and (orientation: landscape) {
+@media (max-width: 767px) and (max-height: 520px) and (orientation: landscape) {
   :root {
     --mobile-bottom-nav: calc(54px + env(safe-area-inset-bottom));
   }
