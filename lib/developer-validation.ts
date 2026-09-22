@@ -55,11 +55,20 @@ export function validateRedirectUris(input: unknown): ValidationResult<string[]>
   return { ok: true, value: unique };
 }
 
+function blockedWebhookHost(hostname: string) {
+  const host = hostname.toLowerCase().replace(/^\[|\]$/g, "");
+  if (host === "localhost" || host.endsWith(".localhost") || host.endsWith(".local") || host.endsWith(".internal")) return true;
+  if (/^\d{1,3}(?:\.\d{1,3}){3}$/.test(host)) return true;
+  if (host.includes(":")) return true;
+  return false;
+}
+
 export function validateWebhookUrl(input: unknown): ValidationResult<string> {
   if (typeof input !== "string" || !input.trim()) return { ok: false, message: "Укажите URL webhook." };
   try {
     const url = new URL(input.trim());
     if (url.protocol !== "https:") return { ok: false, message: "Webhook URL должен использовать HTTPS." };
+    if (blockedWebhookHost(url.hostname)) return { ok: false, message: "Webhook URL должен указывать на публичный HTTPS hostname, а не локальный или IP-адрес." };
     if (url.username || url.password || url.hash) return { ok: false, message: "Webhook URL не должен содержать credentials или fragment." };
     return { ok: true, value: url.toString() };
   } catch {
