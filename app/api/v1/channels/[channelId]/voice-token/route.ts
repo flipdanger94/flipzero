@@ -8,6 +8,14 @@ import { isTrustedMutationRequest } from "@/lib/security-controls";
 import { getChannelPermissions } from "@/lib/space-permissions";
 import { hasPermission, Permission } from "@/lib/permissions";
 
+type PublishSource = NonNullable<Parameters<AccessToken["addGrant"]>[0]["canPublishSources"]>[number];
+const publishSource = {
+  camera: 1 as PublishSource,
+  microphone: 2 as PublishSource,
+  screenShare: 3 as PublishSource,
+  screenShareAudio: 4 as PublishSource,
+};
+
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ channelId: string }> },
@@ -65,11 +73,16 @@ export async function POST(
     ttl: "2h",
     metadata: JSON.stringify({ username: user.username, channelId }),
   });
+  const canPublishSources: PublishSource[] = [];
+  if (canSpeak) canPublishSources.push(publishSource.microphone);
+  if (canStream) canPublishSources.push(publishSource.camera, publishSource.screenShare, publishSource.screenShareAudio);
   accessToken.addGrant({
     roomJoin: true,
     room,
-    canPublish: canSpeak || canStream,
+    canPublish: canPublishSources.length > 0,
+    canPublishSources,
     canSubscribe: true,
+    canPublishData: true,
   });
   return NextResponse.json({ token: await accessToken.toJwt(), url, room, capabilities: { speak: canSpeak, stream: canStream } });
 }
