@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Check, Compass, Gamepad2, GraduationCap, Headphones, LayoutGrid, LoaderCircle, Search, ShieldCheck, Sparkles, Users, X } from "lucide-react";
 import { MediaImage } from "./media-image";
 
-type Community = { id: string; name: string; slug: string; description: string | null; iconUrl: string | null; bannerUrl: string | null; accentColor: string; memberCount: number; joined: boolean };
+type Community = { id: string; name: string; slug: string; description: string | null; iconUrl: string | null; bannerUrl: string | null; accentColor: string; visibility: "public" | "application"; memberCount: number; joined: boolean; joinRequestStatus: string | null };
 type Category = "all" | "gaming" | "music" | "education" | "technology";
 
 const categories: Array<{ id: Category; label: string; icon: React.ReactNode }> = [
@@ -47,18 +47,32 @@ export function DiscoveryDialog({ onClose, onJoined }: { onClose: () => void; on
   const official = visible.find((item) => item.name.toLocaleLowerCase("ru") === "flipzero hq");
   const rest = visible.filter((item) => item.id !== official?.id);
   async function join(spaceId: string) {
+    const item = items.find((entry) => entry.id === spaceId);
+    if (!item) return;
+    let message = "";
+    if (item.visibility === "application") {
+      const value = window.prompt("Коротко расскажите, почему хотите вступить (необязательно):", "");
+      if (value === null) return;
+      message = value;
+    }
     setJoiningId(spaceId); setError("");
-    const response = await fetch("/api/v1/discovery", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ spaceId }) });
+    const response = await fetch("/api/v1/discovery", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ spaceId, message }) });
     const data = await response.json().catch(() => null);
-    if (!response.ok) { setError(data?.message ?? "Не удалось вступить в сообщество."); setJoiningId(null); return; }
-    setItems((current) => current.map((item) => item.id === spaceId ? { ...item, joined: true, memberCount: item.memberCount + (data.joined ? 1 : 0) } : item));
-    setJoiningId(null); await onJoined(spaceId);
+    if (!response.ok) { setError(data?.message ?? "Не удалось отправить запрос."); setJoiningId(null); return; }
+    setItems((current) => current.map((entry) => entry.id === spaceId ? {
+      ...entry,
+      joined: Boolean(data.joined) || entry.joined,
+      memberCount: entry.memberCount + (data.joined && !entry.joined ? 1 : 0),
+      joinRequestStatus: data.requestStatus ?? entry.joinRequestStatus,
+    } : entry));
+    setJoiningId(null);
+    if (data.joined) await onJoined(spaceId);
   }
   const card = (item: Community, featured = false) => <article className={featured ? "discovery-card featured" : "discovery-card"} key={item.id}>
     <div className="discovery-card-banner" style={{ backgroundImage: item.bannerUrl ? `linear-gradient(180deg,transparent,rgba(8,10,14,.78)),url(${item.bannerUrl})` : `linear-gradient(135deg,${item.accentColor},#6f5cff 55%,#10131b)` }} />
     <span className="discovery-card-icon" style={{ background: `linear-gradient(135deg,${item.accentColor},#6f5cff)` }}>{item.iconUrl ? <MediaImage src={item.iconUrl} sizes="58px" /> : item.name.slice(0, 2).toLocaleUpperCase("ru")}</span>
-    <div className="discovery-card-copy"><h3><Link href={`/communities/${encodeURIComponent(item.slug)}`}>{item.name}</Link>{featured ? <ShieldCheck size={16} aria-label="Официальный сервер" /> : null}</h3><p>{item.description || "Открытое сообщество FlipZero"}</p><small><i /> {item.memberCount.toLocaleString("ru-RU")} участников</small></div>
-    <button className={item.joined ? "joined" : ""} onClick={() => item.joined ? onJoined(item.id) : join(item.id)} disabled={joiningId === item.id}>{joiningId === item.id ? <LoaderCircle className="spin" size={16} /> : item.joined ? <><Check size={16} /> Открыть</> : "Вступить"}</button>
+    <div className="discovery-card-copy"><h3><Link href={`/communities/${encodeURIComponent(item.slug)}`}>{item.name}</Link>{featured ? <ShieldCheck size={16} aria-label="Официальный сервер" /> : null}</h3><p>{item.description || (item.visibility === "application" ? "Вступление после одобрения администрации" : "Открытое сообщество FlipZero")}</p><small><i /> {item.memberCount.toLocaleString("ru-RU")} участников{item.visibility === "application" ? " · по заявке" : ""}</small></div>
+    <button className={item.joined || item.joinRequestStatus === "pending" ? "joined" : ""} onClick={() => item.joined ? onJoined(item.id) : item.joinRequestStatus === "pending" ? undefined : join(item.id)} disabled={joiningId === item.id || item.joinRequestStatus === "pending"}>{joiningId === item.id ? <LoaderCircle className="spin" size={16} /> : item.joined ? <><Check size={16} /> Открыть</> : item.joinRequestStatus === "pending" ? "Заявка отправлена" : item.visibility === "application" ? "Подать заявку" : "Вступить"}</button>
   </article>;
   return <div className="dialog-backdrop discovery-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}><section className="discovery-dialog" role="dialog" aria-modal="true" aria-labelledby="discovery-title">
     <button className="discovery-close" onClick={onClose} aria-label="Закрыть"><X size={21} /></button>
