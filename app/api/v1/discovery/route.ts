@@ -88,3 +88,22 @@ export async function POST(request: Request) {
   });
   return NextResponse.json({ spaceId: space.id, joined: inserted });
 }
+
+
+export async function DELETE(request: Request) {
+  const user = await getCurrentUser();
+  if (!user) return NextResponse.json({ code: "UNAUTHENTICATED", message: "Войдите, чтобы отменить заявку." }, { status: 401 });
+  const spaceId = new URL(request.url).searchParams.get("spaceId") ?? "";
+  if (!spaceId) return NextResponse.json({ code: "INVALID_INPUT", message: "Не выбрано сообщество." }, { status: 400 });
+
+  const database = getDatabase();
+  const [pending] = await database.select({ id: spaceJoinRequests.id }).from(spaceJoinRequests).where(and(
+    eq(spaceJoinRequests.spaceId, spaceId),
+    eq(spaceJoinRequests.userId, user.id),
+    eq(spaceJoinRequests.status, "pending"),
+  )).limit(1);
+  if (!pending) return NextResponse.json({ code: "NOT_FOUND", message: "Активная заявка не найдена." }, { status: 404 });
+
+  await database.delete(spaceJoinRequests).where(eq(spaceJoinRequests.id, pending.id));
+  return NextResponse.json({ ok: true, requestStatus: null });
+}
