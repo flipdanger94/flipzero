@@ -1197,3 +1197,5 @@ html[data-motion="off"] *::after {
     justify-content: center !important;
   }
 }
+
+/* deployment refresh: mobile DM full-width composer fix */
