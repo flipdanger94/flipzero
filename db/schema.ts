@@ -196,6 +196,20 @@ export const members = pgTable("members", {
   joinedAt: timestamp("joined_at", { withTimezone: true }).defaultNow().notNull(),
 }, (table) => [primaryKey({ columns: [table.userId, table.spaceId] }), index("members_space_level_idx").on(table.spaceId, table.level)]);
 
+export const spaceAuditLogs = pgTable("space_audit_logs", {
+  id: text("id").primaryKey(),
+  spaceId: text("space_id").notNull().references(() => spaces.id, { onDelete: "cascade" }),
+  actorId: text("actor_id").references(() => users.id, { onDelete: "set null" }),
+  action: text("action").notNull(),
+  targetType: text("target_type"),
+  targetId: text("target_id"),
+  metadata: jsonb("metadata").default({}).notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [
+  index("space_audit_space_created_idx").on(table.spaceId, table.createdAt),
+  index("space_audit_actor_idx").on(table.actorId),
+]);
+
 export const spaceJoinRequests = pgTable("space_join_requests", {
   id: text("id").primaryKey(),
   spaceId: text("space_id").notNull().references(() => spaces.id, { onDelete: "cascade" }),
