@@ -14,7 +14,7 @@ async function accessChannel(channelId: string) {
   const [channel] = await database.select({ id: channels.id, spaceId: channels.spaceId, kind: channels.kind, ownerId: spaces.ownerId }).from(channels).innerJoin(spaces, eq(spaces.id, channels.spaceId)).innerJoin(members, and(eq(members.spaceId, channels.spaceId), eq(members.userId, user.id))).where(eq(channels.id, channelId)).limit(1);
   if (!channel) return { error: NextResponse.json({ code: "FORBIDDEN", message: "Канал недоступен." }, { status: 403 }) };
   const permissionState = await getChannelPermissions(channelId, user.id);
-  if (!permissionState.owner && !hasPermission(permissionState.permissions, SpacePermission.VIEW_CHANNEL)) return { error: NextResponse.json({ code: "FORBIDDEN", message: "Нет права на просмотр канала." }, { status: 403 }) };
+  if (!permissionState.owner && !hasPermission(permissionState.permissions, SpacePermission.ViewChannels)) return { error: NextResponse.json({ code: "FORBIDDEN", message: "Нет права на просмотр канала." }, { status: 403 }) };
   return { database, user, channel, permissions: permissionState.permissions, owner: permissionState.owner };
 }
 

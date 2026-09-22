@@ -13,6 +13,11 @@ export const Permission = {
   SpeakVoice: 1 << 11,
   Stream: 1 << 12,
   Administrator: 1 << 30,
+  // Backward-compatible aliases used by the v1 channel API.
+  VIEW_CHANNEL: 1 << 0,
+  SEND_MESSAGES: 1 << 1,
+  MANAGE_MESSAGES: 1 << 2,
+  ADMINISTRATOR: 1 << 30,
 } as const;
 
 export type PermissionName = keyof typeof Permission;
