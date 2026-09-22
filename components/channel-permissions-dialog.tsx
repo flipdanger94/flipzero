@@ -10,7 +10,7 @@ type State = "inherit" | "allow" | "deny";
 const permissionOptions = [
   ["Просмотр канала", Permission.ViewChannels], ["Отправка сообщений", Permission.SendMessages],
   ["Управление сообщениями", Permission.ManageMessages], ["Управление каналом", Permission.ManageChannels],
-  ["Создание приглашений", Permission.CreateInvites], ["Подключение к голосу", Permission.ConnectVoice],
+  ["Подключение к голосу", Permission.ConnectVoice],
   ["Использование микрофона", Permission.SpeakVoice], ["Запуск трансляций", Permission.Stream],
 ] as const;
 
