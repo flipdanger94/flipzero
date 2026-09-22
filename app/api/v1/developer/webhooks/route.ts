@@ -5,6 +5,7 @@ import { getDatabase } from "@/db/client";
 import { developerWebhooks } from "@/db/developer-schema";
 import { developerApps } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
+import { encryptDeveloperSecret } from "@/lib/developer-secret";
 import { normalizeWebhookEvents, validateWebhookUrl } from "@/lib/developer-validation";
 
 async function requireOwnedApp(appId: string | null) {
@@ -58,7 +59,7 @@ export async function POST(request: Request) {
     const webhook = await findOwnedWebhook(access.database, access.app.id, body.webhookId);
     if (!webhook) return NextResponse.json({ code: "NOT_FOUND", message: "Webhook не найден." }, { status: 404 });
     const generated = createSecret();
-    const [updated] = await access.database.update(developerWebhooks).set({ secretHash: generated.hash, secretPrefix: generated.prefix, updatedAt: new Date() })
+    const [updated] = await access.database.update(developerWebhooks).set({ secretHash: generated.hash, secretCiphertext: encryptDeveloperSecret(generated.secret), secretPrefix: generated.prefix, updatedAt: new Date() })
       .where(eq(developerWebhooks.id, webhook.id)).returning({ id: developerWebhooks.id, secretPrefix: developerWebhooks.secretPrefix, updatedAt: developerWebhooks.updatedAt });
     return NextResponse.json({ webhook: updated, secret: generated.secret });
   }
@@ -81,6 +82,7 @@ export async function POST(request: Request) {
     url: url.value,
     eventTypes,
     secretHash: generated.hash,
+    secretCiphertext: encryptDeveloperSecret(generated.secret),
     secretPrefix: generated.prefix,
   }).returning({
     id: developerWebhooks.id,
