@@ -7,6 +7,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { isTrustedMutationRequest } from "@/lib/security-controls";
 import { getChannelPermissions } from "@/lib/space-permissions";
 import { hasPermission, Permission } from "@/lib/permissions";
+import { getActiveTimeout } from "@/lib/moderation-access";
 
 export async function POST(
   request: Request,
@@ -33,6 +34,8 @@ export async function POST(
     );
   const permissionState = await getChannelPermissions(channelId, user.id);
   if (!permissionState.spaceId || !hasPermission(permissionState.permissions, Permission.ViewChannels) || !hasPermission(permissionState.permissions, Permission.ConnectVoice)) return NextResponse.json({ code: "FORBIDDEN", message: "Нет права подключаться к голосовому каналу." }, { status: 403 });
+  const timedOutUntil = permissionState.owner ? null : await getActiveTimeout(channel.spaceId, user.id);
+  if (timedOutUntil) return NextResponse.json({ code: "TIMED_OUT", message: `Доступ к голосовым каналам ограничен до ${timedOutUntil.toLocaleString("ru-RU")}.` }, { status: 403 });
   const canSpeak = hasPermission(permissionState.permissions, Permission.SpeakVoice);
   const canStream = hasPermission(permissionState.permissions, Permission.Stream);
   const url = process.env.LIVEKIT_URL;
