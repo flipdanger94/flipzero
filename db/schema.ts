@@ -285,6 +285,13 @@ export const voiceStates = pgTable("voice_states", {
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 }, (table) => [index("voice_states_channel_idx").on(table.channelId)]);
 
+export const spaceNotificationSettings = pgTable("space_notification_settings", {
+  userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  spaceId: text("space_id").notNull().references(() => spaces.id, { onDelete: "cascade" }),
+  mode: text("mode").default("mentions").notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [primaryKey({ columns: [table.userId, table.spaceId] })]);
+
 export const channelNotificationSettings = pgTable("channel_notification_settings", {
   userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   channelId: text("channel_id").notNull().references(() => channels.id, { onDelete: "cascade" }),
