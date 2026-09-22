@@ -4,7 +4,8 @@ import { NextResponse } from "next/server";
 import { getDatabase } from "@/db/client";
 import { channelCategories, channels, memberRoles, members, roles, spacePlacements, spaces } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
-import { DEFAULT_MEMBER_PERMISSIONS, Permission } from "@/lib/permissions";
+import { DEFAULT_MEMBER_PERMISSIONS, hasPermission, Permission } from "@/lib/permissions";
+import { getSpaceChannelPermissions } from "@/lib/space-permissions";
 import { createSpaceSchema } from "@/lib/space-validation";
 
 function makeSlug(name: string) {
@@ -41,13 +42,25 @@ export async function GET() {
   }).from(channels).where(inArray(channels.spaceId, spaceIds)).orderBy(asc(channels.position)) : [];
   const categories = spaceIds.length ? await database.select().from(channelCategories).where(inArray(channelCategories.spaceId, spaceIds)).orderBy(asc(channelCategories.position)) : [];
   const assignments = spaceIds.length ? await database.select({ spaceId: memberRoles.spaceId, permissions: roles.permissions }).from(memberRoles).innerJoin(roles, eq(roles.id, memberRoles.roleId)).where(eq(memberRoles.userId, user.id)) : [];
+  const channelPermissionEntries = await Promise.all(joinedSpaces.map(async (space) => {
+    const ids = spaceChannels.filter((channel) => channel.spaceId === space.id).map((channel) => channel.id);
+    return [space.id, await getSpaceChannelPermissions(space.id, user.id, ids)] as const;
+  }));
+  const channelPermissions = new Map(channelPermissionEntries);
 
-  return NextResponse.json({ spaces: joinedSpaces.map((space) => ({
-    ...space,
-    permissions: space.ownerId === user.id ? Permission.Administrator : assignments.filter((item) => item.spaceId === space.id).reduce((value, item) => value | Number(item.permissions), 0),
-    categories: categories.filter((category) => category.spaceId === space.id),
-    channels: spaceChannels.filter((channel) => channel.spaceId === space.id),
-  })) });
+  return NextResponse.json({ spaces: joinedSpaces.map((space) => {
+    const permissions = space.ownerId === user.id ? Permission.Administrator : assignments.filter((item) => item.spaceId === space.id).reduce((value, item) => value | Number(item.permissions), 0);
+    const permissionMap = channelPermissions.get(space.id) ?? new Map<string, number>();
+    const visibleChannels = spaceChannels.filter((channel) => channel.spaceId === space.id && hasPermission(permissionMap.get(channel.id) ?? 0, Permission.ViewChannels));
+    const visibleParentIds = new Set(visibleChannels.map((channel) => channel.parentId).filter((parentId): parentId is string => Boolean(parentId)));
+    const visibleCategories = categories.filter((category) => category.spaceId === space.id && (hasPermission(permissions, Permission.ManageChannels) || visibleParentIds.has(category.id)));
+    return {
+      ...space,
+      permissions,
+      categories: visibleCategories,
+      channels: visibleChannels,
+    };
+  }) });
 }
 
 export async function POST(request: Request) {
