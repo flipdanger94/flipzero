@@ -1,5 +1,5 @@
 import { and, eq } from "drizzle-orm";
-import { AccessToken, RoomServiceClient } from "livekit-server-sdk";
+import { AccessToken, RoomServiceClient, TrackSource } from "livekit-server-sdk";
 import { NextResponse } from "next/server";
 import { getDatabase } from "@/db/client";
 import { channels, members } from "@/db/schema";
@@ -7,14 +7,6 @@ import { getCurrentUser } from "@/lib/auth";
 import { isTrustedMutationRequest } from "@/lib/security-controls";
 import { getChannelPermissions } from "@/lib/space-permissions";
 import { hasPermission, Permission } from "@/lib/permissions";
-
-type PublishSource = NonNullable<Parameters<AccessToken["addGrant"]>[0]["canPublishSources"]>[number];
-const publishSource = {
-  camera: 1 as PublishSource,
-  microphone: 2 as PublishSource,
-  screenShare: 3 as PublishSource,
-  screenShareAudio: 4 as PublishSource,
-};
 
 export async function POST(
   request: Request,
@@ -73,9 +65,9 @@ export async function POST(
     ttl: "2h",
     metadata: JSON.stringify({ username: user.username, channelId }),
   });
-  const canPublishSources: PublishSource[] = [];
-  if (canSpeak) canPublishSources.push(publishSource.microphone);
-  if (canStream) canPublishSources.push(publishSource.camera, publishSource.screenShare, publishSource.screenShareAudio);
+  const canPublishSources: TrackSource[] = [];
+  if (canSpeak) canPublishSources.push(TrackSource.MICROPHONE);
+  if (canStream) canPublishSources.push(TrackSource.CAMERA, TrackSource.SCREEN_SHARE, TrackSource.SCREEN_SHARE_AUDIO);
   accessToken.addGrant({
     roomJoin: true,
     room,
