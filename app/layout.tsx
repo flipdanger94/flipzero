@@ -10,8 +10,31 @@ import "./account-settings.css";
 import "./mobile.css";
 
 export const metadata: Metadata = {
-  title: "FlipZero — чаты, голос и сообщества",
+  metadataBase: new URL("https://flipzeroapp.vercel.app"),
+  title: {
+    default: "FlipZero — чаты, голос и сообщества",
+    template: "%s | FlipZero",
+  },
   description: "Общайтесь в текстовых и голосовых каналах, проводите события и развивайте своё сообщество в FlipZero.",
+  alternates: {
+    canonical: "/",
+    languages: { "ru": "/" },
+  },
+  openGraph: {
+    type: "website",
+    locale: "ru_RU",
+    url: "/",
+    siteName: "FlipZero",
+    title: "FlipZero — чаты, голос и сообщества",
+    description: "Общайтесь в текстовых и голосовых каналах, проводите события и развивайте своё сообщество в FlipZero.",
+    images: [{ url: "/og-image.png", width: 1200, height: 630, alt: "FlipZero — чаты, голос и сообщества" }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "FlipZero — чаты, голос и сообщества",
+    description: "Общайтесь в текстовых и голосовых каналах, проводите события и развивайте своё сообщество в FlipZero.",
+    images: ["/og-image.png"],
+  },
   icons: {
     icon: "/favicon.svg",
     shortcut: "/favicon.svg",
