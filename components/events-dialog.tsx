@@ -38,7 +38,7 @@ export function EventsDialog({ spaceId, onClose }: { spaceId: string; onClose: (
     const response = await fetch(`/api/v1/spaces/${spaceId}/events`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ action: "attend", eventId: item.id, attending: !item.attending }) });
     const data = await response.json().catch(() => null); setWorkingId(null);
     if (!response.ok) return setError(data?.message ?? "Не удалось изменить участие.");
-    setItems((current) => current.map((event) => event.id === item.id ? { ...event, attending: data.attending, attendeeCount: Math.max(0, event.attendeeCount + (data.attending ? 1 : -1)) } : event));
+    setItems((current) => current.map((event) => event.id === item.id ? { ...event, attending: data.attending, attendeeCount: Math.max(0, event.attendeeCount + (data.attending ? (data.joined === false ? 0 : 1) : -1)) } : event));
   }
 
   async function remove(eventId: string) {
