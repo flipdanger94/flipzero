@@ -11,23 +11,31 @@ jobs:
     runs-on: ubuntu-latest
     if: github.repository == 'flipdanger94/flipzero'
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Install Vercel CLI
-        run: npm install -g vercel@latest
-
-      - name: Link Vercel project
+      - name: Create production deployment via Vercel API
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_TEAM_ID: team_AsHje38KtN3G35JN0zHFPSmH
+          VERCEL_PROJECT_ID: prj_a7vxV0ljAd6K0oj9yXmngYDyk4Oz
+          GITHUB_REPO_ID: "1373820599"
         run: |
-          mkdir -p .vercel
-          cat > .vercel/project.json <<'JSON'
-          {"orgId":"team_AsHje38KtN3G35JN0zHFPSmH","projectId":"prj_a7vxV0ljAd6K0oj9yXmngYDyk4Oz","projectName":"flipzero.app"}
-          JSON
+          PAYLOAD=$(jq -nc             --arg name "flipzero.app"             --arg project "$VERCEL_PROJECT_ID"             --arg ref "main"             --arg sha "$GITHUB_SHA"             --argjson repoId "$GITHUB_REPO_ID"             '{name:$name,project:$project,target:"production",gitSource:{type:"github",repoId:$repoId,ref:$ref,sha:$sha}}')
 
-      - name: Pull Vercel project settings
-        run: vercel pull --yes --environment=production --scope=flip24 --token=${{ secrets.VERCEL_TOKEN }}
+          RESPONSE=$(curl --silent --show-error             --request POST             --url "https://api.vercel.com/v13/deployments?teamId=$VERCEL_TEAM_ID&forceNew=1"             --header "Authorization: Bearer $VERCEL_TOKEN"             --header "Content-Type: application/json"             --data "$PAYLOAD"             --write-out "\n%{http_code}")
 
-      - name: Build production
-        run: vercel build --prod --scope=flip24 --token=${{ secrets.VERCEL_TOKEN }}
+          HTTP_CODE=$(echo "$RESPONSE" | tail -n 1)
+          BODY=$(echo "$RESPONSE" | sed '$d')
 
-      - name: Deploy production
-        run: vercel deploy --prebuilt --prod --scope=flip24 --token=${{ secrets.VERCEL_TOKEN }}
+          echo "Vercel API status: $HTTP_CODE"
+          echo "$BODY" | jq '{id,url,readyState,state,error,inspectorUrl}'
+
+          if [ "$HTTP_CODE" -lt 200 ] || [ "$HTTP_CODE" -ge 300 ]; then
+            exit 1
+          fi
+
+          DEPLOYMENT_ID=$(echo "$BODY" | jq -r '.id // empty')
+          if [ -z "$DEPLOYMENT_ID" ]; then
+            echo "Deployment ID missing"
+            exit 1
+          fi
+
+          echo "deployment_id=$DEPLOYMENT_ID" >> "$GITHUB_OUTPUT"
