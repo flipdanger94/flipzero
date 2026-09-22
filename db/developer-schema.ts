@@ -1,5 +1,5 @@
 import { boolean, index, jsonb, pgTable, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
-import { developerApps } from "./schema";
+import { developerApps, users } from "./schema";
 
 export const developerOauthClients = pgTable("developer_oauth_clients", {
   appId: text("app_id").primaryKey().references(() => developerApps.id, { onDelete: "cascade" }),
@@ -25,3 +25,35 @@ export const developerWebhooks = pgTable("developer_webhooks", {
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 }, (table) => [index("developer_webhooks_app_idx").on(table.appId)]);
+
+export const developerOauthAuthorizationCodes = pgTable("developer_oauth_authorization_codes", {
+  id: text("id").primaryKey(),
+  codeHash: text("code_hash").notNull(),
+  appId: text("app_id").notNull().references(() => developerApps.id, { onDelete: "cascade" }),
+  userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  redirectUri: text("redirect_uri").notNull(),
+  scopes: jsonb("scopes").$type<string[]>().default([]).notNull(),
+  codeChallenge: text("code_challenge"),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  consumedAt: timestamp("consumed_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [
+  uniqueIndex("developer_oauth_code_hash_unique").on(table.codeHash),
+  index("developer_oauth_code_app_idx").on(table.appId, table.expiresAt),
+]);
+
+export const developerOauthAccessTokens = pgTable("developer_oauth_access_tokens", {
+  id: text("id").primaryKey(),
+  appId: text("app_id").notNull().references(() => developerApps.id, { onDelete: "cascade" }),
+  userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  tokenHash: text("token_hash").notNull(),
+  prefix: text("prefix").notNull(),
+  scopes: jsonb("scopes").$type<string[]>().default([]).notNull(),
+  lastUsedAt: timestamp("last_used_at", { withTimezone: true }),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  revokedAt: timestamp("revoked_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [
+  uniqueIndex("developer_oauth_access_token_hash_unique").on(table.tokenHash),
+  index("developer_oauth_access_token_app_user_idx").on(table.appId, table.userId),
+]);
