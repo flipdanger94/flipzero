@@ -6,6 +6,7 @@ import { channelCategories, channels, memberRoles, members, roles, spacePlacemen
 import { getCurrentUser } from "@/lib/auth";
 import { DEFAULT_MEMBER_PERMISSIONS, hasPermission, Permission } from "@/lib/permissions";
 import { getSpaceChannelPermissions } from "@/lib/space-permissions";
+import { writeSpaceAuditLog } from "@/lib/space-audit";
 import { createSpaceSchema } from "@/lib/space-validation";
 
 function makeSlug(name: string) {
@@ -94,6 +95,15 @@ export async function POST(request: Request) {
     await tx.insert(memberRoles).values([{ userId: user.id, spaceId, roleId: ownerRoleId }, { userId: user.id, spaceId, roleId: memberRoleId }]);
     await tx.insert(channelCategories).values(defaultCategories);
     await tx.insert(channels).values(defaultChannels);
+  });
+
+  await writeSpaceAuditLog({
+    spaceId,
+    actorId: user.id,
+    action: "space.create",
+    targetType: "space",
+    targetId: spaceId,
+    metadata: { name: parsed.data.name, visibility: parsed.data.visibility },
   });
 
   return NextResponse.json({ space: { id: spaceId, ownerId: user.id, name: parsed.data.name, slug, description: parsed.data.description || null, visibility: parsed.data.visibility, accentColor: parsed.data.accentColor, iconUrl: null, bannerUrl: null, categories: defaultCategories, channels: defaultChannels } }, { status: 201 });
