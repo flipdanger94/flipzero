@@ -22,6 +22,11 @@ export const Permission = {
 
 export type PermissionName = keyof typeof Permission;
 
+export const VOICE_PERMISSION_MASK =
+  Permission.ConnectVoice |
+  Permission.SpeakVoice |
+  Permission.Stream;
+
 export const CHANNEL_PERMISSION_MASK =
   Permission.ViewChannels |
   Permission.SendMessages |
