@@ -34,8 +34,7 @@ async function requireModerator(spaceId: string) {
   const canOpenModeration =
     hasPermission(permissions, Permission.ModerateMembers) ||
     hasPermission(permissions, Permission.KickMembers) ||
-    hasPermission(permissions, Permission.BanMembers) ||
-    hasPermission(permissions, Permission.ManageMessages);
+    hasPermission(permissions, Permission.BanMembers);
   if (!canOpenModeration) return { error: NextResponse.json({ code: "FORBIDDEN", message: "Недостаточно прав для модерации." }, { status: 403 }) };
   return { database, user, space, owner: false, permissions, topPosition: Math.max(0, ...assigned.map((role) => role.position)) };
 }
@@ -50,7 +49,7 @@ export async function GET(_: Request, { params }: { params: Promise<{ spaceId: s
   const { spaceId } = await params;
   const access = await requireModerator(spaceId);
   if ("error" in access) return access.error;
-  const canReviewFlags = access.owner || hasPermission(access.permissions, Permission.ModerateMembers) || hasPermission(access.permissions, Permission.ManageMessages);
+  const canReviewFlags = access.owner || hasPermission(access.permissions, Permission.ModerateMembers);
   const canWarnTimeout = access.owner || hasPermission(access.permissions, Permission.ModerateMembers);
   const canKick = access.owner || hasPermission(access.permissions, Permission.KickMembers);
   const canBan = access.owner || hasPermission(access.permissions, Permission.BanMembers);
@@ -70,7 +69,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ sp
   const { spaceId } = await params;
   const access = await requireModerator(spaceId);
   if ("error" in access) return access.error;
-  if (!access.owner && !hasPermission(access.permissions, Permission.ModerateMembers) && !hasPermission(access.permissions, Permission.ManageMessages)) return NextResponse.json({ code: "FORBIDDEN", message: "Недостаточно прав для проверки сообщений." }, { status: 403 });
+  if (!access.owner && !hasPermission(access.permissions, Permission.ModerateMembers)) return NextResponse.json({ code: "FORBIDDEN", message: "Недостаточно прав для проверки сообщений." }, { status: 403 });
   const parsed = reviewSchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ code: "INVALID_INPUT", message: "Решение по флагу не распознано." }, { status: 400 });
   const [flag] = await access.database.select().from(moderationFlags).where(and(eq(moderationFlags.id, parsed.data.flagId), eq(moderationFlags.spaceId, spaceId))).limit(1);
