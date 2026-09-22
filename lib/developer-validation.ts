@@ -1,3 +1,5 @@
+import { isIP } from "node:net";
+
 export const API_TOKEN_SCOPES = ["profile:read", "spaces:read"] as const;
 export const OAUTH_SCOPES = ["identify", "profile:read", "spaces:read"] as const;
 export const WEBHOOK_EVENTS = ["message.created", "member.joined", "member.left", "space.updated"] as const;
@@ -53,6 +55,24 @@ export function validateRedirectUris(input: unknown): ValidationResult<string[]>
   const unique = [...new Set(normalized)];
   if (!unique.length) return { ok: false, message: "Добавьте хотя бы один redirect URI." };
   return { ok: true, value: unique };
+}
+
+export function isPrivateWebhookIp(address: string) {
+  if (isIP(address) === 4) {
+    const octets = address.split(".").map(Number);
+    const [a, b] = octets;
+    return a === 0 || a === 10 || a === 127 || (a === 100 && b >= 64 && b <= 127) ||
+      (a === 169 && b === 254) || (a === 172 && b >= 16 && b <= 31) ||
+      (a === 192 && b === 168) || (a === 198 && (b === 18 || b === 19)) || a >= 224;
+  }
+  const normalized = address.toLowerCase();
+  if (normalized === "::1" || normalized === "::") return true;
+  if (normalized.startsWith("fc") || normalized.startsWith("fd") || normalized.startsWith("fe8") || normalized.startsWith("fe9") || normalized.startsWith("fea") || normalized.startsWith("feb")) return true;
+  if (normalized.startsWith("::ffff:")) {
+    const mapped = normalized.slice(7);
+    return isIP(mapped) === 4 ? isPrivateWebhookIp(mapped) : true;
+  }
+  return false;
 }
 
 function blockedWebhookHost(hostname: string) {
