@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { isPrivateWebhookIp, normalizeApiTokenScopes, normalizeOAuthScopes, normalizeWebhookEvents, validateRedirectUris, validateWebhookUrl } from "../lib/developer-validation";
 import { createPkceS256Challenge } from "../lib/oauth-pkce";
+import { decryptDeveloperSecret, encryptDeveloperSecret, signDeveloperPayload } from "../lib/developer-secret";
 
 describe("developer platform validation", () => {
   it("filters API scopes to supported values", () => {
@@ -45,6 +46,27 @@ describe("developer platform validation", () => {
     expect(isPrivateWebhookIp("fd00::1")).toBe(true);
     expect(isPrivateWebhookIp("8.8.8.8")).toBe(false);
     expect(isPrivateWebhookIp("2606:4700:4700::1111")).toBe(false);
+  });
+
+  it("encrypts webhook signing secrets at rest", () => {
+    process.env.DEVELOPER_SECRET_KEY = "phase11-test-developer-secret";
+    const encrypted = encryptDeveloperSecret("fz_wh_secret_value");
+    expect(encrypted).not.toContain("fz_wh_secret_value");
+    expect(decryptDeveloperSecret(encrypted)).toBe("fz_wh_secret_value");
+  });
+
+  it("rejects tampered encrypted webhook secrets", () => {
+    process.env.DEVELOPER_SECRET_KEY = "phase11-test-developer-secret";
+    const encrypted = encryptDeveloperSecret("sensitive-secret");
+    const parts = encrypted.split(".");
+    parts[2] = `${parts[2].slice(0, -1)}${parts[2].endsWith("A") ? "B" : "A"}`;
+    expect(() => decryptDeveloperSecret(parts.join("."))).toThrow();
+  });
+
+  it("produces deterministic HMAC signatures for webhook verification", () => {
+    expect(signDeveloperPayload("secret", "1700000000.{\"event\":\"message.created\"}"))
+      .toBe(signDeveloperPayload("secret", "1700000000.{\"event\":\"message.created\"}"));
+    expect(signDeveloperPayload("secret", "payload-a")).not.toBe(signDeveloperPayload("secret", "payload-b"));
   });
 
   it("filters webhook event names", () => {
