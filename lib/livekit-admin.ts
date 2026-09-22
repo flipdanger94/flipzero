@@ -1,5 +1,5 @@
 import "server-only";
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { RoomServiceClient } from "livekit-server-sdk";
 import { getDatabase } from "@/db/client";
 import { channels, voiceStates } from "@/db/schema";
@@ -14,29 +14,36 @@ function getVoiceAdminClient() {
   return new RoomServiceClient(serviceUrl.origin, apiKey, apiSecret, { requestTimeout: 5, failover: false });
 }
 
-export async function evictParticipantFromSpaceVoice(spaceId: string, userId: string) {
-  const db = getDatabase();
-  const [state] = await db.select({ channelId: voiceStates.channelId }).from(voiceStates)
-    .innerJoin(channels, eq(channels.id, voiceStates.channelId))
-    .where(and(eq(voiceStates.userId, userId), eq(channels.spaceId, spaceId)))
-    .limit(1);
-  if (state) await db.delete(voiceStates).where(eq(voiceStates.userId, userId));
+export async function evictParticipantsFromSpaceVoice(spaceId: string, userIds: string[]) {
+  const ids = [...new Set(userIds.filter(Boolean))];
+  if (!ids.length) return;
 
+  const db = getDatabase();
+  const activeStates = await db.select({ userId: voiceStates.userId }).from(voiceStates)
+    .innerJoin(channels, eq(channels.id, voiceStates.channelId))
+    .where(and(eq(channels.spaceId, spaceId), inArray(voiceStates.userId, ids)));
+  const activeIds = [...new Set(activeStates.map((state) => state.userId))];
+  if (activeIds.length) await db.delete(voiceStates).where(inArray(voiceStates.userId, activeIds));
 
   const service = getVoiceAdminClient();
   if (!service) return;
   try {
     const rooms = await service.listRooms([]);
+    const matchingRooms = rooms.filter((room) => room.name.startsWith(`${spaceId}:`));
+    const revokeTokenTs = BigInt(Math.floor(Date.now() / 1000));
     await Promise.allSettled(
-      rooms
-        .filter((room) => room.name.startsWith(`${spaceId}:`))
-        .map((room) => service.removeParticipant(room.name, userId, { revokeTokenTs: BigInt(Math.floor(Date.now() / 1000)) })),
+      matchingRooms.flatMap((room) =>
+        ids.map((userId) => service.removeParticipant(room.name, userId, { revokeTokenTs })),
+      ),
     );
   } catch {
     // Voice cleanup must not roll back the primary moderation/member operation.
   }
 }
 
+export async function evictParticipantFromSpaceVoice(spaceId: string, userId: string) {
+  await evictParticipantsFromSpaceVoice(spaceId, [userId]);
+}
 
 export async function resetChannelVoiceRooms(spaceId: string, channelId: string) {
   const db = getDatabase();
