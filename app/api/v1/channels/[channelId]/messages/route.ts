@@ -12,7 +12,7 @@ async function accessChannel(channelId: string) {
   const user = await getCurrentUser();
   if (!user) return { error: NextResponse.json({ code: "UNAUTHENTICATED", message: "Требуется вход." }, { status: 401 }) };
   const database = getDatabase();
-  const [channel] = await database.select({ id: channels.id, spaceId: channels.spaceId, kind: channels.kind, ownerId: spaces.ownerId }).from(channels).innerJoin(spaces, eq(spaces.id, channels.spaceId)).innerJoin(members, and(eq(members.spaceId, channels.spaceId), eq(members.userId, user.id))).where(eq(channels.id, channelId)).limit(1);
+  const [channel] = await database.select({ id: channels.id, spaceId: channels.spaceId, kind: channels.kind, slowmodeSeconds: channels.slowmodeSeconds, ownerId: spaces.ownerId }).from(channels).innerJoin(spaces, eq(spaces.id, channels.spaceId)).innerJoin(members, and(eq(members.spaceId, channels.spaceId), eq(members.userId, user.id))).where(eq(channels.id, channelId)).limit(1);
   if (!channel) return { error: NextResponse.json({ code: "FORBIDDEN", message: "Канал недоступен." }, { status: 403 }) };
   const permissionState = await getChannelPermissions(channelId, user.id);
   if (!permissionState.owner && !hasPermission(permissionState.permissions, SpacePermission.ViewChannels)) return { error: NextResponse.json({ code: "FORBIDDEN", message: "Нет права на просмотр канала." }, { status: 403 }) };
@@ -33,7 +33,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ chan
   const canManageMessages = !access.timedOutUntil && (access.owner || hasPermission(access.permissions, SpacePermission.MANAGE_MESSAGES));
   const canSendMessages = !access.timedOutUntil && (access.owner || hasPermission(access.permissions, SpacePermission.SEND_MESSAGES)) && (access.channel.kind !== "announcement" || access.owner);
   return NextResponse.json({
-    capabilities: { sendMessages: canSendMessages, manageMessages: canManageMessages, timedOutUntil: access.timedOutUntil },
+    capabilities: { sendMessages: canSendMessages, manageMessages: canManageMessages, timedOutUntil: access.timedOutUntil, slowmodeSeconds: access.channel.slowmodeSeconds },
     messages: (threadRootId ? rows : rows.reverse()).map((row) => ({ ...row, reactions: reactionRows.filter((item) => item.messageId === row.id) })),
   });
 }
@@ -69,6 +69,17 @@ export async function POST(request: Request, { params }: { params: Promise<{ cha
     }
   }
   if (access.channel.kind === "announcement" && access.channel.ownerId !== access.user.id) return NextResponse.json({ code: "READ_ONLY", message: "Публиковать объявления может только владелец." }, { status: 403 });
+  if (access.channel.slowmodeSeconds > 0 && !access.owner && !hasPermission(access.permissions, SpacePermission.MANAGE_MESSAGES)) {
+    const [latestMessage] = await access.database.select({ createdAt: messages.createdAt }).from(messages)
+      .where(and(eq(messages.channelId, channelId), eq(messages.authorId, access.user.id)))
+      .orderBy(desc(messages.createdAt))
+      .limit(1);
+    if (latestMessage?.createdAt) {
+      const availableAt = latestMessage.createdAt.getTime() + access.channel.slowmodeSeconds * 1000;
+      const retryAfterSeconds = Math.ceil((availableAt - Date.now()) / 1000);
+      if (retryAfterSeconds > 0) return NextResponse.json({ code: "SLOWMODE", message: `Следующее сообщение можно отправить через ${retryAfterSeconds} сек.`, retryAfterSeconds }, { status: 429 });
+    }
+  }
   if (!content && !attachments.length) return NextResponse.json({ code: "EMPTY_MESSAGE", message: "Сообщение пустое." }, { status: 400 });
   const assessment = assessMessageSafety(content);
   const id = randomUUID();
