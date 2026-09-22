@@ -49,8 +49,10 @@ jobs:
           components/developer-dialog.tsx
           components/developer-integrations.tsx
           app/oauth/authorize/page.tsx
+          app/oauth/install/page.tsx
           app/api/v1/developer/apps/route.ts
           app/api/v1/developer/installations/route.ts
+          app/api/v1/developer/install/route.ts
           app/api/v1/developer/oauth/route.ts
           app/api/v1/developer/oauth/authorize/route.ts
           app/api/v1/developer/webhooks/route.ts
