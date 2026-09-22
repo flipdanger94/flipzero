@@ -8,3 +8,5 @@ Trigger after syntax fixes.
 Production deployment trigger after Git integration check.
 
 Trigger latest voice commits for production.
+
+Production deploy trigger for setup migration dashboard and releases 0000-0014.
