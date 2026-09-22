@@ -24,8 +24,11 @@ export async function GET(_request: Request, { params }: { params: Promise<{ spa
   try {
     const serviceUrl = new URL(url); serviceUrl.protocol = "https:";
     const service = new RoomServiceClient(serviceUrl.origin, key, secret, { requestTimeout: 5, failover: false });
+    const rooms = await service.listRooms([]);
+    const activeRooms = new Set(rooms.map((room) => room.name));
     const result = await Promise.all(voiceChannels.map(async (channel) => {
-      const participants = await service.listParticipants(`${spaceId}:${channel.id}:main`).catch(() => []);
+      const roomName = `${spaceId}:${channel.id}:main`;
+      const participants = activeRooms.has(roomName) ? await service.listParticipants(roomName).catch(() => []) : [];
       return [channel.id, participants.map((participant) => {
         const microphone = participant.tracks.find((track) => track.source === TrackSource.MICROPHONE);
         return { id: participant.identity, name: participant.name || participant.identity, muted: !microphone || microphone.muted, camera: participant.tracks.some((track) => track.source === TrackSource.CAMERA && !track.muted), sharing: participant.tracks.some((track) => track.source === TrackSource.SCREEN_SHARE && !track.muted), speaking: false };
