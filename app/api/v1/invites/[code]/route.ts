@@ -1,7 +1,7 @@
 import { and, desc, eq, gt, isNull, or, sql } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { getDatabase } from "@/db/client";
-import { invites, memberRoles, members, moderationCases, roles, spaces, userBlocks } from "@/db/schema";
+import { invites, memberRoles, members, moderationCases, roles, spaceJoinRequests, spaces, userBlocks } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
 
 export async function GET(_: Request, { params }: { params: Promise<{ code: string }> }) {
@@ -43,6 +43,7 @@ export async function POST(_: Request, { params }: { params: Promise<{ code: str
       )).returning({ code: invites.code });
       if (!reserved) throw new Error("INVITE_UNAVAILABLE");
       if (memberRole) await tx.insert(memberRoles).values({ userId: user.id, spaceId: invite.spaceId, roleId: memberRole.id }).onConflictDoNothing();
+      await tx.delete(spaceJoinRequests).where(and(eq(spaceJoinRequests.spaceId, invite.spaceId), eq(spaceJoinRequests.userId, user.id)));
       joined = true;
     });
   } catch (error) {
