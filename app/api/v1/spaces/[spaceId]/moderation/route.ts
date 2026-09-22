@@ -117,6 +117,6 @@ export async function POST(request: Request, { params }: { params: Promise<{ spa
       await tx.delete(members).where(and(eq(members.userId, target.id), eq(members.spaceId, spaceId)));
     }
   });
-  if (parsed.data.action === "kick" || parsed.data.action === "ban") await evictParticipantFromSpaceVoice(spaceId, target.id);
+  if (parsed.data.action === "kick" || parsed.data.action === "ban" || parsed.data.action === "timeout") await evictParticipantFromSpaceVoice(spaceId, target.id);
   return NextResponse.json({ case: moderationCase }, { status: 201 });
 }
