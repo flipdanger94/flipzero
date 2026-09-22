@@ -7,13 +7,10 @@ import {
   Gamepad2,
   Globe2,
   Hash,
-  Activity,
   Apple,
-  Layers3,
   Monitor,
   Smartphone,
   Terminal,
-  MessageSquareText,
   Menu,
   MessageCircle,
   Mic2,
@@ -139,14 +136,14 @@ export default function LandingPage() {
         <div className="fz-space-orb fz-orb-two" />
         <div className="fz-container fz-hero-grid">
           <div className="fz-hero-copy">
-            <span className="fz-eyebrow pill"><i /> Новое поколение комьюнити</span>
+            <span className="fz-eyebrow pill"><i /> Место для твоего сообщества</span>
             <h1>Ваши люди.<br /><em>Ваше место.</em></h1>
             <p>Чаты, голос, видео и сообщества — в одном быстром и безопасном пространстве, которое принадлежит вам.</p>
             <div className="fz-actions">
               <Link className="fz-button fz-button-primary" href="/download"><Download size={18} /> Скачать для Windows</Link>
               <Link className="fz-button fz-button-secondary" href="/app">Открыть FlipZero <ArrowRight size={17} /></Link>
             </div>
-            <small className="fz-free-note">Бесплатно, без карты, в браузере</small>
+            <small className="fz-free-note">Можно начать прямо в браузере</small>
             <div className="fz-platforms" aria-label="Доступные платформы">
               <span><Monitor size={22} aria-hidden="true" /><small>Windows</small></span>
               <span><Apple size={22} aria-hidden="true" /><small>macOS</small></span>
@@ -162,15 +159,6 @@ export default function LandingPage() {
           {featureCards.map(({ icon: Icon, title, text }) => (
             <article key={title}><i><Icon size={23} /></i><h3>{title}</h3><p>{text}</p></article>
           ))}
-        </div>
-      </section>
-
-      <section className="fz-stats" aria-label="Статистика FlipZero">
-        <div className="fz-container">
-          <div><i><Users size={20} /></i><strong>1.2M+</strong><span>активных пользователей</span></div>
-          <div><i><Layers3 size={20} /></i><strong>25K+</strong><span>сообществ</span></div>
-          <div><i><Activity size={20} /></i><strong>98%</strong><span>стабильная работа</span></div>
-          <div><i><MessageSquareText size={20} /></i><strong>50M+</strong><span>сообщений в день</span></div>
         </div>
       </section>
 
