@@ -2,6 +2,7 @@
 
 import { type FormEvent, useEffect, useMemo, useState } from "react";
 import { Ban, Bot, Check, Gavel, LoaderCircle, ShieldAlert, Trash2, X } from "lucide-react";
+import { useModalA11y } from "@/hooks/use-modal-a11y";
 
 type Person = { userId?: string; id?: string; displayName: string; username: string };
 type Case = { id: string; targetUserId: string; action: "warn" | "timeout" | "kick" | "ban" | "unban"; reason: string | null; expiresAt: string | null; createdAt: string; target: Person | null; moderator: Person | null };
@@ -9,7 +10,8 @@ type Flag = { id: string; messageId: string; authorId: string; category: string;
 const labels = { warn: "Предупреждение", timeout: "Таймаут", kick: "Исключение", ban: "Блокировка", unban: "Разблокировка" } as const;
 const statusLabels = { pending: "Ожидает решения", dismissed: "Разрешено", actioned: "Удалено" } as const;
 
-export function ModerationDialog({ spaceId, onClose }: { spaceId: string; onClose: () => void }) {
+export function ModerationDialog({
+  const dialogRef = useModalA11y(onClose); spaceId, onClose }: { spaceId: string; onClose: () => void }) {
   const [members, setMembers] = useState<Person[]>([]);
   const [cases, setCases] = useState<Case[]>([]);
   const [flags, setFlags] = useState<Flag[]>([]);
@@ -58,7 +60,7 @@ export function ModerationDialog({ spaceId, onClose }: { spaceId: string; onClos
   }
 
   return <div className="dialog-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
-    <section className="space-dialog moderation-dialog" role="dialog" aria-modal="true" aria-labelledby="moderation-title">
+    <section ref={dialogRef} tabIndex={-1} className="space-dialog moderation-dialog" role="dialog" aria-modal="true" aria-labelledby="moderation-title">
       <button className="dialog-close" onClick={onClose} aria-label="Закрыть"><X size={19} /></button>
       <div className="moderation-heading"><div className="dialog-symbol"><Gavel size={22} /></div><div><h2 id="moderation-title">Trust & Safety</h2><p>Автоматическая защита сообщений и действия модераторов.</p></div></div>
       <div className="trust-status"><span><Bot size={17} /></span><div><strong>Автомодерация активна</strong><small>Проверяет угрозы, мошенничество, персональные данные, травлю и спам.</small></div><b>{pendingFlags.length} на проверке</b></div>
