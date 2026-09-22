@@ -1,4 +1,4 @@
-import { and, count, desc, eq, isNull, notInArray, or } from "drizzle-orm";
+import { and, desc, eq, isNull, or } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { getDatabase } from "@/db/client";
 import { notifications, userBlocks, users } from "@/db/schema";
