@@ -4,7 +4,8 @@ import { type FormEvent, useEffect, useState } from "react";
 import { Bot, Check, Copy, LoaderCircle, Plus, RefreshCw, Save, ShieldCheck, Trash2, Webhook } from "lucide-react";
 
 type OAuthConfig = { appId: string; clientId: string; secretPrefix: string; redirectUris: string[]; scopes: string[]; updatedAt: string };
-type WebhookItem = { id: string; name: string; url: string; eventTypes: string[]; secretPrefix: string; enabled: boolean; updatedAt: string };
+type WebhookDelivery = { id: string; eventType: string; status: string; responseStatus: number | null; durationMs: number | null; error: string | null; createdAt: string };
+type WebhookItem = { id: string; name: string; url: string; eventTypes: string[]; secretPrefix: string; enabled: boolean; updatedAt: string; deliveries?: WebhookDelivery[] };
 type InstallationSpace = { id: string; name: string; slug: string; iconUrl: string | null; accentColor: string; installation: { appId: string; spaceId: string; permissions: string[]; createdAt: string } | null };
 type SecretNotice = { title: string; value: string } | null;
 
@@ -98,6 +99,25 @@ export function DeveloperIntegrations({ appId }: { appId: string }) {
     event.currentTarget.reset();
   }
 
+  async function refreshWebhooks() {
+    const response = await fetch(`/api/v1/developer/webhooks?appId=${encodeURIComponent(appId)}`, { cache: "no-store" });
+    const data = await json(response);
+    if (response.ok) setWebhooks((data?.webhooks ?? []) as WebhookItem[]);
+  }
+
+  async function testWebhook(webhook: WebhookItem) {
+    setWorking(true); setError("");
+    const response = await fetch("/api/v1/developer/webhooks", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ appId, webhookId: webhook.id, action: "test_delivery" }),
+    });
+    const data = await json(response);
+    await refreshWebhooks();
+    setWorking(false);
+    if (!response.ok || !data?.delivered) setError(data?.message ?? "Тестовый webhook не доставлен.");
+  }
+
   async function mutateWebhook(webhook: WebhookItem, action: "toggle" | "regenerate" | "delete") {
     setWorking(true); setError(""); if (action === "regenerate") setSecret(null);
     let response: Response;
@@ -154,6 +174,6 @@ export function DeveloperIntegrations({ appId }: { appId: string }) {
 
     {tab === "oauth" ? <div className="developer-section"><div className="developer-section-head"><div><small>OAUTH CLIENT</small><h4>{oauth ? "OAuth настроен" : "Создать OAuth client"}</h4><p>Authorization Code Flow, exact redirect URI, scopes и PKCE S256. Secret хранится только в виде SHA-256 хеша.</p></div>{oauth ? <button className="secondary-action" onClick={regenerateOAuth} disabled={working}><RefreshCw size={14} /> Новый secret</button> : null}</div>{oauth ? <><div className="oauth-credentials"><label><span>Client ID</span><code>{oauth.clientId}</code></label><label><span>Secret prefix</span><code>{oauth.secretPrefix}</code></label></div>{authorizePath ? <div className="oauth-authorize-url"><code>{authorizePath}</code><button onClick={copyAuthorizeUrl} title="Копировать authorization URL">{authorizeCopied ? <Check size={14} /> : <Copy size={14} />}</button></div> : null}</> : null}<form className="oauth-form" onSubmit={saveOAuth}><label><span>Redirect URI — по одному на строку</span><textarea value={redirectUris} onChange={(event) => setRedirectUris(event.target.value)} rows={3} placeholder="https://example.com/oauth/callback" required /></label><div className="developer-choice-row wrap">{oauthScopes.map((scope) => <label key={scope}><input type="checkbox" checked={selectedScopes.includes(scope)} onChange={() => toggle(scope, selectedScopes, setSelectedScopes)} /><span>{scope}</span></label>)}</div><button className="primary-action" disabled={working || selectedScopes.length === 0}><Save size={14} /> {oauth ? "Сохранить" : "Создать client"}</button></form></div> : null}
 
-    {tab === "webhooks" ? <div className="developer-section"><div className="developer-section-head"><div><small>WEBHOOK ENDPOINTS</small><h4>Подписки на события</h4><p>Разрешены только публичные HTTPS endpoint. Signing secret зашифрован в базе и выдаётся один раз при создании или регенерации.</p></div></div><form className="webhook-create" onSubmit={createWebhook}><div className="webhook-inputs"><input name="name" minLength={2} maxLength={60} placeholder="Production webhook" required /><input name="url" type="url" placeholder="https://api.example.com/flipzero" required /></div><div className="developer-choice-row wrap">{webhookEvents.map((eventName) => <label key={eventName}><input type="checkbox" checked={events.includes(eventName)} onChange={() => toggle(eventName, events, setEvents)} /><span>{eventName}</span></label>)}</div><button className="primary-action" disabled={working || events.length === 0}><Plus size={14} /> Создать webhook</button></form><div className="webhook-list">{webhooks.map((webhook) => <article key={webhook.id} className={webhook.enabled ? "" : "disabled"}><Webhook size={16} /><div><strong>{webhook.name}</strong><code>{webhook.url}</code><span>{webhook.eventTypes.join(" · ")} · {webhook.secretPrefix}</span></div><div className="webhook-actions"><button onClick={() => mutateWebhook(webhook, "toggle")}>{webhook.enabled ? "On" : "Off"}</button><button onClick={() => mutateWebhook(webhook, "regenerate")}><RefreshCw size={13} /></button><button onClick={() => mutateWebhook(webhook, "delete")}><Trash2 size={13} /></button></div></article>)}{!webhooks.length ? <div className="developer-empty">Webhooks пока не созданы.</div> : null}</div></div> : null}
+    {tab === "webhooks" ? <div className="developer-section"><div className="developer-section-head"><div><small>WEBHOOK ENDPOINTS</small><h4>Подписки на события</h4><p>Разрешены только публичные HTTPS endpoint. Signing secret зашифрован в базе и выдаётся один раз при создании или регенерации.</p></div></div><form className="webhook-create" onSubmit={createWebhook}><div className="webhook-inputs"><input name="name" minLength={2} maxLength={60} placeholder="Production webhook" required /><input name="url" type="url" placeholder="https://api.example.com/flipzero" required /></div><div className="developer-choice-row wrap">{webhookEvents.map((eventName) => <label key={eventName}><input type="checkbox" checked={events.includes(eventName)} onChange={() => toggle(eventName, events, setEvents)} /><span>{eventName}</span></label>)}</div><button className="primary-action" disabled={working || events.length === 0}><Plus size={14} /> Создать webhook</button></form><div className="webhook-list">{webhooks.map((webhook) => <article key={webhook.id} className={webhook.enabled ? "" : "disabled"}><Webhook size={16} /><div><strong>{webhook.name}</strong><code>{webhook.url}</code><span>{webhook.eventTypes.join(" · ")} · {webhook.secretPrefix}</span>{webhook.deliveries?.[0] ? <small className={`delivery-status ${webhook.deliveries[0].status}`}>Последняя доставка: {webhook.deliveries[0].status}{webhook.deliveries[0].responseStatus ? ` · HTTP ${webhook.deliveries[0].responseStatus}` : ""}{webhook.deliveries[0].durationMs !== null ? ` · ${webhook.deliveries[0].durationMs} ms` : ""}</small> : null}</div><div className="webhook-actions"><button onClick={() => testWebhook(webhook)} disabled={working}>Test</button><button onClick={() => mutateWebhook(webhook, "toggle")}>{webhook.enabled ? "On" : "Off"}</button><button onClick={() => mutateWebhook(webhook, "regenerate")}><RefreshCw size={13} /></button><button onClick={() => mutateWebhook(webhook, "delete")}><Trash2 size={13} /></button></div></article>)}{!webhooks.length ? <div className="developer-empty">Webhooks пока не созданы.</div> : null}</div></div> : null}
   </section>;
 }
