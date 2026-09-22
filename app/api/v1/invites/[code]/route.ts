@@ -24,10 +24,23 @@ export async function POST(_: Request, { params }: { params: Promise<{ code: str
   const [existing] = await database.select({ userId: members.userId }).from(members).where(and(eq(members.userId, user.id), eq(members.spaceId, invite.spaceId))).limit(1);
   if (existing) return NextResponse.json({ spaceId: invite.spaceId, joined: false });
   const [memberRole] = await database.select({ id: roles.id }).from(roles).where(and(eq(roles.spaceId, invite.spaceId), eq(roles.name, "Участник"))).limit(1);
-  await database.transaction(async (tx) => {
-    await tx.insert(members).values({ userId: user.id, spaceId: invite.spaceId });
-    if (memberRole) await tx.insert(memberRoles).values({ userId: user.id, spaceId: invite.spaceId, roleId: memberRole.id });
-    await tx.update(invites).set({ uses: sql`${invites.uses} + 1` }).where(eq(invites.code, code));
-  });
-  return NextResponse.json({ spaceId: invite.spaceId, joined: true });
+  let joined = false;
+  try {
+    await database.transaction(async (tx) => {
+      const inserted = await tx.insert(members).values({ userId: user.id, spaceId: invite.spaceId }).onConflictDoNothing().returning({ userId: members.userId });
+      if (!inserted.length) return;
+      const [reserved] = await tx.update(invites).set({ uses: sql`${invites.uses} + 1` }).where(and(
+        eq(invites.code, code),
+        or(isNull(invites.expiresAt), gt(invites.expiresAt, new Date())),
+        or(isNull(invites.maxUses), sql`${invites.uses} < ${invites.maxUses}`),
+      )).returning({ code: invites.code });
+      if (!reserved) throw new Error("INVITE_UNAVAILABLE");
+      if (memberRole) await tx.insert(memberRoles).values({ userId: user.id, spaceId: invite.spaceId, roleId: memberRole.id }).onConflictDoNothing();
+      joined = true;
+    });
+  } catch (error) {
+    if (error instanceof Error && error.message === "INVITE_UNAVAILABLE") return NextResponse.json({ code: "INVITE_UNAVAILABLE", message: "Приглашение истекло или уже использовано максимальное число раз." }, { status: 410 });
+    throw error;
+  }
+  return NextResponse.json({ spaceId: invite.spaceId, joined });
 }
