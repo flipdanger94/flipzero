@@ -58,7 +58,8 @@ export async function POST(
     const serviceUrl = new URL(url); serviceUrl.protocol = "https:";
     const service = new RoomServiceClient(serviceUrl.origin, apiKey, apiSecret, { requestTimeout: 5, failover: false });
     const rooms = await service.listRooms([]);
-    await Promise.all(rooms.filter((item) => item.name.startsWith(`${channel.spaceId}:`) && item.name !== room).map((item) => service.removeParticipant(item.name, user.id).catch(() => undefined)));
+    const revokeTokenTs = BigInt(Math.floor(Date.now() / 1000));
+    await Promise.all(rooms.filter((item) => item.name.startsWith(`${channel.spaceId}:`) && item.name !== room).map((item) => service.removeParticipant(item.name, user.id, { revokeTokenTs }).catch(() => undefined)));
   } catch {
     return NextResponse.json({ code: "VOICE_SERVICE_UNAVAILABLE", message: "Голосовой сервер временно недоступен." }, { status: 503 });
   }
