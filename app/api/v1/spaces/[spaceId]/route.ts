@@ -6,6 +6,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { updateSpaceSchema } from "@/lib/space-validation";
 import { getSpacePermissions } from "@/lib/space-permissions";
 import { hasPermission, Permission } from "@/lib/permissions";
+import { evictParticipantFromSpaceVoice } from "@/lib/livekit-admin";
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ spaceId: string }> }) {
   const [user, { spaceId }] = await Promise.all([getCurrentUser(), params]);
@@ -42,6 +43,7 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ s
     const [membership] = await database.select({ userId: members.userId }).from(members).where(and(eq(members.userId, user.id), eq(members.spaceId, spaceId))).limit(1);
     if (!membership) return NextResponse.json({ code: "NOT_MEMBER", message: "Вы не состоите в этом сервере." }, { status: 404 });
     await database.transaction(async (tx) => { await tx.delete(memberRoles).where(and(eq(memberRoles.userId, user.id), eq(memberRoles.spaceId, spaceId))); await tx.delete(members).where(and(eq(members.userId, user.id), eq(members.spaceId, spaceId))); });
+    await evictParticipantFromSpaceVoice(spaceId, user.id);
     return NextResponse.json({ ok: true });
   }
   if (body?.action !== "delete" || body?.name !== space.name) return NextResponse.json({ code: "CONFIRMATION_REQUIRED", message: "Введите точное название сервера." }, { status: 400 });
