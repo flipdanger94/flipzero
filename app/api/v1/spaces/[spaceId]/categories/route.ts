@@ -4,7 +4,7 @@ import { NextResponse } from "next/server";
 import { getDatabase } from "@/db/client";
 import { channelCategories, channels, spaces } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
-import { createCategorySchema } from "@/lib/space-validation";
+import { createCategorySchema, updateCategorySchema } from "@/lib/space-validation";
 import { getSpacePermissions } from "@/lib/space-permissions";
 import { hasPermission, Permission } from "@/lib/permissions";
 
@@ -33,6 +33,19 @@ export async function POST(request: Request, { params }: { params: Promise<{ spa
   const category = { id: randomUUID(), spaceId, name: parsed.data.name, position: (position?.value ?? -1) + 1 };
   await access.database.insert(channelCategories).values(category);
   return NextResponse.json({ category }, { status: 201 });
+}
+
+export async function PATCH(request: Request, { params }: { params: Promise<{ spaceId: string }> }) {
+  const { spaceId } = await params;
+  const access = await managerAccess(spaceId);
+  if ("error" in access) return access.error;
+  const parsed = updateCategorySchema.safeParse(await request.json().catch(() => null));
+  if (!parsed.success) return NextResponse.json({ code: "INVALID_INPUT", message: "Проверьте название категории." }, { status: 400 });
+  const [duplicate] = await access.database.select({ id: channelCategories.id }).from(channelCategories).where(and(eq(channelCategories.spaceId, spaceId), eq(channelCategories.name, parsed.data.name))).limit(1);
+  if (duplicate && duplicate.id !== parsed.data.categoryId) return NextResponse.json({ code: "CATEGORY_EXISTS", message: "Такая категория уже существует." }, { status: 409 });
+  const [category] = await access.database.update(channelCategories).set({ name: parsed.data.name }).where(and(eq(channelCategories.id, parsed.data.categoryId), eq(channelCategories.spaceId, spaceId))).returning();
+  if (!category) return NextResponse.json({ code: "NOT_FOUND", message: "Категория не найдена." }, { status: 404 });
+  return NextResponse.json({ category });
 }
 
 export async function DELETE(request: Request, { params }: { params: Promise<{ spaceId: string }> }) {
