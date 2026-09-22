@@ -66,16 +66,24 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ sp
   if (!access.canManage) return NextResponse.json({ code: "FORBIDDEN", message: "Недостаточно прав для редактирования статей." }, { status: 403 });
   const body = await request.json().catch(() => null) as Record<string, unknown> | null;
   const input = pageInput(body);
-  if (typeof body?.id !== "string" || input.title.length < 2 || input.content.length < 10) return NextResponse.json({ code: "INVALID_INPUT", message: "Добавьте название и текст статьи." }, { status: 400 });
+  const expectedRevision = Number(body?.revision);
+  if (typeof body?.id !== "string" || input.title.length < 2 || input.content.length < 10 || !Number.isInteger(expectedRevision) || expectedRevision < 1) return NextResponse.json({ code: "INVALID_INPUT", message: "Добавьте название и текст статьи." }, { status: 400 });
   const [current] = await access.database.select({ id: wikiPages.id, revision: wikiPages.revision }).from(wikiPages).where(and(eq(wikiPages.id, body.id), eq(wikiPages.spaceId, spaceId))).limit(1);
   if (!current) return NextResponse.json({ code: "NOT_FOUND", message: "Статья не найдена." }, { status: 404 });
-  const revision = current.revision + 1;
-  const [page] = await access.database.transaction(async (tx) => {
-    const updated = await tx.update(wikiPages).set({ title: input.title, summary: input.summary || null, content: input.content, revision, updatedAt: new Date() }).where(eq(wikiPages.id, current.id)).returning();
-    await tx.insert(wikiRevisions).values({ id: randomUUID(), pageId: current.id, editorId: access.user.id, revision, title: input.title, summary: input.summary || null, content: input.content });
-    return updated;
-  });
-  return NextResponse.json({ page });
+  if (current.revision !== expectedRevision) return NextResponse.json({ code: "EDIT_CONFLICT", message: "Статья уже была изменена другим редактором. Обновите её перед сохранением.", currentRevision: current.revision }, { status: 409 });
+  const revision = expectedRevision + 1;
+  try {
+    const [page] = await access.database.transaction(async (tx) => {
+      const updated = await tx.update(wikiPages).set({ title: input.title, summary: input.summary || null, content: input.content, revision, updatedAt: new Date() }).where(and(eq(wikiPages.id, current.id), eq(wikiPages.revision, expectedRevision))).returning();
+      if (!updated) throw new Error("WIKI_EDIT_CONFLICT");
+      await tx.insert(wikiRevisions).values({ id: randomUUID(), pageId: current.id, editorId: access.user.id, revision, title: input.title, summary: input.summary || null, content: input.content });
+      return updated;
+    });
+    return NextResponse.json({ page });
+  } catch (error) {
+    if (error instanceof Error && error.message === "WIKI_EDIT_CONFLICT") return NextResponse.json({ code: "EDIT_CONFLICT", message: "Статья уже была изменена другим редактором. Обновите её перед сохранением." }, { status: 409 });
+    throw error;
+  }
 }
 
 export async function DELETE(request: Request, { params }: { params: Promise<{ spaceId: string }> }) {
