@@ -27,13 +27,13 @@ export const metadata: Metadata = {
     siteName: "FlipZero",
     title: "FlipZero — чаты, голос и сообщества",
     description: "Общайтесь в текстовых и голосовых каналах, проводите события и развивайте своё сообщество в FlipZero.",
-    images: [{ url: "/og-image.png", width: 1200, height: 630, alt: "FlipZero — чаты, голос и сообщества" }],
+    images: [{ url: "/opengraph-image", width: 1200, height: 630, alt: "FlipZero — чаты, голос и сообщества" }],
   },
   twitter: {
     card: "summary_large_image",
     title: "FlipZero — чаты, голос и сообщества",
     description: "Общайтесь в текстовых и голосовых каналах, проводите события и развивайте своё сообщество в FlipZero.",
-    images: ["/og-image.png"],
+    images: ["/opengraph-image"],
   },
   icons: {
     icon: "/favicon.svg",
