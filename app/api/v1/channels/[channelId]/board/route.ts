@@ -33,7 +33,7 @@ export async function GET(_: Request, { params }: { params: Promise<{ channelId:
   if ("error" in result) return result.error;
   const items = await result.database.select().from(boardItems).where(eq(boardItems.channelId, channelId)).orderBy(asc(boardItems.position), asc(boardItems.createdAt));
   const canWrite = !result.timedOutUntil && requireBoardWrite(result.permissions);
-  const canManage = hasPermission(result.permissions, Permission.ManageMessages);
+  const canManage = !result.timedOutUntil && hasPermission(result.permissions, Permission.ManageMessages);
   return NextResponse.json({
     capabilities: { write: canWrite, manageMessages: canManage, timedOutUntil: result.timedOutUntil },
     items: items.map((item) => ({ ...item, canDelete: item.authorId === result.user.id || canManage })),
@@ -48,6 +48,7 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ c
   const id = new URL(request.url).searchParams.get("id") ?? "";
   const [item] = await result.database.select({ authorId: boardItems.authorId }).from(boardItems).where(and(eq(boardItems.id, id), eq(boardItems.channelId, channelId))).limit(1);
   if (!item) return NextResponse.json({ code: "NOT_FOUND", message: "Карточка не найдена." }, { status: 404 });
+  if (result.timedOutUntil && item.authorId !== result.user.id) return NextResponse.json({ code: "TIMED_OUT", message: `Модерация доски ограничена до ${result.timedOutUntil.toLocaleString("ru-RU")}.` }, { status: 403 });
   if (item.authorId !== result.user.id && !hasPermission(result.permissions, Permission.ManageMessages)) return NextResponse.json({ code: "FORBIDDEN", message: "Удалять чужие карточки может только модератор." }, { status: 403 });
   await result.database.delete(boardItems).where(and(eq(boardItems.id, id), eq(boardItems.channelId, channelId)));
   return NextResponse.json({ ok: true });
