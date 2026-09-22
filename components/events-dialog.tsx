@@ -10,8 +10,8 @@ function dateTime(value: string) {
   return new Intl.DateTimeFormat("ru-RU", { day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" }).format(new Date(value));
 }
 
-export function EventsDialog({
-  const dialogRef = useModalA11y(onClose); spaceId, onClose }: { spaceId: string; onClose: () => void }) {
+export function EventsDialog({spaceId, onClose }: { spaceId: string; onClose: () => void }) {
+  const dialogRef = useModalA11y(onClose);
   const [items, setItems] = useState<CommunityEvent[]>([]);
   const [isOwner, setIsOwner] = useState(false);
   const [creating, setCreating] = useState(false);
