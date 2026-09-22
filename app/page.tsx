@@ -7,6 +7,13 @@ import {
   Gamepad2,
   Globe2,
   Hash,
+  Activity,
+  Apple,
+  Layers3,
+  Monitor,
+  Smartphone,
+  Terminal,
+  MessageSquareText,
   Menu,
   MessageCircle,
   Mic2,
@@ -107,7 +114,7 @@ export default function LandingPage() {
             <a href="#voice">Голос и видео</a>
             <a href="#communities">Сообщества</a>
             <Link href="/download">Скачать</Link>
-            <a href="#premium">Премиум</a>
+            <a className="fz-nav-super" href="#superflip"><Crown size={14} /> SUPER FLIP</a>
             <Link href="/developers">Для разработчиков</Link>
           </nav>
           <div className="fz-locale"><Globe2 size={17} /><span>RU</span></div>
@@ -119,6 +126,7 @@ export default function LandingPage() {
               <a href="#voice">Голос и видео</a>
               <a href="#communities">Сообщества</a>
               <Link href="/download">Скачать</Link>
+              <a className="fz-nav-super" href="#superflip"><Crown size={14} /> SUPER FLIP</a>
               <Link href="/developers">Для разработчиков</Link>
               <Link href="/app">Открыть FlipZero</Link>
             </nav>
@@ -139,11 +147,12 @@ export default function LandingPage() {
               <Link className="fz-button fz-button-secondary" href="/app">Открыть FlipZero <ArrowRight size={17} /></Link>
             </div>
             <small className="fz-free-note">Бесплатно, без карты, в браузере</small>
-            <div className="fz-platforms">
-              {["▦|Windows", "●|macOS", "♙|Linux", "◉|Android", "◉|Веб-версия"].map((item) => {
-                const [icon, label] = item.split("|");
-                return <span key={label}><b>{icon}</b><small>{label}</small></span>;
-              })}
+            <div className="fz-platforms" aria-label="Доступные платформы">
+              <span><Monitor size={22} aria-hidden="true" /><small>Windows</small></span>
+              <span><Apple size={22} aria-hidden="true" /><small>macOS</small></span>
+              <span><Terminal size={22} aria-hidden="true" /><small>Linux</small></span>
+              <span><Smartphone size={22} aria-hidden="true" /><small>Android</small></span>
+              <span><Globe2 size={22} aria-hidden="true" /><small>Веб-версия</small></span>
             </div>
           </div>
           <HeroProduct />
@@ -156,14 +165,12 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <section className="fz-stats">
+      <section className="fz-stats" aria-label="Статистика FlipZero">
         <div className="fz-container">
-          <div><strong>1.2M+</strong><span>активных пользователей</span></div>
-          <div><strong>25K+</strong><span>сообществ</span></div>
-          <div><strong>98%</strong><span>стабильная работа</span></div>
-          <div><strong>50M+</strong><span>сообщений в день</span></div>
-          <p>Присоединяйся к миллионам<br />людей по всему миру</p>
-          <div className="fz-avatar-stack"><i>AL</i><i>LU</i><i>MX</i><i>SA</i></div>
+          <div><i><Users size={20} /></i><strong>1.2M+</strong><span>активных пользователей</span></div>
+          <div><i><Layers3 size={20} /></i><strong>25K+</strong><span>сообществ</span></div>
+          <div><i><Activity size={20} /></i><strong>98%</strong><span>стабильная работа</span></div>
+          <div><i><MessageSquareText size={20} /></i><strong>50M+</strong><span>сообщений в день</span></div>
         </div>
       </section>
 
@@ -175,14 +182,22 @@ export default function LandingPage() {
             <p>Всё необходимое для близких, команд и больших сообществ — понятно с первого сообщения.</p>
           </header>
           <div className="fz-deep-grid">
-            <article><MessageCircle size={28} /><span><small>01</small><h3>Сообщения, которые не мешают жить</h3><p>Личные сообщения, каналы, треды, реакции и файлы — быстро и без лишнего шума.</p></span></article>
-            <article><Video size={28} /><span><small>02</small><h3>Голос и видео в один клик</h3><p>Заходи в войс, включай камеру или демонстрацию экрана без лишних экранов.</p></span></article>
-            <article id="communities"><Users size={28} /><span><small>03</small><h3>Сообщества, которые принадлежат тебе</h3><p>Создавай роли, категории, события и управляй пространством так, как удобно тебе.</p></span></article>
+            <article><span className="fz-deep-number">01</span><MessageCircle size={28} /><span><h3>Сообщения, которые не мешают жить</h3><p>Личные и групповые чаты, файлы и общение в каналах — быстро и без лишнего шума.</p></span><div className="fz-deep-visual"><b># общий-чат</b><p><i /> Сообщение в канале</p><p className="mine"><i /> Ответ участника</p></div></article>
+            <article><span className="fz-deep-number">02</span><Video size={28} /><span><h3>Голос и видео в один клик</h3><p>Заходи в голосовые каналы, включай видео и оставайся на связи.</p></span><div className="fz-deep-visual voice"><b>Голосовой канал</b><p><i /> Участник в эфире</p><p><i /> Участник подключён</p></div></article>
+            <article id="communities"><span className="fz-deep-number">03</span><Users size={28} /><span><h3>Сообщества, которые принадлежат тебе</h3><p>Настраивай роли, категории и события в своём пространстве.</p></span><div className="fz-deep-visual community"><b>Pixel Craft</b><p># общий-чат</p><p># мероприятия</p></div></article>
           </div>
         </div>
       </section>
 
-      <section className="fz-cta" id="premium">
+      <section className="fz-superflip" id="superflip">
+        <div className="fz-container">
+          <div className="fz-superflip-mark"><Crown size={34} /></div>
+          <div><span className="fz-eyebrow">SUPER FLIP</span><h2>SUPER FLIP</h2><p>Раздел SuperFlip доступен внутри FlipZero. Публичное описание возможностей будет добавлено после утверждения контента.</p></div>
+          <Link className="fz-button fz-button-super" href="/app">Открыть FlipZero <ArrowRight size={17} /></Link>
+        </div>
+      </section>
+
+      <section className="fz-cta">
         <div className="fz-container">
           <span className="fz-eyebrow">FLIPZERO</span>
           <h2>Собери своих людей<br />в одном месте</h2>
@@ -190,6 +205,18 @@ export default function LandingPage() {
           <div className="fz-actions"><Link className="fz-button fz-button-primary" href="/app">Открыть FlipZero</Link><Link className="fz-button fz-button-secondary" href="/register">Создать аккаунт</Link></div>
         </div>
       </section>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "SoftwareApplication",
+          name: "FlipZero",
+          url: "https://flipzeroapp.vercel.app/",
+          applicationCategory: "CommunicationApplication",
+          operatingSystem: "Windows, macOS, Linux, Android, Web",
+          description: "Платформа для чатов, голосовой и видеосвязи и сообществ."
+        }) }}
+      />
     </main>
   );
 }
