@@ -7,12 +7,13 @@ import { getCurrentUser } from "@/lib/auth";
 import { assessMessageSafety } from "@/lib/trust-safety";
 import { getChannelPermissions, hasPermission, SpacePermission } from "@/lib/space-permissions";
 import { getActiveTimeout } from "@/lib/moderation-access";
+import { createChannelMessageNotifications } from "@/lib/channel-notifications";
 
 async function accessChannel(channelId: string) {
   const user = await getCurrentUser();
   if (!user) return { error: NextResponse.json({ code: "UNAUTHENTICATED", message: "Требуется вход." }, { status: 401 }) };
   const database = getDatabase();
-  const [channel] = await database.select({ id: channels.id, spaceId: channels.spaceId, kind: channels.kind, slowmodeSeconds: channels.slowmodeSeconds, ownerId: spaces.ownerId }).from(channels).innerJoin(spaces, eq(spaces.id, channels.spaceId)).innerJoin(members, and(eq(members.spaceId, channels.spaceId), eq(members.userId, user.id))).where(eq(channels.id, channelId)).limit(1);
+  const [channel] = await database.select({ id: channels.id, spaceId: channels.spaceId, name: channels.name, kind: channels.kind, slowmodeSeconds: channels.slowmodeSeconds, ownerId: spaces.ownerId }).from(channels).innerJoin(spaces, eq(spaces.id, channels.spaceId)).innerJoin(members, and(eq(members.spaceId, channels.spaceId), eq(members.userId, user.id))).where(eq(channels.id, channelId)).limit(1);
   if (!channel) return { error: NextResponse.json({ code: "FORBIDDEN", message: "Канал недоступен." }, { status: 403 }) };
   const permissionState = await getChannelPermissions(channelId, user.id);
   if (!permissionState.owner && !hasPermission(permissionState.permissions, SpacePermission.ViewChannels)) return { error: NextResponse.json({ code: "FORBIDDEN", message: "Нет права на просмотр канала." }, { status: 403 }) };
@@ -96,6 +97,14 @@ export async function POST(request: Request, { params }: { params: Promise<{ cha
     if (assessment.flagged) await tx.insert(moderationFlags).values({ id: randomUUID(), spaceId: access.channel.spaceId, channelId, messageId: id, authorId: access.user.id, category: assessment.category!, severity: assessment.severity, confidence: assessment.confidence, summary: assessment.summary, evidence: assessment.signals, autoHidden: assessment.autoHide });
   });
   if (assessment.autoHide) return NextResponse.json({ code: "MODERATION_HELD", message: "Сообщение временно скрыто автоматической защитой и отправлено на проверку модератору." }, { status: 422 });
+  await createChannelMessageNotifications({
+    spaceId: access.channel.spaceId,
+    channelId,
+    channelName: access.channel.name,
+    messageId: id,
+    content,
+    sender: { id: access.user.id, displayName: access.user.displayName, username: access.user.username },
+  }).catch(() => undefined);
   return NextResponse.json({ message: { id, channelId, authorId: access.user.id, displayName: access.user.displayName, username: access.user.username, avatarUrl: access.user.avatarUrl, content, attachments, replyToId, threadRootId, reactions: [], createdAt: new Date().toISOString() }, moderation: assessment.flagged ? { status: "pending", severity: assessment.severity } : null }, { status: 201 });
 }
 
