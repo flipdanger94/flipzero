@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { AccessToken, RoomServiceClient, TrackSource } from "livekit-server-sdk";
 import { NextResponse } from "next/server";
 import { getDatabase } from "@/db/client";
@@ -24,7 +24,7 @@ export async function POST(
       members,
       and(eq(members.spaceId, channels.spaceId), eq(members.userId, user.id)),
     )
-    .where(and(eq(channels.id, channelId), eq(channels.kind, "voice")))
+    .where(and(eq(channels.id, channelId), inArray(channels.kind, ["voice", "stage"])))
     .limit(1);
   if (!channel)
     return NextResponse.json(
