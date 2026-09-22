@@ -39,7 +39,11 @@ export function ChannelMemberOverrides({ spaceId, channelId }: { spaceId: string
       const loadedOverrides = ((overrideResult.data.overrides ?? []) as MemberOverride[]).filter((item) => item.targetType === "member");
       setMembers(loadedMembers);
       setOverrides(loadedOverrides);
-      setSelectedId(loadedMembers[0]?.userId ?? "");
+      const firstId = loadedMembers[0]?.userId ?? "";
+      const firstOverride = loadedOverrides.find((item) => item.targetId === firstId);
+      setSelectedId(firstId);
+      setDraft({ allow: firstOverride?.allow ?? 0, deny: firstOverride?.deny ?? 0 });
+      setSaved(false);
     }).catch((reason) => {
       if (reason?.name !== "AbortError") setError(reason?.message ?? "Не удалось загрузить персональные права.");
     }).finally(() => setLoading(false));
@@ -47,12 +51,6 @@ export function ChannelMemberOverrides({ spaceId, channelId }: { spaceId: string
   }, [spaceId, channelId]);
 
   const selected = useMemo(() => members.find((member) => member.userId === selectedId) ?? null, [members, selectedId]);
-
-  useEffect(() => {
-    const current = overrides.find((item) => item.targetId === selectedId);
-    setDraft({ allow: current?.allow ?? 0, deny: current?.deny ?? 0 });
-    setSaved(false);
-  }, [overrides, selectedId]);
 
   function stateFor(flag: number): State {
     if ((draft.allow & flag) === flag) return "allow";
@@ -107,7 +105,7 @@ export function ChannelMemberOverrides({ spaceId, channelId }: { spaceId: string
     </div>
     {error ? <div className="auth-error" role="alert">{error}</div> : null}
     {loading ? <div className="role-loading"><LoaderCircle className="spin" size={20} /> Загружаем участников...</div> : members.length ? <>
-      <label className="member-override-picker"><span>Участник</span><select value={selectedId} onChange={(event) => setSelectedId(event.target.value)}>{members.map((member) => <option key={member.userId} value={member.userId}>{member.nickname || member.displayName} · @{member.username || "user"}</option>)}</select></label>
+      <label className="member-override-picker"><span>Участник</span><select value={selectedId} onChange={(event) => { const nextId = event.target.value; const current = overrides.find((item) => item.targetId === nextId); setSelectedId(nextId); setDraft({ allow: current?.allow ?? 0, deny: current?.deny ?? 0 }); setSaved(false); }}>{members.map((member) => <option key={member.userId} value={member.userId}>{member.nickname || member.displayName} · @{member.username || "user"}</option>)}</select></label>
       {selected ? <div className="override-grid">{permissionOptions.map(([label, flag]) => <label key={flag}><span>{label}</span><select value={stateFor(flag)} onChange={(event) => change(flag, event.target.value as State)}><option value="inherit">Наследовать</option><option value="allow">Разрешить</option><option value="deny">Запретить</option></select></label>)}</div> : null}
       <button className="auth-submit override-save" onClick={save} disabled={saving || !selectedId}>{saving ? <LoaderCircle className="spin" size={17} /> : <><Save size={16} /> {saved ? "Сохранено" : "Сохранить участника"}</>}</button>
     </> : <div className="role-protected"><UserRound size={28} /><strong>Участники не найдены</strong></div>}
