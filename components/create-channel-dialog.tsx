@@ -8,8 +8,8 @@ type ChannelKind = "text" | "forum" | "voice" | "announcement" | "board";
 export type CreatedChannel = { id: string; spaceId: string; parentId: string | null; name: string; topic: string | null; kind: ChannelKind; position: number };
 type CategoryOption = { id: string; name: string };
 
-export function CreateChannelDialog({
-  const dialogRef = useModalA11y(onClose); spaceId, categories, initialKind, initialParentId, onClose, onCreated }: { spaceId: string; categories: CategoryOption[]; initialKind: "text" | "voice"; initialParentId?: string | null; onClose: () => void; onCreated: (channel: CreatedChannel) => void }) {
+export function CreateChannelDialog({spaceId, categories, initialKind, initialParentId, onClose, onCreated }: { spaceId: string; categories: CategoryOption[]; initialKind: "text" | "voice"; initialParentId?: string | null; onClose: () => void; onCreated: (channel: CreatedChannel) => void }) {
+  const dialogRef = useModalA11y(onClose);
   const [kind, setKind] = useState<ChannelKind>(initialKind);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
