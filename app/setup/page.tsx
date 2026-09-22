@@ -18,6 +18,7 @@ const releases = [
   ["0012", "Safety / Privacy / Notifications", "Жалобы, блокировки, приватность и уведомления", "0012_safety_privacy_notifications.sql"],
   ["0013", "Профили пользователей", "Локация, статус и ссылки профиля", "0012_user_profiles.sql"],
   ["0014", "Voice states", "Состояния участников в голосовых комнатах", "0013_voice_states.sql"],
+  ["0015", "Developer integrations", "OAuth clients и Webhooks для приложений разработчиков", "0014_developer_integrations.sql"],
 ] as const;
 
 export default function SetupIndexPage() {
