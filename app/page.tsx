@@ -1,66 +1,195 @@
 import Link from "next/link";
-import { ArrowRight, BookOpen, CalendarDays, Check, Download, Hash, KanbanSquare, Menu, MessageCircle, Mic2, MonitorUp, ShieldCheck, Trophy, Users, Video } from "lucide-react";
+import {
+  ArrowRight,
+  Code2,
+  Crown,
+  Download,
+  Gamepad2,
+  Globe2,
+  Hash,
+  Menu,
+  MessageCircle,
+  Mic2,
+  Search,
+  ShieldCheck,
+  Users,
+  Video,
+} from "lucide-react";
 import { BrandMark } from "@/components/brand-mark";
 
-const features = [
-  { icon: MessageCircle, title: "Чаты без ограничений", text: "Личные и групповые чаты, треды, реакции и файлы — без шума и искусственных лимитов." },
-  { icon: Mic2, title: "Голос и видео", text: "Заходите в голос одним кликом, включайте камеру и делитесь экраном в высоком качестве." },
-  { icon: Users, title: "Ваше сообщество", text: "Создавайте пространство с каналами, гибкими ролями, правами и понятной модерацией." },
+const featureCards = [
+  { icon: MessageCircle, title: "Чаты без ограничений", text: "Общайся в личных и групповых чатах, делись файлами и эмоциями." },
+  { icon: Video, title: "Голос и видео", text: "Кристально чистый звук, стабильное соединение и быстрый вход в войс." },
+  { icon: Users, title: "Твои сообщества", text: "Создавай пространства с гибкими настройками, ролями и каналами." },
+  { icon: Gamepad2, title: "Игры и совместный досуг", text: "Будь ближе к тем, кто разделяет твои интересы." },
+  { icon: ShieldCheck, title: "Безопасность", text: "Твои данные под защитой. Ты контролируешь своё пространство." },
+  { icon: Code2, title: "Для разработчиков", text: "Создавай ботов, приложения и интеграции с нашим API." },
 ];
 
-const communityTools = [
-  { icon: CalendarDays, title: "События", text: "Планируйте встречи, эфиры и игровые вечера." },
-  { icon: BookOpen, title: "База знаний", text: "Сохраняйте правила, гайды и важные решения." },
-  { icon: KanbanSquare, title: "Доски", text: "Организуйте идеи и задачи вместе с командой." },
-  { icon: Trophy, title: "Уровни и награды", text: "Поддерживайте активность и отмечайте вклад." },
-];
-
-const people = [
-  { initials: "Л", name: "Лера", state: "Говорит", color: "violet" },
-  { initials: "М", name: "Макс", state: "В эфире", color: "coral" },
-  { initials: "А", name: "Аня", state: "Слушает", color: "mint" },
-  { initials: "И", name: "Илья", state: "Слушает", color: "amber" },
+const members = [
+  ["Dreamer", "Создаёт будущее", "DR"],
+  ["Luna", "В сети", "LU"],
+  ["Max", "В игре", "MX"],
+  ["Sakura", "В сети", "SA"],
+  ["Artem", "В сети", "AR"],
+  ["pixel_kid", "В игре", "PK"],
 ];
 
 function Logo() {
-  return <span className="fz-logo"><span><BrandMark size={24} /></span><strong>FlipZero</strong></span>;
+  return (
+    <span className="fz-logo">
+      <span className="fz-logo-mark"><BrandMark size={34} /></span>
+      <span className="fz-logo-copy"><strong>FlipZero</strong><small>Больше, чем общение</small></span>
+    </span>
+  );
 }
 
-function PrimaryDownload() {
-  return <Link className="fz-button fz-button-primary" href="/download"><Download size={16} /> Скачать для Windows</Link>;
-}
+function HeroProduct() {
+  return (
+    <div className="fz-stage" aria-label="Интерфейс FlipZero">
+      <div className="fz-stage-glow" />
+      <section className="fz-app-preview">
+        <aside className="fz-app-rail">
+          <span className="fz-app-brand"><BrandMark size={24} /></span>
+          {["+", "✦", "◉", "◆", "⬢", "◌"].map((item, index) => <i key={index}>{item}</i>)}
+        </aside>
 
-function ProductPreview() {
-  return <div className="fz-product" aria-label="Предпросмотр интерфейса FlipZero">
-    <div className="fz-product-bar"><span><i /><i /><i /></span><small>FlipZero — Команда продукта</small></div>
-    <div className="fz-product-body">
-      <aside className="fz-preview-rail"><b>F</b><i /><i /><i /></aside>
-      <aside className="fz-preview-channels"><strong>Команда продукта</strong><small>ТЕКСТОВЫЕ КАНАЛЫ</small><span className="active"><Hash size={13} /> общий</span><span><Hash size={13} /> релизы</span><span><Hash size={13} /> вопросы</span><small>ГОЛОСОВЫЕ</small><span className="voice"><Mic2 size={13} /> Лаунж <em>4</em></span></aside>
-      <section className="fz-preview-chat"><header><Hash size={16} /><b>общий</b><small>128 участников</small></header><article><i className="violet" /><p><b>Лера</b><span>Собираемся в голосовой в 19:00?</span></p></article><article><i className="coral" /><p><b>Макс</b><span>Да! Я заодно покажу новый экран.</span></p></article><article><i className="mint" /><p><b>Аня</b><span>Отлично, добавила событие в календарь ✨</span></p></article><footer>Написать в #общий <b>＋ ☺</b></footer></section>
+        <aside className="fz-app-sidebar">
+          <div className="fz-server-title">
+            <span><i>PC</i><strong>Pixel Craft</strong></span><small>12 436 участников</small>
+          </div>
+          <p>Главное</p>
+          {["общий-чат", "анонсы", "мероприятия", "творчество", "мемы", "вопросы"].map((name, index) => (
+            <span key={name} className={index === 0 ? "active" : ""}><Hash size={13} /> {name}</span>
+          ))}
+          <p>Голосовые каналы</p>
+          {["Лаунж", "Игры", "Музыка", "Общение"].map((name, index) => (
+            <span key={name}><Mic2 size={13} /> {name}{index === 0 ? <b>3 в эфире</b> : null}</span>
+          ))}
+          <div className="fz-app-user"><i>AL</i><span><strong>Alexander</strong><small>#1001</small></span><Mic2 size={13} /></div>
+        </aside>
+
+        <main className="fz-app-chat">
+          <header><Hash size={18} /><strong>общий-чат</strong><span>Общайся • Делись • Создавай вместе</span><Search size={18} /><Users size={18} /></header>
+          <div className="fz-app-feed">
+            <article>
+              <i className="avatar avatar-luna">LU</i>
+              <div><p><strong>Luna 💜</strong><time>Сегодня, 14:28</time></p><span>Ребят, посмотрите на этот арт, который я сделала сегодня! ✨</span><div className="fz-art-card"><div className="fz-art-moon" /><div className="fz-art-city" /></div><footer><b>❤️ 284</b><b>🔥 42</b><b>⭐ 27</b></footer></div>
+            </article>
+            <article><i className="avatar avatar-max">MX</i><div><p><strong>Max</strong><time>Сегодня, 14:31</time></p><span>Выглядит потрясающе! 🔥<br />Можно добавить это в галерею на сервере?</span></div></article>
+            <article><i className="avatar avatar-sakura">SA</i><div><p><strong>Sakura 🌸</strong><time>Сегодня, 14:32</time></p><span>Да, конечно! Сейчас закину ещё пару вариантов 🙂</span></div></article>
+          </div>
+          <div className="fz-app-composer"><span>＋</span><p>Написать сообщение в #общий-чат...</p><b>GIF</b><b>☺</b><button>➤</button></div>
+        </main>
+
+        <aside className="fz-app-members">
+          <header><strong>Участники — 1 245</strong><Search size={15} /></header>
+          <small>ВЛАДЕЛЕЦ — 1</small>
+          {members.map(([name, state, initials], index) => (
+            <div key={name}><i className={"member-avatar m" + index}>{initials}</i><span><strong>{name}{index === 0 ? " 👑" : ""}</strong><small>{state}</small></span></div>
+          ))}
+        </aside>
+      </section>
+      <span className="fz-note fz-note-top"><Crown size={34} /> ТВОЁ<br />СООБЩЕСТВО<br />ТВОИ ПРАВИЛА</span>
+      <span className="fz-note fz-note-left">Больше<br />чем общение ↗</span>
     </div>
-  </div>;
-}
-
-function VoiceCard() {
-  return <div className="fz-voice-card"><header><span><small>ГОЛОСОВОЙ КАНАЛ</small><strong>Лаунж</strong></span><b>● 4 в сети</b></header><div className="fz-voice-grid">{people.map(person => <article key={person.name}><i className={person.color}>{person.initials}</i><strong>{person.name}</strong><small className={person.state === "Говорит" ? "talking" : ""}>{person.state}</small></article>)}</div><footer><span><Mic2 size={14} /> Микрофон</span><span><Video size={14} /> Камера</span><span><MonitorUp size={14} /> Экран</span></footer></div>;
+  );
 }
 
 export default function LandingPage() {
-  return <main className="fz-landing">
-    <header className="fz-header"><div className="fz-container fz-header-inner"><Link href="/" aria-label="FlipZero — главная"><Logo /></Link><nav aria-label="Главная навигация"><a href="#features">Возможности</a><a href="#voice">Голос и видео</a><a href="#communities">Сообщества</a><Link href="/download">Скачать</Link></nav><Link className="fz-header-button" href="/app">Открыть FlipZero</Link><details className="fz-mobile-menu"><summary aria-label="Открыть меню"><Menu size={20} /></summary><nav><a href="#features">Возможности</a><a href="#voice">Голос и видео</a><a href="#communities">Сообщества</a><Link href="/download">Скачать</Link><Link href="/app">Открыть FlipZero</Link></nav></details></div></header>
+  return (
+    <main className="fz-landing">
+      <header className="fz-header">
+        <div className="fz-container fz-header-inner">
+          <Link href="/" aria-label="FlipZero — главная"><Logo /></Link>
+          <nav aria-label="Главная навигация">
+            <a href="#features">Возможности</a>
+            <a href="#voice">Голос и видео</a>
+            <a href="#communities">Сообщества</a>
+            <Link href="/download">Скачать</Link>
+            <a href="#premium">Премиум</a>
+            <Link href="/developers">Для разработчиков</Link>
+          </nav>
+          <div className="fz-locale"><Globe2 size={17} /><span>RU</span></div>
+          <Link className="fz-header-button" href="/app">Открыть FlipZero</Link>
+          <details className="fz-mobile-menu">
+            <summary aria-label="Открыть меню"><Menu size={20} /></summary>
+            <nav>
+              <a href="#features">Возможности</a>
+              <a href="#voice">Голос и видео</a>
+              <a href="#communities">Сообщества</a>
+              <Link href="/download">Скачать</Link>
+              <Link href="/developers">Для разработчиков</Link>
+              <Link href="/app">Открыть FlipZero</Link>
+            </nav>
+          </details>
+        </div>
+      </header>
 
-    <section className="fz-hero"><div className="fz-container"><span className="fz-eyebrow pill">● Новое пространство для общения</span><h1>Ваши люди. Ваше <em>место.</em></h1><p>Чаты, голос, видео и сообщества — в одном быстром и спокойном пространстве, которое принадлежит вам.</p><div className="fz-actions"><PrimaryDownload /><Link className="fz-button fz-button-secondary" href="/app">Открыть FlipZero</Link></div><small>Бесплатно, без карты, в браузере</small><ProductPreview /></div></section>
+      <section className="fz-hero">
+        <div className="fz-space-orb fz-orb-one" />
+        <div className="fz-space-orb fz-orb-two" />
+        <div className="fz-container fz-hero-grid">
+          <div className="fz-hero-copy">
+            <span className="fz-eyebrow pill"><i /> Новое поколение комьюнити</span>
+            <h1>Ваши люди.<br /><em>Ваше место.</em></h1>
+            <p>Чаты, голос, видео и сообщества — в одном быстром и безопасном пространстве, которое принадлежит вам.</p>
+            <div className="fz-actions">
+              <Link className="fz-button fz-button-primary" href="/download"><Download size={18} /> Скачать для Windows</Link>
+              <Link className="fz-button fz-button-secondary" href="/app">Открыть FlipZero <ArrowRight size={17} /></Link>
+            </div>
+            <small className="fz-free-note">Бесплатно, без карты, в браузере</small>
+            <div className="fz-platforms">
+              {["▦|Windows", "●|macOS", "♙|Linux", "◉|Android", "◉|Веб-версия"].map((item) => {
+                const [icon, label] = item.split("|");
+                return <span key={label}><b>{icon}</b><small>{label}</small></span>;
+              })}
+            </div>
+          </div>
+          <HeroProduct />
+        </div>
 
-    <section className="fz-section" id="features"><div className="fz-container"><header className="fz-section-head"><span className="fz-eyebrow">ВОЗМОЖНОСТИ</span><h2>Общение без лишних<br />барьеров</h2><p>Всё необходимое для близких, команды и больших сообществ — понятно с первого сообщения.</p></header><div className="fz-feature-grid">{features.map(({ icon: Icon, title, text }) => <article key={title}><i><Icon size={20} /></i><h3>{title}</h3><p>{text}</p><a href="#voice">Подробнее <ArrowRight size={13} /></a></article>)}</div></div></section>
+        <div className="fz-container fz-feature-strip" id="features">
+          {featureCards.map(({ icon: Icon, title, text }) => (
+            <article key={title}><i><Icon size={23} /></i><h3>{title}</h3><p>{text}</p></article>
+          ))}
+        </div>
+      </section>
 
-    <section className="fz-section fz-split" id="voice"><div className="fz-container"><div className="fz-copy"><span className="fz-eyebrow">ГОЛОС И ВИДЕО</span><h2>Будто вы в одной<br />комнате</h2><p>Мгновенно подключайтесь к друзьям и коллегам. Чистый звук, плавное видео и никаких сложных настроек.</p><ul><li><Check size={14} /> Камера</li><li><Check size={14} /> Демонстрация экрана</li><li><Check size={14} /> Выбор микрофона</li></ul></div><VoiceCard /></div></section>
+      <section className="fz-stats">
+        <div className="fz-container">
+          <div><strong>1.2M+</strong><span>активных пользователей</span></div>
+          <div><strong>25K+</strong><span>сообществ</span></div>
+          <div><strong>98%</strong><span>стабильная работа</span></div>
+          <div><strong>50M+</strong><span>сообщений в день</span></div>
+          <p>Присоединяйся к миллионам<br />людей по всему миру</p>
+          <div className="fz-avatar-stack"><i>AL</i><i>LU</i><i>MX</i><i>SA</i></div>
+        </div>
+      </section>
 
-    <section className="fz-section fz-communities" id="communities"><div className="fz-container"><header className="fz-section-head"><span className="fz-eyebrow">СООБЩЕСТВА</span><h2>Пространство, которое<br />растёт вместе с вами</h2><p>От уютного клуба до открытого сообщества — соберите всё важное в одном месте.</p></header><div className="fz-community-grid">{communityTools.map(({ icon: Icon, title, text }) => <article key={title}><i><Icon size={18} /></i><h3>{title}</h3><p>{text}</p></article>)}</div></div></section>
+      <section className="fz-section fz-features-deep" id="voice">
+        <div className="fz-container">
+          <header className="fz-section-head">
+            <span className="fz-eyebrow">ВОЗМОЖНОСТИ</span>
+            <h2>Общение без лишних<br />барьеров</h2>
+            <p>Всё необходимое для близких, команд и больших сообществ — понятно с первого сообщения.</p>
+          </header>
+          <div className="fz-deep-grid">
+            <article><MessageCircle size={28} /><span><small>01</small><h3>Сообщения, которые не мешают жить</h3><p>Личные сообщения, каналы, треды, реакции и файлы — быстро и без лишнего шума.</p></span></article>
+            <article><Video size={28} /><span><small>02</small><h3>Голос и видео в один клик</h3><p>Заходи в войс, включай камеру или демонстрацию экрана без лишних экранов.</p></span></article>
+            <article id="communities"><Users size={28} /><span><small>03</small><h3>Сообщества, которые принадлежат тебе</h3><p>Создавай роли, категории, события и управляй пространством так, как удобно тебе.</p></span></article>
+          </div>
+        </div>
+      </section>
 
-    <section className="fz-section fz-moderation"><div className="fz-container"><div className="fz-copy"><span className="fz-eyebrow">МОДЕРАЦИЯ</span><h2>Порядок без лишнего<br />контроля</h2><p>Назначайте роли и права, защищайте участников и задавайте понятные правила. Инструменты модерации работают тихо, пока сообщество живёт своей жизнью.</p><Link className="fz-button fz-button-primary" href="/app">Открыть своё пространство</Link></div><div className="fz-roles"><header><strong>Роли и доступ</strong><b><ShieldCheck size={12} /> Защищено</b></header><p><i className="mint" /> <span><strong>Администраторы</strong><small>8 участников</small></span><em>Все права</em></p><p><i className="violet" /> <span><strong>Модераторы</strong><small>24 участника</small></span><em>Управление чатами</em></p><p><i className="coral" /> <span><strong>Участники</strong><small>1 280 участников</small></span><em>Базовые права</em></p></div></div></section>
-
-    <section className="fz-cta"><div className="fz-container"><h2>Ваше пространство уже ждёт</h2><p>Соберите своих людей и начните разговор в FlipZero уже сегодня.</p><div className="fz-actions"><PrimaryDownload /><Link className="fz-button fz-button-secondary" href="/app">Открыть FlipZero</Link></div></div></section>
-
-    <footer className="fz-footer"><div className="fz-container"><section><Logo /><p>Чаты, голос, видео и сообщества в одном спокойном пространстве.</p><PrimaryDownload /><Link className="fz-footer-open" href="/app">Открыть FlipZero</Link></section><nav><strong>ПРОДУКТ</strong><a href="#features">Возможности</a><a href="#voice">Голос и видео</a><a href="#communities">Сообщества</a></nav><nav><strong>РЕСУРСЫ</strong><Link href="/api/health">Статус</Link><Link href="/download">Поддержка</Link><Link href="/privacy">Безопасность</Link></nav><nav><strong>НАЧАТЬ</strong><Link href="/download">Скачать</Link><Link href="/login">Войти</Link><Link href="/register">Создать сообщество</Link></nav><div className="fz-footer-bottom"><span>© 2026 FlipZero. Все права защищены.</span><span><Link href="/privacy">Конфиденциальность</Link> · <Link href="/terms">Условия</Link></span></div></div></footer>
-  </main>;
+      <section className="fz-cta" id="premium">
+        <div className="fz-container">
+          <span className="fz-eyebrow">FLIPZERO</span>
+          <h2>Собери своих людей<br />в одном месте</h2>
+          <p>Создай пространство, позови друзей и начни общаться уже сейчас.</p>
+          <div className="fz-actions"><Link className="fz-button fz-button-primary" href="/app">Открыть FlipZero</Link><Link className="fz-button fz-button-secondary" href="/register">Создать аккаунт</Link></div>
+        </div>
+      </section>
+    </main>
+  );
 }
