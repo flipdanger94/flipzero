@@ -5,6 +5,7 @@ import { memberRoles, members, roles, spaces } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
 import { expandPermissions } from "@/lib/permissions";
 import { evictParticipantsFromSpaceVoice } from "@/lib/livekit-admin";
+import { writeSpaceAuditLog } from "@/lib/space-audit";
 
 export async function POST(request: Request, { params }: { params: Promise<{ spaceId: string }> }) {
   const [user, { spaceId }] = await Promise.all([getCurrentUser(), params]);
@@ -51,6 +52,14 @@ export async function POST(request: Request, { params }: { params: Promise<{ spa
   if (!transferred) return NextResponse.json({ code: "OWNERSHIP_CHANGED", message: "Владелец уже изменился. Обновите сервер и попробуйте снова." }, { status: 409 });
 
   await evictParticipantsFromSpaceVoice(spaceId, [user.id, targetUserId]);
+  await writeSpaceAuditLog({
+    spaceId,
+    actorId: user.id,
+    action: "space.ownership.transfer",
+    targetType: "user",
+    targetId: targetUserId,
+    metadata: { previousOwnerId: user.id },
+  });
   const currentRoles = await database.select({ permissions: roles.permissions }).from(memberRoles)
     .innerJoin(roles, eq(roles.id, memberRoles.roleId))
     .where(and(eq(memberRoles.spaceId, spaceId), eq(memberRoles.userId, user.id)));
