@@ -62,10 +62,13 @@ export async function POST(request: Request) {
       tx.update(pathProgress).set({ level: pathLevel }).where(and(eq(pathProgress.userId, user.id), eq(pathProgress.scopeId, spaceId), eq(pathProgress.path, path))),
     ]);
 
-    const [{ count }] = await tx.select({ count: sql<number>`count(*)::int` }).from(xpEvents).where(and(eq(xpEvents.userId, user.id), eq(xpEvents.source, source)));
-    const definitions = await tx.select().from(achievementDefinitions).where(sql`${achievementDefinitions.spaceId} IS NULL OR ${achievementDefinitions.spaceId} = ${spaceId}`);
+    const [[{ count: globalCount }], [{ count: localCount }], definitions] = await Promise.all([
+      tx.select({ count: sql<number>`count(*)::int` }).from(xpEvents).where(and(eq(xpEvents.userId, user.id), eq(xpEvents.source, source))),
+      tx.select({ count: sql<number>`count(*)::int` }).from(xpEvents).where(and(eq(xpEvents.userId, user.id), eq(xpEvents.spaceId, spaceId), eq(xpEvents.source, source))),
+      tx.select().from(achievementDefinitions).where(sql`${achievementDefinitions.spaceId} IS NULL OR ${achievementDefinitions.spaceId} = ${spaceId}`),
+    ]);
     for (const definition of definitions.filter((item) => item.eventSource === source || item.eventSource === "level")) {
-      const progress = definition.eventSource === "level" ? globalLevel : count;
+      const progress = definition.eventSource === "level" ? globalLevel : definition.spaceId ? localCount : globalCount;
       const justUnlocked = progress >= definition.target;
       const rows = await tx.insert(userAchievements).values({ userId: user.id, achievementId: definition.id, progress: Math.min(progress, definition.target), unlockedAt: justUnlocked ? new Date() : null }).onConflictDoUpdate({ target: [userAchievements.userId, userAchievements.achievementId], set: { progress: Math.min(progress, definition.target), unlockedAt: justUnlocked ? sql`coalesce(${userAchievements.unlockedAt}, now())` : userAchievements.unlockedAt, updatedAt: new Date() } }).returning({ unlockedAt: userAchievements.unlockedAt });
       if (justUnlocked && rows[0]?.unlockedAt) unlocked.push(definition.name);
