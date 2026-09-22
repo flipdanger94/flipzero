@@ -19,6 +19,7 @@ export const developerWebhooks = pgTable("developer_webhooks", {
   url: text("url").notNull(),
   eventTypes: jsonb("event_types").$type<string[]>().default([]).notNull(),
   secretHash: text("secret_hash").notNull(),
+  secretCiphertext: text("secret_ciphertext").notNull(),
   secretPrefix: text("secret_prefix").notNull(),
   enabled: boolean("enabled").default(true).notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
