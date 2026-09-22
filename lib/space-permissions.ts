@@ -5,6 +5,21 @@ import { Permission, hasPermission } from "@/lib/permissions";
 
 export const SpacePermission = Permission;
 
+export async function getSpacePermissions(spaceId: string, userId: string) {
+  const db = getDatabase();
+  const [base] = await db.select({ ownerId: spaces.ownerId })
+    .from(spaces)
+    .innerJoin(members, and(eq(members.spaceId, spaces.id), eq(members.userId, userId)))
+    .where(eq(spaces.id, spaceId)).limit(1);
+  if (!base) return { spaceId: null, owner: false, permissions: 0 };
+  if (base.ownerId === userId) return { spaceId, owner: true, permissions: Permission.Administrator };
+  const assigned = await db.select({ permissions: roles.permissions }).from(memberRoles)
+    .innerJoin(roles, eq(roles.id, memberRoles.roleId))
+    .where(and(eq(memberRoles.userId, userId), eq(memberRoles.spaceId, spaceId)));
+  const permissions = assigned.reduce((value, role) => value | Number(role.permissions), 0);
+  return { spaceId, owner: false, permissions };
+}
+
 export async function getChannelPermissions(channelId: string, userId: string) {
   const db = getDatabase();
   const [base] = await db.select({ spaceId: channels.spaceId, ownerId: spaces.ownerId })
