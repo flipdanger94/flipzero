@@ -24,3 +24,33 @@ CREATE TABLE IF NOT EXISTS "developer_webhooks" (
   "updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 CREATE INDEX IF NOT EXISTS "developer_webhooks_app_idx" ON "developer_webhooks" ("app_id");
+
+CREATE TABLE IF NOT EXISTS "developer_oauth_authorization_codes" (
+  "id" text PRIMARY KEY NOT NULL,
+  "code_hash" text NOT NULL,
+  "app_id" text NOT NULL REFERENCES "developer_apps"("id") ON DELETE cascade,
+  "user_id" text NOT NULL REFERENCES "users"("id") ON DELETE cascade,
+  "redirect_uri" text NOT NULL,
+  "scopes" jsonb DEFAULT '[]'::jsonb NOT NULL,
+  "code_challenge" text,
+  "expires_at" timestamp with time zone NOT NULL,
+  "consumed_at" timestamp with time zone,
+  "created_at" timestamp with time zone DEFAULT now() NOT NULL
+);
+CREATE UNIQUE INDEX IF NOT EXISTS "developer_oauth_code_hash_unique" ON "developer_oauth_authorization_codes" ("code_hash");
+CREATE INDEX IF NOT EXISTS "developer_oauth_code_app_idx" ON "developer_oauth_authorization_codes" ("app_id", "expires_at");
+
+CREATE TABLE IF NOT EXISTS "developer_oauth_access_tokens" (
+  "id" text PRIMARY KEY NOT NULL,
+  "app_id" text NOT NULL REFERENCES "developer_apps"("id") ON DELETE cascade,
+  "user_id" text NOT NULL REFERENCES "users"("id") ON DELETE cascade,
+  "token_hash" text NOT NULL,
+  "prefix" text NOT NULL,
+  "scopes" jsonb DEFAULT '[]'::jsonb NOT NULL,
+  "last_used_at" timestamp with time zone,
+  "expires_at" timestamp with time zone NOT NULL,
+  "revoked_at" timestamp with time zone,
+  "created_at" timestamp with time zone DEFAULT now() NOT NULL
+);
+CREATE UNIQUE INDEX IF NOT EXISTS "developer_oauth_access_token_hash_unique" ON "developer_oauth_access_tokens" ("token_hash");
+CREATE INDEX IF NOT EXISTS "developer_oauth_access_token_app_user_idx" ON "developer_oauth_access_tokens" ("app_id", "user_id");
