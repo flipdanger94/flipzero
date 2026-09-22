@@ -29,8 +29,8 @@ function matchesCategory(item: Community, category: Category) {
   return words[category].some((word) => text.includes(word));
 }
 
-export function DiscoveryDialog({
-  const dialogRef = useModalA11y(onClose); onClose, onJoined }: { onClose: () => void; onJoined: (spaceId: string) => void | Promise<void> }) {
+export function DiscoveryDialog({onClose, onJoined }: { onClose: () => void; onJoined: (spaceId: string) => void | Promise<void> }) {
+  const dialogRef = useModalA11y(onClose);
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState<Category>("all");
   const [items, setItems] = useState<Community[]>([]);
