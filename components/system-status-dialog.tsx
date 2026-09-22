@@ -14,8 +14,8 @@ type Health = {
   slo: { availabilityTarget: number; apiP95TargetMs: number; databaseP95TargetMs: number; lcpTargetMs: number; inpTargetMs: number; clsTarget: number };
 };
 
-export function SystemStatusDialog({
-  const dialogRef = useModalA11y(onClose); onClose }: { onClose: () => void }) {
+export function SystemStatusDialog({onClose }: { onClose: () => void }) {
+  const dialogRef = useModalA11y(onClose);
   const [health, setHealth] = useState<Health | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
