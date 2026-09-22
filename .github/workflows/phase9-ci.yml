@@ -1,0 +1,64 @@
+name: Developer Platform CI
+
+on:
+  push:
+    branches:
+      - feat/developer-platform-phase9
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: developer-platform-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Tests
+        run: pnpm test
+
+      - name: Lint Developer Platform
+        run: >
+          pnpm exec eslint
+          lib/developer-validation.ts
+          lib/developer-secret.ts
+          lib/developer-webhooks.ts
+          lib/api-auth.ts
+          lib/oauth-pkce.ts
+          db/developer-schema.ts
+          components/developer-dialog.tsx
+          components/developer-integrations.tsx
+          app/oauth/authorize/page.tsx
+          app/oauth/install/page.tsx
+          app/api/v1/developer/apps/route.ts
+          app/api/v1/developer/installations/route.ts
+          app/api/v1/developer/install/route.ts
+          app/api/v1/developer/oauth/route.ts
+          app/api/v1/developer/oauth/authorize/route.ts
+          app/api/v1/developer/webhooks/route.ts
+          app/api/public/v1/oauth/token/route.ts
+          app/api/public/v1/me/route.ts
+
+      - name: Build
+        run: pnpm build

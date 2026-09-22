@@ -21,6 +21,7 @@ const releases: Record<string, { migrationUrl: URL; title: string; check: string
   "release-0009": { migrationUrl: new URL("../../../../drizzle/0009_space_placements.sql", import.meta.url), title: "Space placements", check: "SELECT to_regclass('public.space_placements') IS NOT NULL AS applied" },
   "release-0013": { migrationUrl: new URL("../../../../drizzle/0012_user_profiles.sql", import.meta.url), title: "Профили пользователей", check: "SELECT COUNT(*) = 3 AS applied FROM information_schema.columns WHERE table_schema='public' AND table_name='users' AND column_name IN ('profile_location','profile_status','profile_links')" },
   "release-0014": { migrationUrl: new URL("../../../../drizzle/0013_voice_states.sql", import.meta.url), title: "Voice states", check: "SELECT to_regclass('public.voice_states') IS NOT NULL AS applied" },
+  "release-0015": { migrationUrl: new URL("../../../../drizzle/0014_developer_integrations.sql", import.meta.url), title: "Developer integrations", check: "SELECT (to_regclass('public.developer_oauth_clients') IS NOT NULL AND to_regclass('public.developer_webhooks') IS NOT NULL AND to_regclass('public.developer_oauth_authorization_codes') IS NOT NULL AND to_regclass('public.developer_oauth_access_tokens') IS NOT NULL AND to_regclass('public.developer_app_installations') IS NOT NULL AND to_regclass('public.developer_webhook_deliveries') IS NOT NULL) AS applied" },
 };
 
 export async function POST(_request: Request, context: { params: Promise<{ release: string }> }) {

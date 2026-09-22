@@ -450,7 +450,7 @@
 .voice-device-settings { display: grid; gap: 4px; margin-top: 12px; }
 .voice-device-settings .device-picker { width: min(100%, 380px); margin-top: 8px; }
 
-@media (max-width: 760px) {
+@media (max-width: 767px) {
   .voice-room { align-content: start; padding: 12px 12px 90px; }
   .voice-hero { padding: 23px 15px; }
   .voice-controls { gap: 8px; }

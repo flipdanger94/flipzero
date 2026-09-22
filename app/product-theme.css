@@ -517,7 +517,7 @@
   box-shadow: 0 14px 36px rgba(0, 212, 255, 0.14);
 }
 
-@media (max-width: 1120px) and (min-width: 761px) {
+@media (max-width: 1120px) and (min-width: 768px) {
   .app-shell,
   .app-shell.members-hidden {
     grid-template-columns: 68px 230px minmax(0, 1fr);
@@ -532,7 +532,7 @@
   }
 }
 
-@media (max-width: 760px) {
+@media (max-width: 767px) {
   .auth-page .auth-input input,
   .app-shell.app-shell .composer textarea,
   .app-shell .search-box input,
@@ -737,7 +737,7 @@
 .app-toast button:hover { background: rgba(255, 255, 255, .12); }
 @keyframes app-toast-in { from { opacity: 0; transform: translateY(10px) scale(.98); } }
 
-@media (max-width: 760px) {
+@media (max-width: 767px) {
   .app-toast {
     right: 12px;
     bottom: calc(78px + env(safe-area-inset-bottom));
@@ -750,3 +750,5 @@
 @media (prefers-reduced-motion: reduce) {
   .app-toast { animation: none; }
 }
+
+.members-load-more,.managed-members-more{width:100%;min-height:38px;margin-top:8px;border:1px solid rgba(255,255,255,.08);border-radius:9px;background:rgba(255,255,255,.035);color:#8f8996;display:flex;align-items:center;justify-content:center;gap:6px;font-size:.53rem;font-weight:700;cursor:pointer}.members-load-more:hover,.managed-members-more:hover,.members-load-more:focus-visible,.managed-members-more:focus-visible{color:#fff;background:rgba(255,255,255,.07)}.members-load-more:disabled,.managed-members-more:disabled{opacity:.55;cursor:wait}

@@ -1,0 +1,88 @@
+import { boolean, index, integer, jsonb, pgTable, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
+import { developerApps, spaces, users } from "./schema";
+
+export const developerOauthClients = pgTable("developer_oauth_clients", {
+  appId: text("app_id").primaryKey().references(() => developerApps.id, { onDelete: "cascade" }),
+  clientId: text("client_id").notNull(),
+  clientSecretHash: text("client_secret_hash").notNull(),
+  secretPrefix: text("secret_prefix").notNull(),
+  redirectUris: jsonb("redirect_uris").$type<string[]>().default([]).notNull(),
+  scopes: jsonb("scopes").$type<string[]>().default(["identify"]).notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [uniqueIndex("developer_oauth_client_id_unique").on(table.clientId)]);
+
+export const developerWebhooks = pgTable("developer_webhooks", {
+  id: text("id").primaryKey(),
+  appId: text("app_id").notNull().references(() => developerApps.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  url: text("url").notNull(),
+  eventTypes: jsonb("event_types").$type<string[]>().default([]).notNull(),
+  secretHash: text("secret_hash").notNull(),
+  secretCiphertext: text("secret_ciphertext").notNull(),
+  secretPrefix: text("secret_prefix").notNull(),
+  enabled: boolean("enabled").default(true).notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [index("developer_webhooks_app_idx").on(table.appId)]);
+
+export const developerOauthAuthorizationCodes = pgTable("developer_oauth_authorization_codes", {
+  id: text("id").primaryKey(),
+  codeHash: text("code_hash").notNull(),
+  appId: text("app_id").notNull().references(() => developerApps.id, { onDelete: "cascade" }),
+  userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  redirectUri: text("redirect_uri").notNull(),
+  scopes: jsonb("scopes").$type<string[]>().default([]).notNull(),
+  codeChallenge: text("code_challenge"),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  consumedAt: timestamp("consumed_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [
+  uniqueIndex("developer_oauth_code_hash_unique").on(table.codeHash),
+  index("developer_oauth_code_app_idx").on(table.appId, table.expiresAt),
+]);
+
+export const developerOauthAccessTokens = pgTable("developer_oauth_access_tokens", {
+  id: text("id").primaryKey(),
+  appId: text("app_id").notNull().references(() => developerApps.id, { onDelete: "cascade" }),
+  userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  tokenHash: text("token_hash").notNull(),
+  prefix: text("prefix").notNull(),
+  scopes: jsonb("scopes").$type<string[]>().default([]).notNull(),
+  lastUsedAt: timestamp("last_used_at", { withTimezone: true }),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  revokedAt: timestamp("revoked_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [
+  uniqueIndex("developer_oauth_access_token_hash_unique").on(table.tokenHash),
+  index("developer_oauth_access_token_app_user_idx").on(table.appId, table.userId),
+]);
+
+export const developerAppInstallations = pgTable("developer_app_installations", {
+  appId: text("app_id").notNull().references(() => developerApps.id, { onDelete: "cascade" }),
+  spaceId: text("space_id").notNull().references(() => spaces.id, { onDelete: "cascade" }),
+  installedById: text("installed_by_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  permissions: jsonb("permissions").$type<string[]>().default(["events:read"]).notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [
+  uniqueIndex("developer_app_installation_unique").on(table.appId, table.spaceId),
+  index("developer_app_installations_space_idx").on(table.spaceId),
+]);
+
+export const developerWebhookDeliveries = pgTable("developer_webhook_deliveries", {
+  id: text("id").primaryKey(),
+  webhookId: text("webhook_id").notNull().references(() => developerWebhooks.id, { onDelete: "cascade" }),
+  eventId: text("event_id").notNull(),
+  eventType: text("event_type").notNull(),
+  status: text("status").default("pending").notNull(),
+  attempt: integer("attempt").default(1).notNull(),
+  responseStatus: integer("response_status"),
+  durationMs: integer("duration_ms"),
+  error: text("error"),
+  completedAt: timestamp("completed_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [
+  index("developer_webhook_deliveries_webhook_created_idx").on(table.webhookId, table.createdAt),
+  index("developer_webhook_deliveries_event_idx").on(table.eventId),
+]);

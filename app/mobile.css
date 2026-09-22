@@ -36,7 +36,7 @@ a {
   touch-action: manipulation;
 }
 
-@media (max-width: 760px) {
+@media (max-width: 767px) {
   :root {
     --mobile-bottom-nav: calc(66px + env(safe-area-inset-bottom));
     --mobile-page-padding: clamp(14px, 4vw, 20px);
@@ -596,7 +596,7 @@ a {
 
 /* Tablet portrait and compact laptop windows keep the desktop information
    architecture, but reduce the rails and turn dense panels into touch UI. */
-@media (min-width: 761px) and (max-width: 1024px) {
+@media (min-width: 768px) and (max-width: 1023px) {
   .app-shell,
   .app-shell.members-hidden {
     grid-template-columns: 64px 220px minmax(0, 1fr);
@@ -693,7 +693,7 @@ a {
   }
 }
 
-@media (max-width: 760px) and (max-height: 520px) and (orientation: landscape) {
+@media (max-width: 767px) and (max-height: 520px) and (orientation: landscape) {
   :root {
     --mobile-bottom-nav: calc(54px + env(safe-area-inset-bottom));
   }
@@ -732,4 +732,102 @@ a {
     width: 0;
     height: 0;
   }
+}
+
+
+/* Phase 10 accessibility + scroll system */
+:root {
+  --focus-ring: color-mix(in srgb, var(--accent, #7c6df2) 82%, white 18%);
+  --scroll-thumb: color-mix(in srgb, var(--accent, #7c6df2) 36%, transparent);
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--scroll-thumb) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background: var(--scroll-thumb);
+  background-clip: padding-box;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, var(--accent, #7c6df2) 55%, transparent);
+  background-clip: padding-box;
+}
+
+:where(button, a, input, textarea, select, [role="button"], [tabindex]):focus {
+  outline: none;
+}
+
+:where(button, a, input, textarea, select, [role="button"], [tabindex]):focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+[role="dialog"][aria-modal="true"] {
+  overscroll-behavior: contain;
+}
+
+[role="dialog"][aria-modal="true"]:focus {
+  outline: none;
+}
+
+.social-hub > nav,
+.account-settings-nav,
+.discovery-chips,
+.developer-tabs,
+.admin-section-nav,
+.mobile-space-switcher {
+  scrollbar-width: none;
+  overscroll-behavior-inline: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.social-hub > nav::-webkit-scrollbar,
+.account-settings-nav::-webkit-scrollbar,
+.discovery-chips::-webkit-scrollbar,
+.developer-tabs::-webkit-scrollbar,
+.admin-section-nav::-webkit-scrollbar,
+.mobile-space-switcher::-webkit-scrollbar {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+html[data-motion="off"] *,
+html[data-motion="off"] *::before,
+html[data-motion="off"] *::after {
+  scroll-behavior: auto !important;
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
 }
