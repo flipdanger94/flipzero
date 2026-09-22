@@ -3,6 +3,7 @@ import { and, eq, gt, isNull } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { getDatabase } from "@/db/client";
 import { developerOauthAccessTokens, developerOauthAuthorizationCodes, developerOauthClients } from "@/db/developer-schema";
+import { createPkceS256Challenge } from "@/lib/oauth-pkce";
 
 async function readBody(request: Request) {
   const contentType = request.headers.get("content-type") ?? "";
@@ -65,7 +66,7 @@ export async function POST(request: Request) {
 
   if (authorization.codeChallenge) {
     if (!codeVerifier) return NextResponse.json({ error: "invalid_grant", error_description: "Для этого кода требуется PKCE code_verifier." }, { status: 400 });
-    const challenge = createHash("sha256").update(codeVerifier).digest("base64url");
+    const challenge = createPkceS256Challenge(codeVerifier);
     if (challenge !== authorization.codeChallenge) return NextResponse.json({ error: "invalid_grant", error_description: "PKCE verification failed." }, { status: 400 });
   }
 
