@@ -1,6 +1,9 @@
 name: Deploy Vercel Production
 
 on:
+  push:
+    branches:
+      - main
   workflow_dispatch:
 
 permissions:
