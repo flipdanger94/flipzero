@@ -1809,3 +1809,40 @@ html[data-motion="off"] *::after {
     padding-left:9px!important;
   }
 }
+
+
+/* Direct messaging mobile final contract */
+@media(max-width:767px){
+  .platform-workspace .social-hub.social-hub-embedded .direct-layout.has-profile>section{
+    grid-template-rows:58px minmax(0,1fr) auto!important;
+    padding:0!important;
+  }
+  .platform-workspace .social-hub.social-hub-embedded .direct-title{
+    display:grid!important;
+    grid-template-columns:44px 38px minmax(0,1fr) auto!important;
+    gap:7px!important;
+    padding:7px 8px!important;
+  }
+  .direct-mobile-back{display:grid!important}
+  .direct-title-copy small{display:none!important}
+  .direct-actions{gap:1px!important}.direct-actions button{width:34px!important;height:34px!important;min-width:34px!important;min-height:34px!important}
+  .platform-workspace .social-hub.social-hub-embedded .direct-composer{
+    grid-row:3!important;position:relative!important;display:block!important;width:100%!important;height:auto!important;min-height:64px!important;max-height:44dvh!important;padding:7px 8px!important;overflow:visible!important;
+  }
+  .direct-composer-row{width:100%!important;gap:3px!important}.direct-composer-row textarea{min-height:44px!important;font-size:16px!important;padding:10px!important}.direct-composer-row>button{flex:0 0 40px!important;width:40px!important;min-width:40px!important;height:44px!important;min-height:44px!important}.direct-composer-row>button[disabled][title*="Стикеры"]{display:none!important}
+  .direct-composer-meta{font-size:.48rem!important}.direct-composer-meta>span{max-width:72%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .direct-attachment-preview{max-height:68px!important}.direct-attachment-preview article{flex-basis:170px!important}
+  .direct-emoji-picker{position:fixed!important;z-index:15000!important;left:8px!important;right:8px!important;bottom:calc(var(--mobile-bottom-nav) + 72px)!important;width:auto!important;grid-template-columns:repeat(5,1fr)!important}.direct-emoji-picker button{justify-self:center!important}
+  .dm-message-image{width:min(280px,72vw)!important}.dm-message-audio,.dm-message-file{min-width:0!important;width:min(290px,72vw)!important}.dm-message-audio audio{width:220px!important;max-width:100%!important}
+  .platform-workspace .social-hub .direct-layout.profile-visible>.direct-profile{
+    display:block!important;position:absolute!important;z-index:75!important;top:0!important;right:0!important;bottom:0!important;width:min(86vw,330px)!important;max-height:none!important;padding:0 14px 18px!important;border-left:1px solid #716bff33!important;background:#070d1cf7!important;box-shadow:-18px 0 55px #0008!important;overflow-y:auto!important;transform:none!important;
+  }
+  .platform-workspace .social-hub .direct-layout.profile-hidden>.direct-profile{display:none!important}
+  .direct-profile-close{width:40px!important;height:40px!important;min-height:40px!important}
+  .superflip-benefit-grid{grid-template-columns:1fr!important;margin-top:18px!important}.superflip-benefit-grid article{min-height:96px!important}
+  .direct-call-backdrop{padding:0!important}.direct-call-dialog{width:100vw!important;height:calc(100dvh - var(--mobile-bottom-nav))!important;max-height:none!important;border:0!important;border-radius:0!important}.direct-call-local{width:120px!important;height:90px!important;right:10px!important;bottom:10px!important}
+}
+@media(max-width:430px){
+  .direct-actions button:nth-child(2){display:none}
+  .direct-composer-row>button{flex-basis:38px!important;width:38px!important;min-width:38px!important}.direct-composer-row textarea{padding-inline:8px!important}
+}
