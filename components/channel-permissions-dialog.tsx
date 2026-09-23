@@ -13,12 +13,9 @@ type PermissionItem = { label: string; description: string; flag: number; group:
 
 const textPermissions: PermissionItem[] = [
   { label: "Просмотр канала", description: "Видеть канал в списке и открывать его.", flag: Permission.ViewChannels, group: "Основные" },
-  { label: "История сообщений", description: "Читать предыдущие сообщения канала.", flag: Permission.ReadHistory, group: "Основные" },
   { label: "Отправка сообщений", description: "Писать новые сообщения в этом канале.", flag: Permission.SendMessages, group: "Сообщения" },
   { label: "Добавлять реакции", description: "Ставить emoji-реакции на сообщения.", flag: Permission.AddReactions, group: "Сообщения" },
   { label: "Прикреплять файлы", description: "Отправлять вложения и голосовые сообщения.", flag: Permission.AttachFiles, group: "Сообщения" },
-  { label: "Встраивать ссылки", description: "Показывать расширенные превью ссылок.", flag: Permission.EmbedLinks, group: "Сообщения" },
-  { label: "Упоминать роли", description: "Использовать @роль в сообщениях.", flag: Permission.MentionRoles, group: "Сообщения" },
   { label: "Управление сообщениями", description: "Удалять и закреплять сообщения других участников.", flag: Permission.ManageMessages, group: "Управление" },
   { label: "Управление каналом", description: "Менять настройки и права этого канала.", flag: Permission.ManageChannels, group: "Управление" },
   { label: "Создание приглашений", description: "Создавать приглашения в пространство из канала.", flag: Permission.CreateInvites, group: "Управление" },
