@@ -779,3 +779,5 @@
 .fz-action-dialog .fz-confirm-field{display:grid;gap:8px;margin-top:18px;color:#bac6d8;font-size:.85rem}
 .fz-action-dialog .fz-confirm-field input{width:100%;border:1px solid #ffffff39;border-radius:9px;background:#101a2b;color:#fff;padding:10px 12px;font-size:1rem}
 .server-context-menu .server-menu-group{display:block;padding:8px 9px 3px;color:#9a8ab5;font-size:.58rem;font-weight:800;letter-spacing:.12em}
+.auth-form .auth-reset-link{justify-self:end;color:#bc9bff;font-size:.8rem;text-decoration:none}
+.auth-form .auth-reset-link:hover{text-decoration:underline}

@@ -1,6 +1,7 @@
 "use client";
 import { type FormEvent, Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
 import { Eye, EyeOff, KeyRound, LoaderCircle, LockKeyhole, Mail } from "lucide-react";
 import { AuthShell } from "@/components/auth-shell";
 
@@ -13,6 +14,7 @@ function LoginForm() {
   const searchParams = useSearchParams();
   const next = searchParams.get("next");
   const sessionsEnded = searchParams.get("sessions") === "ended";
+  const resetComplete = searchParams.get("reset") === "success";
   const safeNext = next?.startsWith("/") && !next.startsWith("//") && !next.startsWith("/\\") ? next : null;
 
   async function submit(event: FormEvent<HTMLFormElement>) {
@@ -30,8 +32,10 @@ function LoginForm() {
     <form className="auth-form" onSubmit={submit}>
       {error && <div className="auth-error" role="alert">{error}</div>}
       {sessionsEnded && !error ? <div className="auth-success" role="status">Все активные сессии завершены. Войдите снова на этом устройстве.</div> : null}
+      {resetComplete && !error ? <div className="auth-success" role="status">Пароль обновлён. Войдите с новым паролем.</div> : null}
       <label><span>Email</span><div className="auth-input"><Mail size={17} /><input name="email" type="email" autoComplete="email" placeholder="you@example.com" required /></div></label>
       <label><span>Пароль</span><div className="auth-input"><LockKeyhole size={17} /><input name="password" type={showPassword ? "text" : "password"} autoComplete="current-password" placeholder="Ваш пароль" required /><button type="button" onClick={() => setShowPassword((value) => !value)} aria-label={showPassword ? "Скрыть пароль" : "Показать пароль"}>{showPassword ? <EyeOff size={17} /> : <Eye size={17} />}</button></div></label>
+      <Link className="auth-reset-link" href="/reset-password">Забыли пароль?</Link>
       {requiresOtp ? <label><span>Код 2FA или резервный код</span><div className="auth-input"><KeyRound size={17} /><input name="otp" inputMode="numeric" autoComplete="one-time-code" placeholder="000000" required autoFocus /></div></label> : null}
       <button className="auth-submit" disabled={loading}>{loading ? <><LoaderCircle className="spin" size={18} /> Входим...</> : "Войти в FlipZero"}</button>
     </form>

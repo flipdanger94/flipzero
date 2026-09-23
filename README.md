@@ -119,4 +119,8 @@ git push origin main
 
 Перед production-deploy обязательно выполните `pnpm lint && pnpm test && pnpm build`.
 
+### Восстановление пароля
+
+После обновления кода администратор применяет `/setup/release-0017` (после `/setup/release-0016`). Для писем настройте в Vercel серверные переменные `RESEND_API_KEY` и `RESET_EMAIL_FROM` (подтверждённый адрес отправителя), а также `PASSWORD_RESET_BASE_URL=https://flipzeroapp.vercel.app`. Ссылка действует 30 минут и используется один раз. Смена пароля завершает все старые сеансы. До настройки отправителя форма возвращает сообщение о недоступности отправки писем.
+
 <!-- deployment pipeline check: 2026-09-22 -->
