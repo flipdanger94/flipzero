@@ -1,6 +1,6 @@
 "use client";
 
-import { type DragEvent, type FormEvent, useCallback, useEffect, useRef, useState } from "react";
+import { type DragEvent, type FormEvent, type ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import {
   ArrowLeft, Ban, Clock3, Crown, File as FileIcon, FilePlus2, Image as ImageIcon, LoaderCircle, MapPin, MessageCircle,
   MessageSquarePlus, Mic, PanelRightClose, PanelRightOpen, Phone, Search, SendHorizontal, ShieldCheck, Smile,
@@ -243,7 +243,7 @@ export function SocialHubDialog({ currentUserId, initialTab = "messages", initia
   return embedded?content:<div className="dialog-backdrop" onMouseDown={(event)=>event.target===event.currentTarget&&onClose?.()}>{content}</div>;
 }
 
-function FriendRow({person,subtitle,actions,onProfile}:{person:Person;subtitle?:string;actions:React.ReactNode;onProfile:(anchor:{x:number;y:number})=>void}){return <article className="friend-row-v2"><button type="button" className="friend-profile-trigger" onClick={(event)=>{const rect=event.currentTarget.getBoundingClientRect();onProfile({x:rect.left,y:rect.bottom+6})}} aria-label={`Открыть профиль ${person.displayName}`}><Avatar person={person}/><span><strong>{person.displayName}</strong><small>@{person.username} · {subtitle??(person.presence==="online"?"В сети":"Не в сети")}</small></span></button><div className="friend-row-actions">{actions}</div></article>}
+function FriendRow({person,subtitle,actions,onProfile}:{person:Person;subtitle?:string;actions:ReactNode;onProfile:(anchor:{x:number;y:number})=>void}){return <article className="friend-row-v2"><button type="button" className="friend-profile-trigger" onClick={(event)=>{const rect=event.currentTarget.getBoundingClientRect();onProfile({x:rect.left,y:rect.bottom+6})}} aria-label={`Открыть профиль ${person.displayName}`}><Avatar person={person}/><span><strong>{person.displayName}</strong><small>@{person.username} · {subtitle??(person.presence==="online"?"В сети":"Не в сети")}</small></span></button><div className="friend-row-actions">{actions}</div></article>}
 function EmptyFriends({title,text}:{title:string;text:string}){return <div className="social-empty friend-empty"><Users size={28}/><strong>{title}</strong><span>{text}</span></div>}
 function Avatar({person}:{person:Person}){return <i className="social-avatar">{person.avatarUrl?<MediaImage src={person.avatarUrl}/>:person.displayName.slice(0,2).toUpperCase()}</i>}
 
