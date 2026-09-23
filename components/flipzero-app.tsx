@@ -246,9 +246,7 @@ export default function Home({ initialSpaceId, initialChannelId }: { initialSpac
     const visibleRoles = [...spaceRoles].filter((role) => role.showInMemberList).sort((a, b) => b.position - a.position);
     const groups = new Map<string, { key: string; label: string; color: string | null; position: number; members: SpaceMember[] }>();
     for (const member of spaceMembers) {
-      const topRole = visibleRoles.find((role) =>
-        member.userId === activeSpace?.ownerId ? role.name.toLocaleLowerCase("ru") === "владелец" || member.roleIds?.includes(role.id) : member.roleIds?.includes(role.id),
-      );
+      const topRole = visibleRoles.find((role) => member.roleIds?.includes(role.id));
       const key = topRole?.id ?? "__members";
       const group = groups.get(key) ?? {
         key,
@@ -407,7 +405,6 @@ export default function Home({ initialSpaceId, initialChannelId }: { initialSpac
 
       <aside className="member-panel">
         <div className="real-member-list">
-          <div className="member-panel-summary"><span>УЧАСТНИКИ — {membersTotal || spaceMembers.length}</span><small>В сети: {spaceMembers.filter((member) => member.online).length}</small></div>
           {membersLoading ? <div className="members-loading">Загрузка участников…</div> : memberGroups.length ? <>{memberGroups.map((group) => <section className="member-section member-role-group" key={group.key}><h2><span style={group.color ? { color: group.color } : undefined}>{group.label.toLocaleUpperCase("ru")} — {group.members.length}</span></h2>{group.members.map((member) => <button className={`member ${member.online ? "is-online" : "is-offline"}`} key={member.userId} type="button" aria-label={`Открыть профиль ${member.nickname || member.displayName} — ${member.online ? "в сети" : "не в сети"}`} title={`Открыть профиль ${member.nickname || member.displayName}`} onClick={() => openExclusiveOverlay(() => setSelectedMember(member))}><span className="mini-avatar avatar-coral">{member.avatarUrl ? <MediaImage src={member.avatarUrl} /> : (member.displayName || member.username || "?").slice(0, 2).toLocaleUpperCase("ru")}<i /></span><span><strong>{member.nickname || member.displayName}</strong><small>@{member.username || "участник"} · {member.online ? "в сети" : "не в сети"}</small></span></button>)}</section>)}{membersCursor ? <button className="members-load-more" onClick={() => void loadMoreMembers()} disabled={membersLoadingMore}>{membersLoadingMore ? <><LoaderCircle className="spin" size={14} /> Загружаем…</> : "Показать ещё"}</button> : null}</> : <div className="members-loading">В этом пространстве пока нет участников.</div>}
         </div>
       </aside>
