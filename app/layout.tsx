@@ -7,6 +7,7 @@ import "./product-theme.css";
 import "./neon-redesign.css";
 import "./community.css";
 import "./account-settings.css";
+import "./clans.css";
 import "./mobile.css";
 
 export const metadata: Metadata = {
