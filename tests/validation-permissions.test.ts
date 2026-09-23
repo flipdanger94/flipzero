@@ -3,7 +3,7 @@ import { loginSchema, registerSchema } from "../lib/auth-validation";
 import { updateAccountSchema, updatePasswordSchema } from "../lib/account-validation";
 import { createCategorySchema, createChannelSchema, createSpaceSchema, updateSpaceSchema } from "../lib/space-validation";
 import { combinePermissions, DEFAULT_MEMBER_PERMISSIONS, hasPermission, Permission } from "../lib/permissions";
-import { normalizeDirectMessage } from "../lib/direct-message";
+import { decodeDirectMessage, encodeDirectMessage, normalizeDirectAttachments, normalizeDirectMessage } from "../lib/direct-message";
 import { isProtectedRoute, loginPathFor } from "../lib/route-access";
 
 describe("authentication validation", () => {
@@ -108,16 +108,32 @@ describe("permission model", () => {
     expect(hasPermission(DEFAULT_MEMBER_PERMISSIONS, Permission.ViewChannels)).toBe(true);
     expect(hasPermission(DEFAULT_MEMBER_PERMISSIONS, Permission.SendMessages)).toBe(true);
     expect(hasPermission(DEFAULT_MEMBER_PERMISSIONS, Permission.ConnectVoice)).toBe(true);
+    expect(hasPermission(DEFAULT_MEMBER_PERMISSIONS, Permission.AttachFiles)).toBe(true);
+    expect(hasPermission(DEFAULT_MEMBER_PERMISSIONS, Permission.AddReactions)).toBe(true);
     expect(hasPermission(DEFAULT_MEMBER_PERMISSIONS, Permission.BanMembers)).toBe(false);
     expect(hasPermission(DEFAULT_MEMBER_PERMISSIONS, Permission.ManageRoles)).toBe(false);
   });
 });
 
 describe("limits and protected routes", () => {
-  it("supports premium DM length only when the caller explicitly supplies the larger limit", () => {
+  it("enforces the 4000-character hard ceiling for direct messages", () => {
+    expect(normalizeDirectMessage("x".repeat(4000))?.length).toBe(4000);
     expect(normalizeDirectMessage("x".repeat(4001))).toBeNull();
-    expect(normalizeDirectMessage("x".repeat(8000), 8000)?.length).toBe(8000);
-    expect(normalizeDirectMessage("x".repeat(8001), 8000)).toBeNull();
+    expect(normalizeDirectMessage("x".repeat(1001), 1000)).toBeNull();
+  });
+
+  it("round-trips validated direct-message attachments", () => {
+    const attachments = normalizeDirectAttachments([{
+      type: "image",
+      url: "/api/v1/media/123e4567-e89b-12d3-a456-426614174000",
+      name: "preview.png",
+      mimeType: "image/png",
+      size: 1024,
+    }]);
+    expect(attachments).toHaveLength(1);
+    const decoded = decodeDirectMessage(encodeDirectMessage("Фото", attachments));
+    expect(decoded.text).toBe("Фото");
+    expect(decoded.attachments[0]?.name).toBe("preview.png");
   });
 
   it("protects OAuth consent and install pages", () => {

@@ -69,6 +69,8 @@ describe("SuperFlip entitlement boundaries", () => {
   });
 
   it("keeps premium limits strictly above standard limits", () => {
+    expect(STANDARD_CAPABILITIES.directMessageLimit).toBe(1000);
+    expect(SUPERFLIP_CAPABILITIES.directMessageLimit).toBe(4000);
     expect(SUPERFLIP_CAPABILITIES.directMessageLimit).toBeGreaterThan(STANDARD_CAPABILITIES.directMessageLimit);
     expect(SUPERFLIP_CAPABILITIES.profileBioLimit).toBeGreaterThan(STANDARD_CAPABILITIES.profileBioLimit);
     expect(SUPERFLIP_CAPABILITIES.avatarUploadMb).toBeGreaterThan(STANDARD_CAPABILITIES.avatarUploadMb);

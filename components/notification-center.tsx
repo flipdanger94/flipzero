@@ -29,7 +29,7 @@ export function NotificationCenter({onOpenMessages,onOpenFriends}:{onOpenMessage
   setUnread(v=>Math.max(0,v-(item.readAt?0:1)));
   setOpen(false);
   if(item.type==="friend_request")onOpenFriends();
-  else if(item.type==="direct_message"||item.type==="friend_accepted")onOpenMessages(item.actor?.id??null);
+  else if(item.type==="direct_message"||item.type==="friend_accepted"||item.type==="direct_call")onOpenMessages(item.actor?.id??null);
  }
 
  async function readAll(){
