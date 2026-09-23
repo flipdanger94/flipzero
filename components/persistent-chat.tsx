@@ -52,7 +52,7 @@ function LinkPreview({ content }: { content: string }) {
 }
 
 export function PersistentChat({ channelId, channelName, spaceId, currentUserId, ownerId, searchQuery, onOpenDirect }: { channelId: string; channelName: string; spaceId: string; currentUserId: string; ownerId?: string; searchQuery: string; onOpenDirect?: (userId:string)=>void }) {
-  const [messages, setMessages] = useState<ChatMessage[]>([]); const [reportingMessage,setReportingMessage]=useState<ChatMessage|null>(null); const [profile, setProfile] = useState<ChatMessage | null>(null); const [draft, setDraft] = useState(""); const [reply, setReply] = useState<ChatMessage | null>(null); const [loading, setLoading] = useState(true); const [error, setError] = useState(""); const [recording, setRecording] = useState(false); const [recordSeconds, setRecordSeconds] = useState(0); const [emojiOpen, setEmojiOpen] = useState(false);
+  const [messages, setMessages] = useState<ChatMessage[]>([]); const [reportingMessage,setReportingMessage]=useState<ChatMessage|null>(null); const [profile, setProfile] = useState<ChatMessage | null>(null); const [draft, setDraft] = useState(""); const [reply, setReply] = useState<ChatMessage | null>(null); const [loading, setLoading] = useState(true); const [error, setError] = useState(""); const [recording, setRecording] = useState(false); const [recordSeconds, setRecordSeconds] = useState(0); const [emojiOpen, setEmojiOpen] = useState(false) const [mentionQuery, setMentionQuery] = useState<string | null>(null); const [mentionItems, setMentionItems] = useState<MentionSuggestion[]>([]); const [mentionIndex, setMentionIndex] = useState(0); const [mentionStart, setMentionStart] = useState(-1); const [mentionLoading, setMentionLoading] = useState(false); const [roleNames, setRoleNames] = useState<string[]>([]);
   const recorderRef = useRef<MediaRecorder | null>(null); const streamRef = useRef<MediaStream | null>(null); const chunksRef = useRef<Blob[]>([]); const startedRef = useRef(0);
   const composerRef = useRef<HTMLTextAreaElement | null>(null);
   const messageListRef = useRef<HTMLDivElement | null>(null); const followLatestRef = useRef(true); const mutationRef = useRef(false); const revisionRef = useRef(0);
@@ -84,6 +84,42 @@ export function PersistentChat({ channelId, channelName, spaceId, currentUserId,
   useEffect(() => { const list = messageListRef.current; if (list && followLatestRef.current) list.scrollTop = list.scrollHeight; }, [messages]);
   useEffect(() => { if (!recording) return; const timer = window.setInterval(() => { const seconds = Math.floor((Date.now() - startedRef.current) / 1000); setRecordSeconds(seconds); if (seconds >= 60 && recorderRef.current?.state === "recording") recorderRef.current.stop(); }, 250); return () => window.clearInterval(timer); }, [recording]);
   useEffect(() => { if (!emojiOpen) return; const close = (event: KeyboardEvent) => { if (event.key === "Escape") setEmojiOpen(false); }; window.addEventListener("keydown", close); return () => window.removeEventListener("keydown", close); }, [emojiOpen]);
+  useEffect(() => {
+    let active = true;
+    fetch("/api/v1/spaces/" + spaceId + "/roles")
+      .then(async (response) => ({ ok: response.ok, data: await response.json() }))
+      .then(({ ok, data }) => {
+        if (active && ok) setRoleNames((data.roles ?? []).map((role: { name?: string }) => role.name).filter((name: unknown): name is string => typeof name === "string"));
+      })
+      .catch(() => {});
+    return () => { active = false; };
+  }, [spaceId]);
+  useEffect(() => {
+    if (mentionQuery === null) {
+      setMentionItems([]);
+      setMentionLoading(false);
+      return;
+    }
+    const controller = new AbortController();
+    const timer = window.setTimeout(async () => {
+      setMentionLoading(true);
+      try {
+        const response = await fetch("/api/v1/spaces/" + spaceId + "/mentions?q=" + encodeURIComponent(mentionQuery), { signal: controller.signal });
+        const data = await response.json();
+        if (!response.ok || controller.signal.aborted) return;
+        const items = (data.items ?? []) as MentionSuggestion[];
+        setMentionItems(items);
+        setMentionIndex(0);
+        const searchedRoles = items.filter((item): item is Extract<MentionSuggestion, { type: "role" }> => item.type === "role").map((item) => item.name);
+        if (searchedRoles.length) setRoleNames((current) => [...new Set([...current, ...searchedRoles])]);
+      } catch {
+        if (!controller.signal.aborted) setMentionItems([]);
+      } finally {
+        if (!controller.signal.aborted) setMentionLoading(false);
+      }
+    }, 110);
+    return () => { controller.abort(); window.clearTimeout(timer); };
+  }, [mentionQuery, spaceId]);
   useEffect(() => () => streamRef.current?.getTracks().forEach((track) => track.stop()), []);
   async function post(content: string, attachments: Attachment[] = []) { mutationRef.current = true; revisionRef.current++; try { const response = await fetch(`/api/v1/channels/${channelId}/messages`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ content, attachments, replyToId: reply?.id }) }); const data = await response.json(); if (!response.ok) { setError(data.message ?? "Не удалось отправить сообщение."); return; } followLatestRef.current = true; setMessages((items) => [...items, data.message]); setDraft(""); setReply(null); void fetch("/api/v1/gamification/award", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ source: "message", spaceId, idempotencyKey: `message:${data.message.id}` }) }); } catch { setError("Не удалось отправить сообщение. Проверьте соединение."); } finally { mutationRef.current = false; } }
   async function send(event: FormEvent) { event.preventDefault(); const content = draft.trim(); if (content) { setEmojiOpen(false); await post(content); } }
