@@ -1497,3 +1497,20 @@ html[data-motion="off"] *::after {
   }
 }
 @media(max-width:760px){.app-shell .composer>button:nth-of-type(2),.app-shell .composer>button:nth-of-type(3){display:grid}}
+
+
+/* Member role hierarchy */
+.real-member-list{min-height:0;padding-top:8px}.member-panel-summary{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 8px 10px;color:#6f6a76;font-size:.56rem;letter-spacing:.08em}.member-panel-summary small{color:#55d9ab;letter-spacing:0;text-transform:none}.member-role-group{margin-top:14px}.member-role-group:first-of-type{margin-top:6px}.member-role-group h2{display:flex;align-items:center;justify-content:space-between;margin-bottom:5px}.member-role-group .member{grid-template-columns:30px minmax(0,1fr);padding-block:6px}.member-role-group .member.is-offline{opacity:.68}.member-role-group .member.is-online{opacity:1}
+
+/* Dismissible notification rows */
+.notification-list>article{position:relative;display:grid;grid-template-columns:minmax(0,1fr) 32px;align-items:start;gap:4px;border-radius:12px}.notification-list>article.unread{background:rgba(111,92,255,.12)}.notification-open{width:100%!important;height:auto!important;min-height:58px!important;display:flex!important;align-items:flex-start!important;gap:10px!important;padding:11px!important;border:0!important;border-radius:12px!important;background:transparent!important;text-align:left!important}.notification-open>i{width:36px;height:36px;flex:0 0 36px;border-radius:50%;display:grid;place-items:center;background:rgba(255,255,255,.07)}.notification-open>span{display:flex;min-width:0;flex-direction:column;gap:3px}.notification-dismiss{width:30px!important;height:30px!important;min-height:30px!important;margin:7px 4px 0 0!important;padding:0!important;border:0!important;border-radius:8px!important;background:transparent!important;color:#7d8499!important;display:grid!important;place-items:center!important}.notification-dismiss:hover{background:rgba(255,255,255,.08)!important;color:#fff!important}
+
+/* Admin SuperFlip duration controls */
+.admin-superflip-actions{display:flex;align-items:center;gap:5px;flex-wrap:wrap}.admin-superflip-actions button{white-space:nowrap}.admin-superflip-actions button:first-child{color:#ffd77c}.admin-superflip-actions button:last-child{color:#c9a3ff}
+
+@media(max-width:767px){
+  .notification-popover{z-index:2200;inset:max(8px,env(safe-area-inset-top)) 8px calc(var(--mobile-bottom-nav) + 8px);width:auto;max-height:none;border-radius:16px}
+  .notification-list{max-height:calc(100dvh - var(--mobile-bottom-nav) - 130px)}
+  .dialog-backdrop,.account-backdrop,.discovery-backdrop,.crop-backdrop{z-index:2100}
+  .admin-users article{grid-template-columns:minmax(0,1fr);gap:8px}.admin-users article>em{justify-self:start}.admin-superflip-actions{width:100%}.admin-superflip-actions button{flex:1 1 86px}
+}
