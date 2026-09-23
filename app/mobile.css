@@ -1843,6 +1843,7 @@ html[data-motion="off"] *::after {
   .direct-call-backdrop{padding:0!important}.direct-call-dialog{width:100vw!important;height:calc(100dvh - var(--mobile-bottom-nav))!important;max-height:none!important;border:0!important;border-radius:0!important}.direct-call-local{width:120px!important;height:90px!important;right:10px!important;bottom:10px!important}
 }
 @media(max-width:430px){
-  .direct-actions button:nth-child(2){display:none}
+  .direct-actions{gap:0!important}
+  .direct-actions button{width:32px!important;height:32px!important;min-width:32px!important;min-height:32px!important}
   .direct-composer-row>button{flex-basis:38px!important;width:38px!important;min-width:38px!important}.direct-composer-row textarea{padding-inline:8px!important}
 }
