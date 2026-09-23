@@ -3,14 +3,16 @@
 import { type FormEvent, useRef, useState } from "react";
 import { useModalA11y } from "@/hooks/use-modal-a11y";
 
-type ConfirmProps = { title: string; description: string; confirmLabel: string; destructive?: boolean; busy?: boolean; onCancel: () => void; onConfirm: () => void };
+type ConfirmProps = { title: string; description: string; confirmLabel: string; confirmationText?: string; destructive?: boolean; busy?: boolean; onCancel: () => void; onConfirm: () => void };
 
-export function ConfirmDialog({ title, description, confirmLabel, destructive = false, busy = false, onCancel, onConfirm }: ConfirmProps) {
+export function ConfirmDialog({ title, description, confirmLabel, confirmationText, destructive = false, busy = false, onCancel, onConfirm }: ConfirmProps) {
   const ref = useModalA11y(onCancel);
+  const [typed, setTyped] = useState("");
   return <div className="fz-action-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onCancel(); }}>
     <section ref={ref} tabIndex={-1} className="fz-action-dialog" role="dialog" aria-modal="true" aria-labelledby="fz-confirm-title" aria-describedby="fz-confirm-description">
       <h2 id="fz-confirm-title">{title}</h2><p id="fz-confirm-description">{description}</p>
-      <footer><button type="button" onClick={onCancel} disabled={busy}>Отмена</button><button type="button" className={destructive ? "destructive" : ""} onClick={onConfirm} disabled={busy}>{busy ? "Подождите…" : confirmLabel}</button></footer>
+      {confirmationText ? <label className="fz-confirm-field">Для подтверждения введите «{confirmationText}»<input autoFocus value={typed} onChange={(event) => setTyped(event.target.value)} autoComplete="off" /></label> : null}
+      <footer><button type="button" onClick={onCancel} disabled={busy}>Отмена</button><button type="button" className={destructive ? "destructive" : ""} onClick={onConfirm} disabled={busy || Boolean(confirmationText && typed !== confirmationText)}>{busy ? "Подождите…" : confirmLabel}</button></footer>
     </section>
   </div>;
 }
