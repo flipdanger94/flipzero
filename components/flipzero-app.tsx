@@ -99,7 +99,7 @@ export default function Home({ initialSpaceId, initialChannelId }: { initialSpac
   const [serverMenuOpen, setServerMenuOpen] = useState(false);
   const [spaceMembers, setSpaceMembers] = useState<SpaceMember[]>([]);
   const [selectedMember, setSelectedMember] = useState<SpaceMember | null>(null);
-  const [spaceRoles, setSpaceRoles] = useState<Array<{id:string;name:string;color:string;position:number;showInMemberList:boolean}>>([]);
+  const [spaceRoles, setSpaceRoles] = useState<Array<{id:string;name:string;color:string;position:number;showInMemberList:boolean;isManaged:boolean}>>([]);
   const [membersLoading, setMembersLoading] = useState(false);
   const [membersLoadingMore, setMembersLoadingMore] = useState(false);
   const [membersCursor, setMembersCursor] = useState<string | null>(null);
@@ -243,7 +243,7 @@ export default function Home({ initialSpaceId, initialChannelId }: { initialSpac
   const activeForumChannel = activeSpace?.channels.find((channel) => channel.name === activeChannel && channel.kind === "forum") ?? null;
   const activeVoiceChannel = activeSpace?.channels.find((channel) => channel.name === activeChannel && ["voice", "stage"].includes(channel.kind)) ?? null;
   const memberGroups = (() => {
-    const visibleRoles = [...spaceRoles].filter((role) => role.showInMemberList).sort((a, b) => b.position - a.position);
+    const visibleRoles = [...spaceRoles].filter((role) => role.showInMemberList || role.isManaged).sort((a, b) => b.position - a.position);
     const groups = new Map<string, { key: string; label: string; color: string | null; position: number; members: SpaceMember[] }>();
     for (const member of spaceMembers) {
       const topRole = visibleRoles.find((role) => member.roleIds?.includes(role.id));
