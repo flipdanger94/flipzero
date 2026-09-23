@@ -183,6 +183,12 @@ export const spaces = pgTable("spaces", {
   ...timestamps,
 }, (table) => [uniqueIndex("spaces_slug_unique").on(table.slug), index("spaces_owner_idx").on(table.ownerId)]);
 
+export const spaceSuperupSupports = pgTable("space_superup_supports", {
+  userId: text("user_id").primaryKey().references(() => users.id, { onDelete: "cascade" }),
+  spaceId: text("space_id").notNull().references(() => spaces.id, { onDelete: "cascade" }),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [index("space_superup_supports_space_idx").on(table.spaceId)]);
+
 export const spacePlacements = pgTable("space_placements", {
   spaceId: text("space_id").primaryKey().references(() => spaces.id, { onDelete: "cascade" }),
   shardId: text("shard_id").default("primary").notNull(),

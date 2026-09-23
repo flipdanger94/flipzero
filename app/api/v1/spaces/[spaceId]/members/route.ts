@@ -1,7 +1,7 @@
 import { and, asc, eq, gt, inArray, or, sql } from "drizzle-orm";
 import { after, NextResponse } from "next/server";
 import { getDatabase } from "@/db/client";
-import { memberRoles, members, roles, spaces, users } from "@/db/schema";
+import { memberRoles, members, roles, spaces, spaceSuperupSupports, superflipPurchases, users } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
 import { dispatchDeveloperEvent } from "@/lib/developer-webhooks";
 import { hasPermission, Permission } from "@/lib/permissions";
@@ -80,6 +80,10 @@ export async function GET(request: Request, { params }: { params: Promise<{ spac
   const assignments = userIds.length
     ? await database.select().from(memberRoles).where(and(eq(memberRoles.spaceId, spaceId), inArray(memberRoles.userId, userIds)))
     : [];
+  const supporters = userIds.length ? await database.select({ userId: spaceSuperupSupports.userId }).from(spaceSuperupSupports)
+    .innerJoin(superflipPurchases, eq(superflipPurchases.userId, spaceSuperupSupports.userId))
+    .where(and(eq(spaceSuperupSupports.spaceId, spaceId), inArray(spaceSuperupSupports.userId, userIds), sql`${superflipPurchases.revokedAt} is null`, or(sql`${superflipPurchases.expiresAt} is null`, gt(superflipPurchases.expiresAt, new Date())))) : [];
+  const supporterIds = new Set(supporters.map((item) => item.userId));
   const last = page.at(-1);
 
   return NextResponse.json({
@@ -88,6 +92,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ spac
     members: page.map((member) => ({
       ...member,
       online: Boolean(member.lastSeenAt && member.lastSeenAt.getTime() > Date.now() - 90_000),
+      superupSupporter: supporterIds.has(member.userId),
       lastSeenAt: undefined,
       roleIds: assignments.filter((item) => item.userId === member.userId).map((item) => item.roleId),
     })),
