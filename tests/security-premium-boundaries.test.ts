@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { isTrustedMutationRequest } from "../lib/security-controls";
-import { isSuperFlipActive, STANDARD_CAPABILITIES, subscriptionExpiry, SUPERFLIP_CAPABILITIES } from "../lib/superflip";
+import { isSuperFlipActive, normalizeSuperFlipGiftReason, parseSuperFlipGiftPeriod, STANDARD_CAPABILITIES, subscriptionExpiry, superFlipGiftNotificationBody, SUPERFLIP_CAPABILITIES } from "../lib/superflip";
 
 describe("trusted mutation origin boundaries", () => {
   it("accepts same-origin HTTPS requests", () => {
@@ -80,5 +80,20 @@ describe("SuperFlip entitlement boundaries", () => {
   it("clamps subscription months to the supported range", () => {
     expect(subscriptionExpiry(0, now).toISOString()).toBe(subscriptionExpiry(1, now).toISOString());
     expect(subscriptionExpiry(999, now).toISOString()).toBe(subscriptionExpiry(120, now).toISOString());
+  });
+
+  it("requires a non-empty gift reason and accepts only supported periods", () => {
+    expect(normalizeSuperFlipGiftReason(undefined)).toBeNull();
+    expect(normalizeSuperFlipGiftReason("   ")).toBeNull();
+    expect(normalizeSuperFlipGiftReason("  Подарок за тестирование  ")).toBe("Подарок за тестирование");
+    expect(normalizeSuperFlipGiftReason("x".repeat(600))).toHaveLength(500);
+    expect(parseSuperFlipGiftPeriod("month")).toBe("month");
+    expect(parseSuperFlipGiftPeriod("year")).toBe("year");
+    expect(parseSuperFlipGiftPeriod("forever")).toBe("forever");
+    expect(parseSuperFlipGiftPeriod("week")).toBeNull();
+  });
+
+  it("builds a user-facing gift notification with the period and reason", () => {
+    expect(superFlipGiftNotificationBody("year", "За вклад в сообщество")).toBe("Срок: 1 год. Причина: За вклад в сообщество");
   });
 });
