@@ -3,7 +3,7 @@
 import { type FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useModalA11y } from "@/hooks/use-modal-a11y";
-import { AtSign, Bell, Check, Crown, Gem, Headphones, KeyRound, LoaderCircle, LogOut, Mic, Palette, RefreshCw, ShieldCheck, UserRound, Volume2, X, UserX } from "lucide-react";
+import { AtSign, Bell, Check, Code2, Crown, Gem, Headphones, KeyRound, LoaderCircle, LogOut, Mic, Palette, RefreshCw, ShieldCheck, UserRound, Volume2, X, UserX } from "lucide-react";
 import { BrandMark } from "./brand-mark";
 import { ImageUpload } from "./image-upload";
 import { SecurityCenter } from "./security-center";
@@ -99,6 +99,8 @@ export function AccountSettingsDialog({ user, initialSection = "profile", onClos
         <small className="account-nav-label account-nav-group">НАСТРОЙКИ ПРИЛОЖЕНИЯ</small>
         <button type="button" className={section === "voice" ? "active" : ""} onClick={() => openSection("voice")}><Headphones size={18} /> Голос и видео</button>
         <button type="button" className={section === "appearance" ? "active" : ""} onClick={() => openSection("appearance")}><Palette size={18} /> Внешний вид</button>
+        <small className="account-nav-label account-nav-group">ИНСТРУМЕНТЫ</small>
+        <a className="account-nav-link" href="/developers/console"><Code2 size={18}/>Платформа разработчиков</a>
         <small className="account-nav-label account-nav-group">FLIPZERO</small>
         <button type="button" className={`account-premium-nav ${section === "superflip" ? "active" : ""}`} onClick={() => openSection("superflip")}><Crown size={18} /> SuperFlip</button>
         <button type="button" className={`account-superup-nav ${section === "superup" ? "active" : ""}`} onClick={() => openSection("superup")}><Gem size={18} /> О SuperUp</button>
