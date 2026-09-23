@@ -64,6 +64,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ spac
       username: users.username,
       displayName: users.displayName,
       avatarUrl: users.avatarUrl,
+      lastSeenAt: users.lastSeenAt,
     }).from(members)
       .innerJoin(users, eq(members.userId, users.id))
       .where(and(...memberConditions))
@@ -86,6 +87,8 @@ export async function GET(request: Request, { params }: { params: Promise<{ spac
     roles: spaceRoles,
     members: page.map((member) => ({
       ...member,
+      online: Boolean(member.lastSeenAt && member.lastSeenAt.getTime() > Date.now() - 90_000),
+      lastSeenAt: undefined,
       roleIds: assignments.filter((item) => item.userId === member.userId).map((item) => item.roleId),
     })),
     total: totalRow[0]?.count ?? 0,

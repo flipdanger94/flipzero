@@ -26,9 +26,16 @@ async function requireRoleManager(spaceId: string) {
 
 export async function GET(_: Request, { params }: { params: Promise<{ spaceId: string }> }) {
   const { spaceId } = await params;
-  const access = await requireRoleManager(spaceId);
-  if ("error" in access) return access.error;
-  const items = await access.database.select().from(roles).where(eq(roles.spaceId, spaceId)).orderBy(asc(roles.position));
+  const user = await getCurrentUser();
+  if (!user) return NextResponse.json({ code: "UNAUTHENTICATED", message: "Требуется вход." }, { status: 401 });
+  const database = getDatabase();
+  const [space] = await database.select({ ownerId: spaces.ownerId }).from(spaces).where(eq(spaces.id, spaceId)).limit(1);
+  if (!space) return NextResponse.json({ code: "NOT_FOUND", message: "Пространство не найдено." }, { status: 404 });
+  if (space.ownerId !== user.id) {
+    const [membership] = await database.select({ userId: members.userId }).from(members).where(and(eq(members.spaceId, spaceId), eq(members.userId, user.id))).limit(1);
+    if (!membership) return NextResponse.json({ code: "FORBIDDEN", message: "Вы не состоите в этом сообществе." }, { status: 403 });
+  }
+  const items = await database.select().from(roles).where(eq(roles.spaceId, spaceId)).orderBy(asc(roles.position));
   return NextResponse.json({ roles: items });
 }
 
@@ -48,6 +55,12 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ sp
   const access = await requireRoleManager(spaceId);
   if ("error" in access) return access.error;
   const body = await request.json().catch(() => null);
+  if (typeof body?.id === "string" && typeof body?.showInMemberList === "boolean") {
+    const [existing] = await access.database.select({ id: roles.id }).from(roles).where(and(eq(roles.id, body.id), eq(roles.spaceId, spaceId))).limit(1);
+    if (!existing) return NextResponse.json({ code: "NOT_FOUND", message: "Роль не найдена." }, { status: 404 });
+    const [updated] = await access.database.update(roles).set({ showInMemberList: body.showInMemberList }).where(and(eq(roles.id, body.id), eq(roles.spaceId, spaceId))).returning();
+    return NextResponse.json({ role: updated });
+  }
   const parsed = roleSchema.safeParse(body);
   if (!parsed.success || typeof body?.id !== "string") return NextResponse.json({ code: "INVALID_INPUT", message: "Проверьте данные роли." }, { status: 400 });
   const [existing] = await access.database.select({ isManaged: roles.isManaged }).from(roles).where(and(eq(roles.id, body.id), eq(roles.spaceId, spaceId))).limit(1);

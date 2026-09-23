@@ -35,3 +35,31 @@
 @media(max-width:520px){.install-space-list article{grid-template-columns:34px minmax(0,1fr)}.install-space-list button{grid-column:1/-1;justify-content:center}}
 
 .webhook-list .delivery-status{margin-top:5px!important;font-size:.44rem!important}.webhook-list .delivery-status.delivered{color:#77d8ae!important}.webhook-list .delivery-status.failed{color:#ff8291!important}.webhook-list .delivery-status.pending{color:#d7b56d!important}.webhook-actions button:disabled{opacity:.45;cursor:not-allowed}
+.developer-console-page{min-height:100dvh;background:#090d19;color:#f4f6ff;padding:22px clamp(16px,3vw,44px);box-sizing:border-box}.developer-console-page>header{width:min(1100px,100%);margin:0 auto 26px;display:flex;justify-content:space-between;align-items:center;gap:14px}.developer-console-page>header a{color:#a9bdff;text-decoration:none;font-size:.9rem}.developer-console-page>header strong{font-size:1rem}.developer-standalone{width:min(1100px,100%);margin:0 auto}.developer-standalone .developer-dialog{width:100%;height:min(780px,calc(100dvh - 120px));max-height:none;box-sizing:border-box}.developer-standalone .developer-heading h2{font-size:1.5rem}.developer-standalone .developer-layout strong,.developer-standalone .developer-layout p,.developer-standalone .developer-layout button,.developer-standalone .developer-create input{font-size:.9rem}@media(max-width:700px){.developer-console-page>header{flex-wrap:wrap}.developer-console-page>header strong{order:-1;width:100%}.developer-standalone .developer-dialog{height:calc(100dvh - 130px);padding:15px}}
+.developer-console-page>header nav{display:flex;gap:22px;align-items:center}
+.developer-public-actions{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:16px;margin-top:24px}
+.developer-public-actions .developer-public-cta{margin:0}
+.developer-public-docs{color:#c1cafa;font-size:.88rem;font-weight:700;text-decoration:none}.developer-public-docs:hover{text-decoration:underline}
+.developer-docs-page{min-height:100dvh;background:radial-gradient(circle at 75% 0,#3a295836,transparent 40%),#080e1b;color:#eaf0ff;padding:0 22px 80px}
+.developer-docs-shell{max-width:1180px;margin:auto}
+.developer-docs-shell>header{min-height:72px;display:flex;align-items:center;justify-content:space-between;gap:18px;border-bottom:1px solid #ffffff18}
+.developer-docs-shell>header a,.developer-docs-shell>header span{display:flex;align-items:center;gap:7px;color:#aebef9;text-decoration:none;font-size:.85rem}.developer-docs-shell>header span{color:#e5ebff;font-weight:800}
+.developer-docs-grid{display:grid;grid-template-columns:210px minmax(0,1fr);gap:clamp(26px,5vw,70px);padding-top:38px}
+.developer-docs-grid>nav{position:sticky;top:28px;align-self:start;display:grid;gap:8px;padding:20px 14px;border:1px solid #ffffff18;border-radius:16px;background:#111a2bbf}
+.developer-docs-grid>nav strong{padding:4px 10px 12px;font-size:.78rem}.developer-docs-grid>nav a{padding:8px 10px;color:#9daecc;text-decoration:none;font-size:.78rem;border-radius:8px}.developer-docs-grid>nav a:hover{color:white;background:#5c67b132}
+.developer-docs-grid article{min-width:0;max-width:780px}
+.developer-docs-hero{padding:35px clamp(20px,4vw,42px);border:1px solid #8793fa43;border-radius:20px;background:linear-gradient(125deg,#202d54,#181a34 70%,#261d41)}
+.developer-docs-hero>span{display:flex;align-items:center;gap:8px;color:#a9b9ff;font-size:.72rem;font-weight:800;letter-spacing:.12em}
+.developer-docs-hero h1{font-size:clamp(1.75rem,3.2vw,2.75rem);line-height:1.13;letter-spacing:-.04em;margin:18px 0 12px}
+.developer-docs-hero p{color:#b6c2df;line-height:1.65;max-width:580px;font-size:.92rem}
+.developer-docs-hero>a{display:inline-flex;align-items:center;gap:9px;margin-top:13px;padding:11px 16px;border-radius:10px;background:#a998ff;color:#121529;text-decoration:none;font-size:.83rem;font-weight:800}
+.developer-docs-grid section{padding:30px 4px;border-bottom:1px solid #ffffff19;scroll-margin-top:24px}
+.developer-docs-grid section h2{display:flex;align-items:center;gap:10px;font-size:1.4rem;margin:0 0 14px}.developer-docs-grid section h3{font-size:1rem;margin:24px 0 10px}
+.developer-docs-grid section p,.developer-docs-grid section li{font-size:.87rem;line-height:1.75;color:#b6c3d9}.developer-docs-grid section a{color:#b8aaff}.developer-docs-grid section li+li{margin-top:9px}
+.developer-docs-grid code{color:#dfcaff;font-size:.88em}.developer-docs-grid pre{max-width:100%;overflow:auto;border:1px solid #ffffff1b;border-radius:12px;background:#111927;padding:19px 20px;line-height:1.7}.developer-docs-grid pre code{font-size:.8rem;color:#c9e7ec;white-space:pre}
+.developer-docs-table{display:grid;border:1px solid #ffffff1c;border-radius:12px;overflow:hidden}.developer-docs-table>div{display:grid;grid-template-columns:145px 1fr;gap:14px;padding:14px 16px;border-bottom:1px solid #ffffff1c;color:#b6c3d9;font-size:.83rem;line-height:1.5}.developer-docs-table>div:last-child{border:0}
+.developer-docs-grid .developer-docs-note{display:flex;gap:10px;align-items:flex-start;padding:12px 15px;border:1px solid #877de047;border-radius:10px;background:#7258be1c}.developer-docs-note svg{flex:none;margin-top:3px;color:#aa9bff}
+.developer-docs-grid article footer{display:flex;justify-content:space-between;gap:12px;align-items:center;padding:30px 4px;color:#71819f;font-size:.8rem}.developer-docs-grid article footer a{display:flex;align-items:center;gap:6px;color:#b5a7ff;text-decoration:none}
+@media(max-width:760px){.developer-docs-grid{grid-template-columns:1fr;padding-top:18px}.developer-docs-grid>nav{position:static;display:flex;overflow:auto;align-items:center;gap:3px;padding:10px}.developer-docs-grid>nav strong{display:none}.developer-docs-grid>nav a{white-space:nowrap}.developer-docs-shell>header span{display:none}.developer-console-page>header nav{gap:12px}.developer-console-page>header nav a{font-size:.77rem}}
+@media(max-width:490px){.developer-docs-page{padding-inline:14px}.developer-docs-hero{padding:24px 19px}.developer-docs-table>div{grid-template-columns:1fr;gap:4px}.developer-docs-grid article footer{flex-direction:column;align-items:flex-start}}
+.api-example a{color:#b6a7ff;text-decoration:underline;text-underline-offset:3px}

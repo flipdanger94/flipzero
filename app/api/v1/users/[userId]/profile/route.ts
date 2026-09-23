@@ -12,7 +12,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ use
   await db.execute(sql`ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "profile_location" text; ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "profile_status" text; ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "profile_links" jsonb DEFAULT '[]'::jsonb NOT NULL;`);
   const [user] = await db.select({
     id: users.id, username: users.username, displayName: users.displayName, avatarUrl: users.avatarUrl,
-    bannerUrl: users.bannerUrl, bio: users.bio, accentColor: users.accentColor, presence: users.presence,
+    bannerUrl: users.bannerUrl, bio: users.bio, accentColor: users.accentColor, presence: users.presence, lastSeenAt: users.lastSeenAt,
     globalXp: users.globalXp, globalLevel: users.globalLevel, createdAt: users.createdAt,
     profileLocation: users.profileLocation, profileStatus: users.profileStatus, profileLinks: users.profileLinks,
   }).from(users).where(eq(users.id, userId)).limit(1);
@@ -37,7 +37,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ use
   const [outgoingRequest] = viewer.id === userId || friendship ? [] : await db.select({ id: friendRequests.id }).from(friendRequests).where(and(eq(friendRequests.fromId, viewer.id), eq(friendRequests.toId, userId), eq(friendRequests.status, "pending"))).limit(1);
   const [incomingRequest] = viewer.id === userId || friendship ? [] : await db.select({ id: friendRequests.id }).from(friendRequests).where(and(eq(friendRequests.fromId, userId), eq(friendRequests.toId, viewer.id), eq(friendRequests.status, "pending"))).limit(1);
   return NextResponse.json({
-    profile: { ...user, isOwnProfile: viewer.id === userId, isFriend: Boolean(friendship), friendshipStatus: friendship ? "friends" : outgoingRequest ? "outgoing" : incomingRequest ? "incoming" : "none", incomingRequestId: incomingRequest?.id ?? null,
+    profile: { ...user, presence: user.lastSeenAt && user.lastSeenAt.getTime() > Date.now() - 90_000 ? "online" : "offline", lastSeenAt: undefined, isOwnProfile: viewer.id === userId, isFriend: Boolean(friendship), friendshipStatus: friendship ? "friends" : outgoingRequest ? "outgoing" : incomingRequest ? "incoming" : "none", incomingRequestId: incomingRequest?.id ?? null,
       stats: { messages: messageCount?.value ?? 0, friends: friendCount?.value ?? 0, servers: serverCount?.value ?? 0 },
       servers: serverRows,
     }

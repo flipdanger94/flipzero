@@ -29,6 +29,7 @@ export const users = pgTable("users", {
   profileLinks: jsonb("profile_links").$type<string[]>().default([]).notNull(),
   accentColor: text("accent_color").default("#ff5c70").notNull(),
   presence: presenceStatus("presence").default("offline").notNull(),
+  lastSeenAt: timestamp("last_seen_at", { withTimezone: true }),
   emailVerifiedAt: timestamp("email_verified_at", { withTimezone: true }),
   globalXp: bigint("global_xp", { mode: "number" }).default(0).notNull(),
   globalLevel: integer("global_level").default(1).notNull(),
@@ -145,6 +146,21 @@ export const sessions = pgTable("sessions", {
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 }, (table) => [uniqueIndex("sessions_token_hash_unique").on(table.tokenHash), index("sessions_user_idx").on(table.userId)]);
 
+export const passwordResetTokens = pgTable("password_reset_tokens", {
+  id: text("id").primaryKey(),
+  userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  tokenHash: text("token_hash").notNull(),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [uniqueIndex("password_reset_token_unique").on(table.tokenHash), index("password_reset_user_created_idx").on(table.userId, table.createdAt)]);
+
+export const passwordResetAttempts = pgTable("password_reset_attempts", {
+  id: text("id").primaryKey(),
+  ipHash: text("ip_hash").notNull(),
+  emailHash: text("email_hash").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [index("password_reset_ip_created_idx").on(table.ipHash, table.createdAt), index("password_reset_email_created_idx").on(table.emailHash, table.createdAt)]);
+
 export const loginHistory = pgTable("login_history", {
   id: text("id").primaryKey(),
   userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
@@ -184,6 +200,7 @@ export const roles = pgTable("roles", {
   position: integer("position").default(0).notNull(),
   permissions: bigint("permissions", { mode: "number" }).default(0).notNull(),
   isManaged: boolean("is_managed").default(false).notNull(),
+  showInMemberList: boolean("show_in_member_list").default(false).notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 }, (table) => [index("roles_space_position_idx").on(table.spaceId, table.position)]);
 

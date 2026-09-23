@@ -25,7 +25,7 @@ export default function DevelopersPage() {
           <article><Boxes size={24} /><h2>Приложения</h2><p>Подключайте приложения к платформе FlipZero.</p></article>
           <article><Braces size={24} /><h2>Интеграции</h2><p>Связывайте FlipZero с внешними сервисами через API.</p></article>
         </div>
-        <Link className="developer-public-cta" href="/app">Перейти в FlipZero <ArrowRight size={17} /></Link>
+        <div className="developer-public-actions"><Link className="developer-public-cta" href="/developers/console">Создать приложение или API-ключ <ArrowRight size={17} /></Link><Link className="developer-public-docs" href="/developers/docs">Читать документацию</Link></div>
       </section>
     </main>
   );
