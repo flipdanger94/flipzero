@@ -1,4 +1,25 @@
 export type SuperFlipGrant = { expiresAt: Date | null; revokedAt: Date | null };
+export type SuperFlipGiftPeriod = "month" | "year" | "forever";
+
+export function parseSuperFlipGiftPeriod(value: unknown): SuperFlipGiftPeriod | null {
+  return value === "month" || value === "year" || value === "forever" ? value : null;
+}
+
+export function normalizeSuperFlipGiftReason(value: unknown) {
+  if (typeof value !== "string") return null;
+  const reason = value.trim();
+  return reason ? reason.slice(0, 500) : null;
+}
+
+export function superFlipGiftPeriodLabel(period: SuperFlipGiftPeriod) {
+  if (period === "month") return "1 месяц";
+  if (period === "year") return "1 год";
+  return "навсегда";
+}
+
+export function superFlipGiftNotificationBody(period: SuperFlipGiftPeriod, reason: string) {
+  return `Срок: ${superFlipGiftPeriodLabel(period)}. Причина: ${reason}`;
+}
 
 export const SUPERFLIP_CAPABILITIES = {
   profileBioLimit: 500,

@@ -782,3 +782,12 @@
 .server-context-menu .server-menu-group{display:block;padding:8px 9px 3px;color:#9a8ab5;font-size:.58rem;font-weight:800;letter-spacing:.12em}
 .auth-form .auth-reset-link{justify-self:end;color:#bc9bff;font-size:.8rem;text-decoration:none}
 .auth-form .auth-reset-link:hover{text-decoration:underline}
+
+
+/* Admin feedback for SuperFlip grants */
+.admin-notice{margin:12px 18px 0;padding:10px 12px;border:1px solid rgba(83,231,168,.24);border-radius:11px;background:rgba(32,151,112,.11);color:#d9fff0;display:flex;align-items:center;gap:10px;font-size:.68rem;line-height:1.45}
+.admin-notice span{flex:1;min-width:0}
+.admin-notice button{width:30px;height:30px;min-height:30px;border:0;border-radius:8px;background:transparent;color:#9ed8c3;display:grid;place-items:center;cursor:pointer}
+.admin-notice button:hover{background:rgba(255,255,255,.07);color:#fff}
+.fz-action-dialog form>small{display:block;margin-top:7px;color:#8693b3;font-size:.72rem;text-align:right}
+.fz-action-dialog label>strong{display:block;padding:11px;border:1px solid #4b5d83;border-radius:10px;background:#0b1425;color:#fff;font-size:.94rem}
