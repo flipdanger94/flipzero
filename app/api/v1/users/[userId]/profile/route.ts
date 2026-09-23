@@ -1,4 +1,4 @@
-import { and, count, eq, or, sql } from "drizzle-orm";
+import { and, count, eq, inArray, or, sql } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { getDatabase } from "@/db/client";
 import { friendRequests, friends, members, messages, spaces, userBlocks, userPrivacySettings, users } from "@/db/schema";
@@ -33,6 +33,23 @@ export async function GET(_request: Request, { params }: { params: Promise<{ use
     db.select({ value: count() }).from(members).where(eq(members.userId, userId)),
     db.select({ id: spaces.id, name: spaces.name, iconUrl: spaces.iconUrl }).from(members).innerJoin(spaces, eq(spaces.id, members.spaceId)).where(eq(members.userId, userId)).limit(3),
   ]);
+  const [viewerFriends, targetFriends, viewerSpaces, targetSpaces] = viewer.id === userId
+    ? [[], [], [], []]
+    : await Promise.all([
+        db.select({ id: friends.friendId }).from(friends).where(eq(friends.userId, viewer.id)),
+        db.select({ id: friends.friendId }).from(friends).where(eq(friends.userId, userId)),
+        db.select({ id: members.spaceId }).from(members).where(eq(members.userId, viewer.id)),
+        db.select({ id: members.spaceId }).from(members).where(eq(members.userId, userId)),
+      ]);
+  const viewerFriendIds = new Set(viewerFriends.map((item) => item.id));
+  const commonFriendIds = targetFriends.map((item) => item.id).filter((id) => viewerFriendIds.has(id)).slice(0, 20);
+  const viewerSpaceIds = new Set(viewerSpaces.map((item) => item.id));
+  const commonSpaceIds = targetSpaces.map((item) => item.id).filter((id) => viewerSpaceIds.has(id)).slice(0, 20);
+  const [commonFriends, commonServers] = await Promise.all([
+    commonFriendIds.length ? db.select({ id: users.id, username: users.username, displayName: users.displayName, avatarUrl: users.avatarUrl }).from(users).where(inArray(users.id, commonFriendIds)) : Promise.resolve([]),
+    commonSpaceIds.length ? db.select({ id: spaces.id, name: spaces.name, iconUrl: spaces.iconUrl }).from(spaces).where(inArray(spaces.id, commonSpaceIds)) : Promise.resolve([]),
+  ]);
+
   const [friendship] = viewer.id === userId ? [] : await db.select({ friendId: friends.friendId }).from(friends).where(and(eq(friends.userId, viewer.id), eq(friends.friendId, userId))).limit(1);
   const [outgoingRequest] = viewer.id === userId || friendship ? [] : await db.select({ id: friendRequests.id }).from(friendRequests).where(and(eq(friendRequests.fromId, viewer.id), eq(friendRequests.toId, userId), eq(friendRequests.status, "pending"))).limit(1);
   const [incomingRequest] = viewer.id === userId || friendship ? [] : await db.select({ id: friendRequests.id }).from(friendRequests).where(and(eq(friendRequests.fromId, userId), eq(friendRequests.toId, viewer.id), eq(friendRequests.status, "pending"))).limit(1);
@@ -40,6 +57,8 @@ export async function GET(_request: Request, { params }: { params: Promise<{ use
     profile: { ...user, presence: user.lastSeenAt && user.lastSeenAt.getTime() > Date.now() - 90_000 ? "online" : "offline", lastSeenAt: undefined, isOwnProfile: viewer.id === userId, isFriend: Boolean(friendship), friendshipStatus: friendship ? "friends" : outgoingRequest ? "outgoing" : incomingRequest ? "incoming" : "none", incomingRequestId: incomingRequest?.id ?? null,
       stats: { messages: messageCount?.value ?? 0, friends: friendCount?.value ?? 0, servers: serverCount?.value ?? 0 },
       servers: serverRows,
+      commonFriends,
+      commonServers,
     }
   });
 }
