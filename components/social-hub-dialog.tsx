@@ -199,7 +199,6 @@ export function SocialHubDialog({ currentUserId, initialTab = "messages", initia
   function stopRecording(){if(recorderRef.current?.state==="recording")recorderRef.current.stop()}
   async function openChat(person:Person){const conversation=conversations.find((item)=>item.other.id===person.id);followLatestRef.current=true;setMessages([]);setNotice("");setProfileVisible(true);setActive(conversation??{id:"",other:person,unread:0,lastMessage:null});setTab("messages")}
   async function joinWaitlist(){const response=await fetch("/api/superflip/purchase",{method:"POST"});const data=await response.json();setNotice(data.message);setSuperflip((value)=>value?{...value,waitlisted:true}:value)}
-  async function inviteFriend(){const url=`${window.location.origin}/register`;if(navigator.share){try{await navigator.share({title:"FlipZero",text:"Присоединяйся ко мне в FlipZero",url});return}catch{}}await navigator.clipboard.writeText(url);setNotice("Ссылка-приглашение скопирована.")}
   const filteredConversations=conversations.filter((item)=>{const q=conversationQuery.trim().toLocaleLowerCase("ru");return !q||item.other.displayName.toLocaleLowerCase("ru").includes(q)||item.other.username.toLocaleLowerCase("ru").includes(q)});
 
   const friendRows=friendView==="online"?friends.filter((person)=>person.presence==="online"):friendView==="all"?friends:[];
