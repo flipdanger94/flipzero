@@ -3,7 +3,7 @@ import { and, eq, or } from "drizzle-orm";
 import { AccessToken, TrackSource } from "livekit-server-sdk";
 import { NextResponse } from "next/server";
 import { getDatabase } from "@/db/client";
-import { notifications, userBlocks, users } from "@/db/schema";
+import { friends, notifications, userBlocks, userPrivacySettings, users } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
 import { isTrustedMutationRequest } from "@/lib/security-controls";
 
@@ -24,6 +24,11 @@ export async function POST(request: Request) {
     and(eq(userBlocks.blockerId, receiverId), eq(userBlocks.blockedId, user.id)),
   )).limit(1);
   if (blocked) return NextResponse.json({ message: "Звонок недоступен из-за блокировки." }, { status: 403 });
+  const [privacy] = await db.select({ directMessages: userPrivacySettings.directMessages }).from(userPrivacySettings).where(eq(userPrivacySettings.userId, receiverId)).limit(1);
+  if (privacy?.directMessages === false) {
+    const [friend] = await db.select({ friendId: friends.friendId }).from(friends).where(and(eq(friends.userId, receiverId), eq(friends.friendId, user.id))).limit(1);
+    if (!friend) return NextResponse.json({ message: "Пользователь принимает звонки только от друзей." }, { status: 403 });
+  }
 
   const url = process.env.LIVEKIT_URL;
   const apiKey = process.env.LIVEKIT_API_KEY;
