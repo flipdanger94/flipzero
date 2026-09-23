@@ -15,8 +15,12 @@ type MentionSuggestion =
 const quickEmoji = ["😀", "😂", "😍", "🥰", "😎", "🤔", "😭", "🙏", "👍", "👏", "❤️", "🔥", "✨", "🎉", "💜", "👋"];
 
 function escapeRegExp(value: string) {
-  return value.replace(/[.*+?^$()|[\]\\{}]/g, "\\
-function LinkPreview");
+  let escaped = "";
+  for (const character of value) {
+    if ("\\^$.*+?()[]{}|".includes(character)) escaped += "\\";
+    escaped += character;
+  }
+  return escaped;
 }
 
 function renderMentionContent(content: string, roleNames: string[]): ReactNode[] {
