@@ -3,3 +3,16 @@
 .composer-emoji-picker button{min-width:0;min-height:36px;border:0;border-radius:8px;background:transparent;font-size:1.25rem;cursor:pointer}
 .composer-emoji-picker button:hover,.composer-emoji-picker button:focus-visible{outline:2px solid #aa83ed;background:#ffffff1b}
 @media(max-width:650px){.composer-emoji-picker{right:12px;grid-template-columns:repeat(8,1fr)}}
+
+
+/* Chat mentions */
+.mention-picker{position:absolute;left:4%;bottom:calc(100% + 6px);z-index:14;width:min(430px,calc(100vw - 28px));max-height:min(390px,55dvh);overflow:auto;border:1px solid #ffffff20;border-radius:14px;background:#1d1b22;box-shadow:0 20px 52px #000b;padding:7px}
+.mention-picker>header{height:34px;padding:0 8px;display:flex;align-items:center;justify-content:space-between;color:#817a89}.mention-picker>header strong{color:#d9d4df;font-size:.62rem;text-transform:uppercase;letter-spacing:.08em}.mention-picker>header small{font-size:.52rem}
+.mention-picker>button{width:100%;min-height:52px;border:0;border-radius:10px;background:transparent;color:#d9d4df;padding:6px 9px;display:grid;grid-template-columns:36px minmax(0,1fr) auto;align-items:center;gap:10px;text-align:left;cursor:pointer}
+.mention-picker>button:hover,.mention-picker>button.active,.mention-picker>button[aria-selected="true"]{background:linear-gradient(90deg,#ff657516,#c84ad417);outline:1px solid #ff768533}
+.mention-avatar{position:relative;width:34px;height:34px;border-radius:11px;overflow:hidden;background:linear-gradient(135deg,#ff6678,#b842d0);display:grid;place-items:center;color:white;font-size:.62rem;font-weight:850}.mention-avatar img{width:100%;height:100%;object-fit:cover}.mention-avatar i{position:absolute;right:1px;bottom:1px;width:8px;height:8px;border:2px solid #1d1b22;border-radius:50%;background:#625d68}.mention-avatar i.online{background:#31df9d}
+.mention-copy{min-width:0}.mention-copy strong,.mention-copy small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.mention-copy strong{font-size:.68rem}.mention-copy small{margin-top:3px;color:#77717f;font-size:.54rem}.mention-picker>button>em{font-style:normal;color:#686270;font-size:.5rem}
+.mention-role-icon{--mention-role-color:#a855f7;width:34px;height:34px;border:1px solid var(--mention-role-color);border-radius:11px;background:color-mix(in srgb,var(--mention-role-color) 17%,#211e27);color:var(--mention-role-color);display:grid;place-items:center}
+.mention-picker-state{min-height:58px;display:flex;align-items:center;justify-content:center;gap:8px;color:#77717f;font-size:.6rem}
+.chat-mention{display:inline-flex;align-items:center;border-radius:5px;padding:0 4px;font-weight:700;line-height:1.35}.chat-mention.user-mention{background:#6d5df62c;color:#c5bcff}.chat-mention.role-mention{background:#d84fbd25;color:#f2a1e1}.persistent-message:hover .chat-mention{filter:brightness(1.08)}
+@media(max-width:650px){.mention-picker{left:12px;right:12px;width:auto;max-height:48dvh}.mention-picker>button{grid-template-columns:34px minmax(0,1fr);min-height:50px}.mention-picker>button>em{display:none}}
