@@ -5,6 +5,7 @@ import { getDatabase } from "@/db/client";
 import { mediaAssets, spaces, users } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
 import { getSuperFlipCapabilities } from "@/lib/superflip";
+import { normalizeSpaceBanner } from "@/lib/banner-image";
 
 export const runtime = "nodejs";
 
@@ -44,11 +45,16 @@ export async function POST(request: Request) {
   const bytes = Buffer.from(await file.arrayBuffer());
   const contentType = imageType(bytes);
   if (!contentType || contentType !== file.type) return NextResponse.json({ message: "Поддерживаются PNG, JPEG, WebP и GIF." }, { status: 400 });
+  let storedImage = { bytes, contentType };
+  if (imageKind === "spaceBanner") {
+    try { storedImage = await normalizeSpaceBanner(bytes, contentType, allowedBytes); }
+    catch (reason) { return NextResponse.json({ message: reason instanceof Error ? reason.message : "Не удалось обработать баннер." }, { status: 422 }); }
+  }
   const id = randomUUID();
   const url = `/api/v1/media/${id}`;
 
   const updated = await database.transaction(async (tx) => {
-    await tx.insert(mediaAssets).values({ id, bytes, contentType });
+    await tx.insert(mediaAssets).values({ id, bytes: storedImage.bytes, contentType: storedImage.contentType });
     if (imageKind === "avatar" || imageKind === "accountBanner") {
       const column = imageKind === "avatar" ? "avatarUrl" : "bannerUrl";
       const [previous] = await tx.select({ url: users[column] }).from(users).where(eq(users.id, user.id)).limit(1);
