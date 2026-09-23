@@ -1,6 +1,6 @@
 "use client";
 
-import { type CSSProperties, type FormEvent, Fragment, useEffect, useRef, useState } from "react";
+import { type CSSProperties, type FormEvent, type ReactNode, Fragment, useEffect, useRef, useState } from "react";
 import { CornerUpLeft, ExternalLink, Gamepad2, Link2, LoaderCircle, MapPin, MessageCircle, MessageSquareText, Mic, Pin, Search, SendHorizontal, ShieldCheck, Smile, Sparkles, Square, Star, Trash2, Users, X, ShieldAlert, UserX } from "lucide-react";
 import { MediaImage } from "./media-image";
 import { ImageUpload } from "./image-upload";
@@ -9,7 +9,39 @@ import { useModalA11y } from "@/hooks/use-modal-a11y";
 
 type Attachment = { type: "voice"; url: string; duration: number; mimeType: string };
 type ChatMessage = { id: string; authorId: string; displayName: string; username: string; avatarUrl?: string | null; content: string; attachments?: Attachment[]; replyToId: string | null; editedAt?: string | null; pinnedAt?: string | null; createdAt: string; reactions: Array<{ emoji: string; userId: string }> };
+type MentionSuggestion =
+  | { type: "user"; id: string; username: string; displayName: string; nickname: string | null; avatarUrl?: string | null; online?: boolean }
+  | { type: "role"; id: string; name: string; color: string };
 const quickEmoji = ["😀", "😂", "😍", "🥰", "😎", "🤔", "😭", "🙏", "👍", "👏", "❤️", "🔥", "✨", "🎉", "💜", "👋"];
+
+function escapeRegExp(value: string) {
+  return value.replace(/[.*+?^$()|[\]\\{}]/g, "\\
+function LinkPreview");
+}
+
+function renderMentionContent(content: string, roleNames: string[]): ReactNode[] {
+  const roleSet = new Set(roleNames.map((name) => name.toLocaleLowerCase("ru")));
+  const rolePattern = [...roleNames].sort((a, b) => b.length - a.length).map(escapeRegExp).join("|");
+  const targetPattern = rolePattern ? "(?:" + rolePattern + "|[\\p{L}\\p{N}_.-]+)" : "[\\p{L}\\p{N}_.-]+";
+  const mentionRegex = new RegExp("(^|\\s)(@" + targetPattern + ")(?=$|\\s|[.,!?;:])", "giu");
+  const nodes: ReactNode[] = [];
+  let cursor = 0;
+  let key = 0;
+
+  for (const match of content.matchAll(mentionRegex)) {
+    const start = match.index ?? 0;
+    const prefix = match[1] ?? "";
+    const mention = match[2] ?? "";
+    if (start > cursor) nodes.push(content.slice(cursor, start));
+    if (prefix) nodes.push(prefix);
+    const isRole = roleSet.has(mention.slice(1).toLocaleLowerCase("ru"));
+    nodes.push(<span className={"chat-mention " + (isRole ? "role-mention" : "user-mention")} key={"mention-" + key++}>{mention}</span>);
+    cursor = start + match[0].length;
+  }
+
+  if (cursor < content.length) nodes.push(content.slice(cursor));
+  return nodes;
+}
 
 function LinkPreview({ content }: { content: string }) {
   const match = content.match(/https?:\/\/[^\s<]+/i);
