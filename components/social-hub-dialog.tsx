@@ -126,7 +126,7 @@ export function SocialHubDialog({ currentUserId, initialTab = "messages", initia
   },[active,loadMessages]);
   useEffect(()=>{const list=directMessagesRef.current;if(list&&followLatestRef.current)list.scrollTop=list.scrollHeight},[messages]);
   useEffect(()=>{const refresh=()=>{if(document.visibilityState==="visible")void loadConversations()};const timer=window.setInterval(refresh,3000);document.addEventListener("visibilitychange",refresh);return()=>{window.clearInterval(timer);document.removeEventListener("visibilitychange",refresh)}},[loadConversations]);
-  useEffect(()=>()=>{pendingFiles.forEach((item)=>item.previewUrl&&URL.revokeObjectURL(item.previewUrl));recordingStreamRef.current?.getTracks().forEach((track)=>track.stop())},[pendingFiles]);
+  useEffect(()=>()=>{recordingStreamRef.current?.getTracks().forEach((track)=>track.stop())},[]);
   useEffect(()=>{if(!recording)return;const timer=window.setInterval(()=>{const seconds=Math.floor((Date.now()-recordingStartedRef.current)/1000);setRecordSeconds(seconds);if(seconds>=300&&recorderRef.current?.state==="recording")recorderRef.current.stop()},250);return()=>window.clearInterval(timer)},[recording]);
 
   async function loadOlderMessages(){if(!active?.id||!messageCursor||loadingOlder)return;setLoadingOlder(true);await loadMessages(active,{cursor:messageCursor});setLoadingOlder(false)}
@@ -207,7 +207,7 @@ export function SocialHubDialog({ currentUserId, initialTab = "messages", initia
         </form>{notice?<p className="direct-notice" role="alert">{notice}</p>:null}
         </>:<div className="social-empty"><MessageCircle size={32}/><strong>{conversations.length?"Выберите диалог":"Начните новый диалог"}</strong><span>{conversations.length?"Сообщения появятся здесь.":"Откройте список друзей и выберите собеседника."}</span><button onClick={()=>setTab("friends")}>Перейти к друзьям</button></div>}
       </section>
-      {active&&profileVisible?<DirectProfile key={active.other.id} person={active.other}/>:null}
+      {active&&profileVisible?<DirectProfile key={active.other.id} person={active.other} onClose={()=>setProfileVisible(false)}/>:null}
       {active&&callMode?<DirectCallOverlay person={active.other} video={callMode==="video"} onClose={()=>setCallMode(null)}/>:null}
     </div>
     :tab==="friends"?<div className="friends-content"><form className="friend-search" onSubmit={search}><Search size={16}/><input name="q" minLength={2} placeholder="Поиск по username"/><button>Найти</button></form>{notice?<p className="social-notice">{notice}</p>:null}{requests.length?<section><h3>Новые заявки</h3>{requests.map((item)=><div className="person-row" key={item.id}><Avatar person={item.from}/><span><strong>{item.from.displayName}</strong><small>@{item.from.username}</small></span><button onClick={()=>respond(item.id,"accepted")}>Принять</button><button className="muted" onClick={()=>respond(item.id,"declined")}>Отклонить</button></div>)}</section>:null}{results.length?<section><h3>Результаты поиска</h3>{results.map((person)=><div className="person-row" key={person.id}><Avatar person={person}/><span><strong>{person.displayName}</strong><small>@{person.username}</small></span><button onClick={()=>requestFriend(person.id)}><UserPlus size={14}/> Добавить</button></div>)}</section>:null}<section><h3>Мои друзья</h3>{friends.map((person)=><div className="person-row" key={person.id}><Avatar person={person}/><span><strong>{person.displayName}</strong><small>@{person.username}</small></span><button onClick={()=>openChat(person)}>Написать</button><button className="muted" onClick={()=>removeFriend(person.id)}>Удалить</button></div>)}{!friends.length?<div className="social-list-empty"><span>Пока нет друзей. Найдите пользователя выше или пригласите знакомого.</span><button onClick={()=>void inviteFriend()}>Пригласить друга</button></div>:null}</section></div>
@@ -218,7 +218,7 @@ export function SocialHubDialog({ currentUserId, initialTab = "messages", initia
 
 function Avatar({person}:{person:Person}){return <i className="social-avatar">{person.avatarUrl?<MediaImage src={person.avatarUrl}/>:person.displayName.slice(0,2).toUpperCase()}</i>}
 
-function DirectProfile({person}:{person:Person}){
+function DirectProfile({person,onClose}:{person:Person;onClose:()=>void}){
   const [details,setDetails]=useState<ProfileDetails|null>(null);
   const [profileError,setProfileError]=useState(false);
   const [commonTab,setCommonTab]=useState<"friends"|"servers">("friends");
@@ -234,6 +234,7 @@ function DirectProfile({person}:{person:Person}){
   const isOnline=(details?.presence??person.presence)==="online";
   const avatarPerson={...person,displayName,username,avatarUrl};
   return <aside className="direct-profile profile-reference" aria-label={`Профиль ${displayName}`}>
+    <button className="direct-profile-close" type="button" onClick={onClose} aria-label="Скрыть профиль"><X size={17}/></button>
     <div className="direct-profile-cover" style={details?.bannerUrl?{backgroundImage:`linear-gradient(180deg,transparent,#07101d),url("${details.bannerUrl}")`}:undefined}><span>FLIPZERO</span></div>
     <div className="direct-profile-identity"><Avatar person={avatarPerson}/><span className={`direct-presence ${isOnline?"online":""}`}/><h3>{displayName}</h3><p>@{username}</p><small>{isOnline?"● В сети":"Не в сети"}</small></div>
     <section className="profile-reference-about"><h4>О пользователе</h4><p>{profileError?"Не удалось загрузить профиль.":details?.bio||"Пользователь пока ничего о себе не рассказал."}</p>{details?.profileStatus?<span>{details.profileStatus}</span>:null}{details?.profileLocation?<span><MapPin size={15}/>{details.profileLocation}</span>:null}</section>
