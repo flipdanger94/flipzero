@@ -306,7 +306,7 @@ export default function Home({ initialSpaceId, initialChannelId }: { initialSpac
   async function deleteActiveSpace() {
     if (!activeSpace) return; const name = activeSpace.name;
     const response = await fetch(`/api/v1/spaces/${activeSpace.id}`, { method: "DELETE", headers: { "content-type": "application/json" }, body: JSON.stringify({ action: "delete", name }) });
-    const result = await response.json().catch(() => null); if (!response.ok) { setAppNotice({ message: result?.message ?? "Не удалось удалить сервер.", tone: "error" }); return; }
+    const result = await response.json().catch(() => null); if (!response.ok) { setAppNotice({ message: result?.message ?? "Не удалось удалить пространство.", tone: "error" }); return; }
     const next = userSpaces.filter((space) => space.id !== activeSpace.id); setUserSpaces(next); setActiveSpaceId(next[0]?.id ?? null);
   }
 

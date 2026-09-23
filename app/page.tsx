@@ -77,7 +77,7 @@ function HeroProduct() {
               <i className="avatar avatar-luna">LU</i>
               <div><p><strong>Luna 💜</strong><time>Сегодня, 14:28</time></p><span>Ребят, посмотрите на этот арт, который я сделала сегодня! ✨</span><div className="fz-art-card"><div className="fz-art-moon" /><div className="fz-art-city" /></div><footer><b>❤️ 284</b><b>🔥 42</b><b>⭐ 27</b></footer></div>
             </article>
-            <article><i className="avatar avatar-max">MX</i><div><p><strong>Max</strong><time>Сегодня, 14:31</time></p><span>Выглядит потрясающе! 🔥<br />Можно добавить это в галерею на сервере?</span></div></article>
+            <article><i className="avatar avatar-max">MX</i><div><p><strong>Max</strong><time>Сегодня, 14:31</time></p><span>Выглядит потрясающе! 🔥<br />Можно добавить это в галерею пространства?</span></div></article>
             <article><i className="avatar avatar-sakura">SA</i><div><p><strong>Sakura 🌸</strong><time>Сегодня, 14:32</time></p><span>Да, конечно! Сейчас закину ещё пару вариантов 🙂</span></div></article>
           </div>
           <div className="fz-app-composer"><span>＋</span><p>Написать сообщение в #общий-чат...</p><b>GIF</b><b>☺</b><button>➤</button></div>
