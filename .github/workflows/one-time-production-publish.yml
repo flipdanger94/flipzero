@@ -1,0 +1,50 @@
+name: One-time Vercel Production Publish
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    if: github.event.head_commit.message == 'Publish mobile sidebar fix to production'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      VERCEL_TEAM_ID: team_AsHje38KtN3G35JN0zHFPSmH
+      VERCEL_PROJECT_ID: prj_a7vxV0ljAd6K0oj9yXmngYDyk4Oz
+    steps:
+      - name: Create production deployment
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          RELEASE_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          if [ -z "${VERCEL_TOKEN:-}" ]; then
+            echo "VERCEL_TOKEN is not configured"
+            exit 1
+          fi
+          PAYLOAD=$(jq -nc             --arg name "flipzero.app"             --arg project "$VERCEL_PROJECT_ID"             --arg ref "main"             --arg sha "$RELEASE_SHA"             --argjson repoId 1373820599             '{name:$name,project:$project,target:"production",gitSource:{type:"github",repoId:$repoId,ref:$ref,sha:$sha}}')
+          RESPONSE=$(curl --silent --show-error             --request POST             --url "https://api.vercel.com/v13/deployments?teamId=$VERCEL_TEAM_ID&forceNew=1"             --header "Authorization: Bearer $VERCEL_TOKEN"             --header "Content-Type: application/json"             --data "$PAYLOAD"             --write-out "\n%{http_code}")
+          HTTP_CODE=$(echo "$RESPONSE" | tail -n 1)
+          BODY=$(echo "$RESPONSE" | sed '$d')
+          echo "Vercel API status: $HTTP_CODE"
+          echo "$BODY" | jq '{id,url,readyState,state,error,inspectorUrl}'
+          if [ "$HTTP_CODE" -lt 200 ] || [ "$HTTP_CODE" -ge 300 ]; then exit 1; fi
+          DEPLOYMENT_ID=$(echo "$BODY" | jq -r '.id // empty')
+          if [ -z "$DEPLOYMENT_ID" ]; then exit 1; fi
+          for attempt in $(seq 1 60); do
+            STATUS_RESPONSE=$(curl --silent --show-error               --url "https://api.vercel.com/v13/deployments/$DEPLOYMENT_ID?teamId=$VERCEL_TEAM_ID"               --header "Authorization: Bearer $VERCEL_TOKEN")
+            READY_STATE=$(echo "$STATUS_RESPONSE" | jq -r '.readyState // .state // "UNKNOWN"')
+            DEPLOYMENT_URL=$(echo "$STATUS_RESPONSE" | jq -r '.url // empty')
+            echo "Attempt $attempt: state=$READY_STATE url=$DEPLOYMENT_URL"
+            case "$READY_STATE" in
+              READY) exit 0 ;;
+              ERROR|CANCELED) echo "$STATUS_RESPONSE" | jq '{errorCode,errorMessage,error}'; exit 1 ;;
+            esac
+            sleep 10
+          done
+          exit 1
