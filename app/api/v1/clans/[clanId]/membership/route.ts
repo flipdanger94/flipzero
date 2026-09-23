@@ -14,6 +14,7 @@ async function addMemberAtomically(clanId:string,userId:string,role:"member"|"of
       .where(and(eq(clans.id,clanId),lt(clans.memberCount,CLAN_MEMBER_LIMIT))).returning({id:clans.id});
     if(!slot) throw new Error("CLAN_FULL");
     await tx.insert(clanMembers).values({clanId,userId,role});
+    await tx.update(clanRequests).set({status:"cancelled",respondedAt:new Date()}).where(and(eq(clanRequests.userId,userId),eq(clanRequests.status,"pending")));
   });
 }
 
@@ -86,6 +87,7 @@ export async function POST(request:Request,{params}:{params:Promise<{clanId:stri
         const [slot]=await tx.update(clans).set({memberCount:sql`${clans.memberCount}+1`,updatedAt:new Date()}).where(and(eq(clans.id,clanId),lt(clans.memberCount,CLAN_MEMBER_LIMIT))).returning({id:clans.id});
         if(!slot) throw new Error("CLAN_FULL");
         await tx.insert(clanMembers).values({clanId,userId:user.id,role:"member"});
+        await tx.update(clanRequests).set({status:"cancelled",respondedAt:new Date()}).where(and(eq(clanRequests.userId,user.id),eq(clanRequests.status,"pending")));
         await tx.update(clanRequests).set({status:"accepted",respondedAt:new Date()}).where(eq(clanRequests.id,requestId));
       });
       return NextResponse.json({ok:true});
