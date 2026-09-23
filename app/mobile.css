@@ -1847,3 +1847,138 @@ html[data-motion="off"] *::after {
   .direct-actions button{width:32px!important;height:32px!important;min-width:32px!important;min-height:32px!important}
   .direct-composer-row>button{flex-basis:38px!important;width:38px!important;min-width:38px!important}.direct-composer-row textarea{padding-inline:8px!important}
 }
+
+
+/* Mobile channel drawer banner final contract */
+@media (max-width: 767px) {
+  .app-shell .channel-panel.has-server-banner {
+    display: grid !important;
+    grid-template-rows: auto 128px minmax(0, 1fr) 60px !important;
+    align-content: stretch !important;
+    padding-top: env(safe-area-inset-top) !important;
+    overflow: hidden !important;
+  }
+
+  .app-shell .channel-panel.has-server-banner > .mobile-space-switcher {
+    grid-row: 1 !important;
+    position: relative !important;
+    z-index: 4 !important;
+    min-height: 62px !important;
+    margin: 0 !important;
+    padding: 11px 54px 10px 12px !important;
+    border-bottom: 1px solid rgba(128, 139, 177, .16) !important;
+    background: #070d1c !important;
+  }
+
+  .app-shell .channel-panel.has-server-banner > .space-heading-wrap {
+    position: absolute !important;
+    z-index: 90 !important;
+    top: calc(env(safe-area-inset-top) + 62px) !important;
+    left: 0 !important;
+    right: 0 !important;
+    width: 100% !important;
+    height: 0 !important;
+    min-height: 0 !important;
+    grid-row: auto !important;
+    overflow: visible !important;
+    pointer-events: none !important;
+  }
+
+  .app-shell .channel-panel.has-server-banner > .space-heading-wrap > .server-context-menu {
+    pointer-events: auto !important;
+  }
+
+  .app-shell .channel-panel.has-server-banner > .server-sidebar-banner {
+    grid-row: 2 !important;
+    position: relative !important;
+    z-index: 2 !important;
+    top: auto !important;
+    left: auto !important;
+    right: auto !important;
+    bottom: auto !important;
+    width: 100% !important;
+    height: 128px !important;
+    min-height: 128px !important;
+    margin: 0 !important;
+    border: 0 !important;
+    border-bottom: 1px solid rgba(128, 139, 177, .16) !important;
+    background-position: center !important;
+    background-size: cover !important;
+    overflow: hidden !important;
+  }
+
+  .app-shell .channel-panel.has-server-banner > .server-sidebar-banner::after {
+    background: linear-gradient(180deg, rgba(3, 6, 14, .74) 0%, rgba(3, 6, 14, .28) 46%, rgba(3, 6, 14, .62) 100%) !important;
+  }
+
+  .app-shell .channel-panel.has-server-banner .server-banner-heading {
+    position: absolute !important;
+    z-index: 3 !important;
+    top: 0 !important;
+    right: 0 !important;
+    bottom: auto !important;
+    left: 0 !important;
+    width: 100% !important;
+    min-height: 64px !important;
+    margin: 0 !important;
+    padding: 12px 14px 16px !important;
+    border: 0 !important;
+    background: linear-gradient(180deg, rgba(4, 7, 15, .92) 0%, rgba(4, 7, 15, .58) 58%, transparent 100%) !important;
+    align-items: start !important;
+    pointer-events: auto !important;
+  }
+
+  .app-shell .channel-panel.has-server-banner .server-banner-heading > span {
+    align-self: start !important;
+  }
+
+  .app-shell .channel-panel.has-server-banner .server-banner-heading strong {
+    font-size: .88rem !important;
+    line-height: 1.18 !important;
+  }
+
+  .app-shell .channel-panel.has-server-banner .server-banner-heading small {
+    margin-top: 3px !important;
+    font-size: .58rem !important;
+    line-height: 1.25 !important;
+  }
+
+  .app-shell .channel-panel.has-server-banner .server-banner-heading > svg {
+    align-self: start !important;
+    margin-top: 2px !important;
+  }
+
+  .app-shell .channel-panel.has-server-banner > .channel-scroll {
+    grid-row: 3 !important;
+    position: relative !important;
+    z-index: 1 !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding-top: 14px !important;
+    border-top: 0 !important;
+    background: #070d1c !important;
+    overflow-y: auto !important;
+  }
+
+  .app-shell .channel-panel.has-server-banner > .user-dock {
+    grid-row: 4 !important;
+    position: relative !important;
+    z-index: 3 !important;
+    min-height: 60px !important;
+  }
+
+  .app-shell .channel-panel.has-server-banner > .mobile-drawer-close {
+    z-index: 95 !important;
+    top: calc(env(safe-area-inset-top) + 11px) !important;
+    right: 10px !important;
+  }
+
+  .app-shell .channel-panel.has-server-banner .server-context-menu {
+    position: fixed !important;
+    z-index: 120 !important;
+    top: max(calc(env(safe-area-inset-top) + 70px), 70px) !important;
+    left: 10px !important;
+    right: 10px !important;
+    max-height: min(72dvh, 620px) !important;
+  }
+}
