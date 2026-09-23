@@ -1,34 +1,83 @@
 "use client";
 
-import { type FormEvent, useCallback, useEffect, useRef, useState } from "react";
-import { ArrowLeft, Crown, LoaderCircle, MapPin, MessageCircle, Search, SendHorizontal, ShieldCheck, Star, UserPlus, Users, X } from "lucide-react";
+import { type DragEvent, type FormEvent, useCallback, useEffect, useRef, useState } from "react";
+import {
+  ArrowLeft, Crown, File, FilePlus2, Image as ImageIcon, LoaderCircle, MapPin, MessageCircle,
+  Mic, PanelRightClose, PanelRightOpen, Phone, Search, SendHorizontal, ShieldCheck, Smile,
+  Sparkles, Star, UserPlus, Users, Video, X, Zap,
+} from "lucide-react";
 import { MediaImage } from "./media-image";
+import { DirectCallOverlay } from "./direct-call-overlay";
 import { useModalA11y } from "@/hooks/use-modal-a11y";
 
 type Person = { id: string; username: string; displayName: string; avatarUrl?: string | null; presence?: string };
-type ProfileDetails = { bio:string|null; profileLocation:string|null; profileStatus:string|null; presence:string; globalLevel:number; stats:{messages:number;friends:number;servers:number}; servers:Array<{id:string;name:string;iconUrl:string|null}> };
+type CommonFriend = { id:string; username:string; displayName:string; avatarUrl:string|null };
+type CommonServer = { id:string; name:string; iconUrl:string|null };
+type ProfileDetails = {
+  id:string; username:string; displayName:string; avatarUrl:string|null; bannerUrl?:string|null; bio:string|null;
+  profileLocation:string|null; profileStatus:string|null; presence:string; globalLevel:number; globalXp?:number;
+  stats:{messages:number;friends:number;servers:number}; servers:Array<{id:string;name:string;iconUrl:string|null}>;
+  commonFriends:CommonFriend[]; commonServers:CommonServer[];
+};
 type FriendRequest = { id: string; from: Person };
 type Conversation = { id: string; other: Person; unread: number; lastMessage: { text: string; createdAt: string } | null };
-type DirectMessage = { id: string; senderId: string; receiverId: string; text: string; createdAt: string };
+type DirectAttachment = { type:"image"|"audio"|"file"; url:string; name:string; mimeType:string; size:number; duration?:number };
+type DirectMessage = { id: string; senderId: string; receiverId: string; text: string; attachments?:DirectAttachment[]; createdAt: string };
+type PendingAttachment = { id:string; file:File; type:"image"|"audio"|"file"; previewUrl:string|null; duration?:number };
+type CallMode = "voice" | "video" | null;
+
+const quickEmoji = ["😀","😂","😍","🥰","😎","🤔","😭","🙏","👍","👏","❤️","🔥","✨","🎉","💜","👋","🚀","✅","💯","👀"];
 
 export function SocialHubDialog({ currentUserId, initialTab = "messages", initialUserId, onClose, embedded = false, isAdmin = false, onOpenAdmin }: { currentUserId: string; initialTab?: "messages" | "friends" | "superflip"; initialUserId?: string | null; onClose?: () => void; embedded?: boolean; isAdmin?: boolean; onOpenAdmin?: () => void }) {
-  const [tab, setTab] = useState(initialTab); const [loading, setLoading] = useState(true); const [loadError, setLoadError] = useState(""); const [notice, setNotice] = useState("");
-  const [friends, setFriends] = useState<Person[]>([]); const [requests, setRequests] = useState<FriendRequest[]>([]); const [results, setResults] = useState<Person[]>([]);
-  const [conversations, setConversations] = useState<Conversation[]>([]); const [active, setActive] = useState<Conversation | null>(null); const [messages, setMessages] = useState<DirectMessage[]>([]);
+  const [tab, setTab] = useState(initialTab);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
+  const [notice, setNotice] = useState("");
+  const [friends, setFriends] = useState<Person[]>([]);
+  const [requests, setRequests] = useState<FriendRequest[]>([]);
+  const [results, setResults] = useState<Person[]>([]);
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [active, setActive] = useState<Conversation | null>(null);
+  const [messages, setMessages] = useState<DirectMessage[]>([]);
+  const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
   const [messageCursor, setMessageCursor] = useState<string | null>(null);
   const [loadingOlder, setLoadingOlder] = useState(false);
-  const directMessagesRef = useRef<HTMLDivElement | null>(null); const followLatestRef = useRef(true);
+  const [profileVisible, setProfileVisible] = useState(true);
+  const [emojiOpen, setEmojiOpen] = useState(false);
+  const [dragging, setDragging] = useState(false);
+  const [pendingFiles, setPendingFiles] = useState<PendingAttachment[]>([]);
+  const [callMode, setCallMode] = useState<CallMode>(null);
+  const [recording, setRecording] = useState(false);
+  const [recordSeconds, setRecordSeconds] = useState(0);
+  const directMessagesRef = useRef<HTMLDivElement | null>(null);
+  const followLatestRef = useRef(true);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const recorderRef = useRef<MediaRecorder | null>(null);
+  const recordingStreamRef = useRef<MediaStream | null>(null);
+  const chunksRef = useRef<Blob[]>([]);
+  const recordingStartedRef = useRef(0);
   const modalRef = useModalA11y(onClose ?? (() => undefined), !embedded && Boolean(onClose));
-  const [superflip, setSuperflip] = useState<{ status: "not_launched" | "trial_active" | "active" | "expired"; active: boolean; waitlisted: boolean; source?: string | null; reason?: string | null; grantedAt?: string | null; expiresAt?: string | null; capabilities?: { directMessageLimit: number; profileBioLimit: number; avatarUploadMb: number; bannerUploadMb: number; animatedProfileMedia: boolean } } | null>(null);
+  const [superflip, setSuperflip] = useState<{ status:"not_launched"|"trial_active"|"active"|"expired"; active:boolean; waitlisted:boolean; source?:string|null; reason?:string|null; grantedAt?:string|null; expiresAt?:string|null; capabilities?:{directMessageLimit:number;profileBioLimit:number;avatarUploadMb:number;bannerUploadMb:number;animatedProfileMedia:boolean} } | null>(null);
 
-  const loadFriends = useCallback(async () => { const response = await fetch("/api/friends"); const data = await response.json(); if (response.ok) { setFriends(data.friends ?? []); setRequests(data.requests ?? []); } }, []);
-  const loadConversations = useCallback(async () => { const response = await fetch("/api/messages"); const data = await response.json(); if (response.ok) setConversations(data.conversations ?? []); }, []);
+  const messageLimit = superflip?.capabilities?.directMessageLimit ?? 1000;
+  const overLimit = draft.length > messageLimit;
+
+  const loadFriends = useCallback(async () => {
+    const response = await fetch("/api/friends", { cache:"no-store" });
+    const data = await response.json();
+    if (response.ok) { setFriends(data.friends ?? []); setRequests(data.requests ?? []); }
+  }, []);
+  const loadConversations = useCallback(async () => {
+    const response = await fetch("/api/messages", { cache:"no-store" });
+    const data = await response.json();
+    if (response.ok) setConversations(data.conversations ?? []);
+  }, []);
   const loadMessages = useCallback(async (conversation: Conversation, options?: { cursor?: string; mergeLatest?: boolean }) => {
     if (!conversation.id) { setMessages([]); setMessageCursor(null); return; }
     const params = new URLSearchParams({ conversationId: conversation.id, limit: "50" });
     if (options?.cursor) params.set("cursor", options.cursor);
-    const response = await fetch(`/api/messages?${params.toString()}`);
+    const response = await fetch(`/api/messages?${params.toString()}`, { cache:"no-store" });
     const data = await response.json();
     if (!response.ok) return;
     const incoming = (data.messages ?? []) as DirectMessage[];
@@ -36,127 +85,159 @@ export function SocialHubDialog({ currentUserId, initialTab = "messages", initia
       setMessages((current) => {
         const byId = new Map(current.map((message) => [message.id, message]));
         for (const message of incoming) byId.set(message.id, message);
-        return [...byId.values()].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+        return [...byId.values()].sort((a,b)=>new Date(a.createdAt).getTime()-new Date(b.createdAt).getTime());
       });
       return;
     }
-    if (options?.cursor) {
-      setMessages((current) => [...incoming.filter((message) => !current.some((item) => item.id === message.id)), ...current]);
-    } else {
-      setMessages(incoming);
-    }
+    if (options?.cursor) setMessages((current) => [...incoming.filter((message)=>!current.some((item)=>item.id===message.id)), ...current]);
+    else setMessages(incoming);
     setMessageCursor(data.nextCursor ?? null);
   }, []);
+
   const loadInitial = useCallback(async () => {
     try {
-      const statusResponse = await fetch("/api/superflip/status");
+      const statusResponse = await fetch("/api/superflip/status", { cache:"no-store" });
       if (!statusResponse.ok) throw new Error("Не удалось загрузить состояние SuperFlip.");
       const status = await statusResponse.json();
       await Promise.all([loadFriends(), loadConversations()]);
-      setSuperflip(status);
-      setLoadError("");
+      setSuperflip(status); setLoadError("");
     } catch (reason) {
       setLoadError(reason instanceof Error ? reason.message : "Не удалось загрузить Social Hub.");
-    } finally {
-      setLoading(false);
-    }
+    } finally { setLoading(false); }
   }, [loadConversations, loadFriends]);
-  useEffect(() => { const task = window.setTimeout(() => { void loadInitial(); }, 0); return () => window.clearTimeout(task); }, [loadInitial]);
+
+  useEffect(()=>{const task=window.setTimeout(()=>void loadInitial(),0);return()=>window.clearTimeout(task)},[loadInitial]);
   useEffect(() => {
     if (!initialUserId || loading) return;
-    const existing = conversations.find((item) => item.other.id === initialUserId);
-    if (existing) {
-      const task = window.setTimeout(() => { setActive(existing); setTab("messages"); }, 0);
-      return () => window.clearTimeout(task);
-    }
-    const controller = new AbortController();
-    fetch(`/api/v1/users/${initialUserId}/profile`, { signal: controller.signal }).then((response) => response.json()).then((data) => {
-      if (data.profile) {
-        setActive({ id: "", other: { id: data.profile.id, username: data.profile.username, displayName: data.profile.displayName, avatarUrl: data.profile.avatarUrl, presence: data.profile.presence }, unread: 0, lastMessage: null });
-        setTab("messages");
-      }
-    }).catch(() => undefined);
-    return () => controller.abort();
-  }, [initialUserId, loading, conversations]);
+    const existing = conversations.find((item)=>item.other.id===initialUserId);
+    if (existing) { const task=window.setTimeout(()=>{setActive(existing);setTab("messages");setProfileVisible(true)},0); return()=>window.clearTimeout(task); }
+    const controller=new AbortController();
+    fetch(`/api/v1/users/${initialUserId}/profile`,{signal:controller.signal,cache:"no-store"}).then((response)=>response.json()).then((data)=>{
+      if(data.profile){setActive({id:"",other:{id:data.profile.id,username:data.profile.username,displayName:data.profile.displayName,avatarUrl:data.profile.avatarUrl,presence:data.profile.presence},unread:0,lastMessage:null});setTab("messages");setProfileVisible(true)}
+    }).catch(()=>undefined);
+    return()=>controller.abort();
+  },[initialUserId,loading,conversations]);
   useEffect(() => {
     if (!active) return;
-    const selected = active;
-    const initialTask = window.setTimeout(() => {
-      setMessages([]);
-      setMessageCursor(null);
-      followLatestRef.current = true;
-      void loadMessages(selected);
-    }, 0);
-    const timer = window.setInterval(() => { void loadMessages(selected, { mergeLatest: true }); }, 4000);
-    return () => { window.clearTimeout(initialTask); window.clearInterval(timer); };
-  }, [active, loadMessages]);
-  useEffect(() => { const list = directMessagesRef.current; if (list && followLatestRef.current) list.scrollTop = list.scrollHeight; }, [messages]);
-  useEffect(() => {
-    const refresh = () => { if (document.visibilityState === "visible") void loadConversations(); };
-    const timer = window.setInterval(refresh, 3000);
-    document.addEventListener("visibilitychange", refresh);
-    return () => { window.clearInterval(timer); document.removeEventListener("visibilitychange", refresh); };
-  }, [loadConversations]);
+    const selected=active;
+    const initialTask=window.setTimeout(()=>{setMessages([]);setMessageCursor(null);followLatestRef.current=true;void loadMessages(selected)},0);
+    const timer=window.setInterval(()=>void loadMessages(selected,{mergeLatest:true}),4000);
+    return()=>{window.clearTimeout(initialTask);window.clearInterval(timer)};
+  },[active,loadMessages]);
+  useEffect(()=>{const list=directMessagesRef.current;if(list&&followLatestRef.current)list.scrollTop=list.scrollHeight},[messages]);
+  useEffect(()=>{const refresh=()=>{if(document.visibilityState==="visible")void loadConversations()};const timer=window.setInterval(refresh,3000);document.addEventListener("visibilitychange",refresh);return()=>{window.clearInterval(timer);document.removeEventListener("visibilitychange",refresh)}},[loadConversations]);
+  useEffect(()=>()=>{pendingFiles.forEach((item)=>item.previewUrl&&URL.revokeObjectURL(item.previewUrl));recordingStreamRef.current?.getTracks().forEach((track)=>track.stop())},[pendingFiles]);
+  useEffect(()=>{if(!recording)return;const timer=window.setInterval(()=>{const seconds=Math.floor((Date.now()-recordingStartedRef.current)/1000);setRecordSeconds(seconds);if(seconds>=300&&recorderRef.current?.state==="recording")recorderRef.current.stop()},250);return()=>window.clearInterval(timer)},[recording]);
 
-  async function loadOlderMessages() {
-    if (!active?.id || !messageCursor || loadingOlder) return;
-    setLoadingOlder(true);
-    await loadMessages(active, { cursor: messageCursor });
-    setLoadingOlder(false);
+  async function loadOlderMessages(){if(!active?.id||!messageCursor||loadingOlder)return;setLoadingOlder(true);await loadMessages(active,{cursor:messageCursor});setLoadingOlder(false)}
+  async function search(event:FormEvent<HTMLFormElement>){event.preventDefault();const query=String(new FormData(event.currentTarget).get("q")??"");const response=await fetch(`/api/users/search?q=${encodeURIComponent(query)}`);const data=await response.json();setResults(data.users??[])}
+  async function requestFriend(toId:string){const response=await fetch("/api/friends",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({toId})});const data=await response.json();setNotice(response.ok?"Заявка отправлена.":data.message);await loadFriends()}
+  async function respond(requestId:string,status:"accepted"|"declined"){await fetch("/api/friends",{method:"PATCH",headers:{"content-type":"application/json"},body:JSON.stringify({requestId,status})});await loadFriends();await loadConversations()}
+  async function removeFriend(friendId:string){await fetch(`/api/friends?friendId=${friendId}`,{method:"DELETE"});await loadFriends()}
+
+  function addFiles(files: File[], duration?:number) {
+    setNotice("");
+    setPendingFiles((current)=>{
+      const available=Math.max(0,4-current.length);
+      const accepted=files.slice(0,available).map((file)=>({
+        id:crypto.randomUUID(), file,
+        type:(file.type.startsWith("image/")?"image":file.type.startsWith("audio/")?"audio":"file") as PendingAttachment["type"],
+        previewUrl:file.type.startsWith("image/")?URL.createObjectURL(file):null,
+        ...(duration?{duration}:{}),
+      }));
+      if(files.length>available)setNotice("Можно прикрепить до 4 файлов к одному сообщению.");
+      return [...current,...accepted];
+    });
   }
-
-  async function search(event: FormEvent<HTMLFormElement>) { event.preventDefault(); const query = String(new FormData(event.currentTarget).get("q") ?? ""); const response = await fetch(`/api/users/search?q=${encodeURIComponent(query)}`); const data = await response.json(); setResults(data.users ?? []); }
-  async function requestFriend(toId: string) { const response = await fetch("/api/friends", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ toId }) }); const data = await response.json(); setNotice(response.ok ? "Заявка отправлена." : data.message); await loadFriends(); }
-  async function respond(requestId: string, status: "accepted" | "declined") { await fetch("/api/friends", { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ requestId, status }) }); await loadFriends(); await loadConversations(); }
-  async function removeFriend(friendId: string) { await fetch(`/api/friends?friendId=${friendId}`, { method: "DELETE" }); await loadFriends(); }
-  async function sendMessage(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault(); if (!active?.other || sending) return;
-    const form = event.currentTarget; const text = String(new FormData(form).get("text") ?? "").trim(); if (!text) return;
-    setSending(true); setNotice("");
-    try {
-      const response = await fetch("/api/messages", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ receiverId: active.other.id, text }) });
-      const data = await response.json().catch(() => null);
-      if (!response.ok) { setNotice(data?.message ?? "Не удалось отправить сообщение."); return; }
-      form.reset(); followLatestRef.current = true;
-      setMessages((current) => current.some((item) => item.id === data.message.id) ? current : [...current, data.message]);
-      if (!active.id && data.message?.conversationId) setActive((current) => current ? { ...current, id: data.message.conversationId, lastMessage: data.message } : current);
+  function removePending(id:string){setPendingFiles((current)=>{const target=current.find((item)=>item.id===id);if(target?.previewUrl)URL.revokeObjectURL(target.previewUrl);return current.filter((item)=>item.id!==id)})}
+  function onDrop(event:DragEvent<HTMLDivElement>){event.preventDefault();setDragging(false);addFiles([...event.dataTransfer.files])}
+  async function uploadAttachment(item:PendingAttachment){
+    const body=new FormData();body.append("file",item.file);if(item.duration)body.append("duration",String(item.duration));
+    const response=await fetch("/api/messages/attachments",{method:"POST",body});
+    const data=await response.json();if(!response.ok)throw new Error(data.message??"Не удалось загрузить вложение.");return data.attachment as DirectAttachment;
+  }
+  async function sendMessage(event:FormEvent<HTMLFormElement>){
+    event.preventDefault();if(!active?.other||sending)return;
+    const text=draft.trim();if(!text&&!pendingFiles.length)return;
+    if(draft.length>messageLimit){setNotice(`Лимит сообщения — ${messageLimit} символов.`);return}
+    setSending(true);setNotice("");setEmojiOpen(false);
+    try{
+      const attachments=await Promise.all(pendingFiles.map(uploadAttachment));
+      const response=await fetch("/api/messages",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({receiverId:active.other.id,text,attachments})});
+      const data=await response.json().catch(()=>null);
+      if(!response.ok){setNotice(data?.message??"Не удалось отправить сообщение.");return}
+      pendingFiles.forEach((item)=>item.previewUrl&&URL.revokeObjectURL(item.previewUrl));setPendingFiles([]);setDraft("");followLatestRef.current=true;
+      setMessages((current)=>current.some((item)=>item.id===data.message.id)?current:[...current,data.message]);
+      if(!active.id&&data.message?.conversationId)setActive((current)=>current?{...current,id:data.message.conversationId,lastMessage:{text:text||"Вложение",createdAt:data.message.createdAt}}:current);
       await loadConversations();
-    } catch { setNotice("Нет соединения. Сообщение не отправлено."); }
-    finally { setSending(false); }
+    }catch(reason){setNotice(reason instanceof Error?reason.message:"Нет соединения. Сообщение не отправлено.")}
+    finally{setSending(false)}
   }
-  async function openChat(person: Person) { const conversation = conversations.find((item) => item.other.id === person.id); followLatestRef.current = true; setMessages([]); setNotice(""); setActive(conversation ?? { id: "", other: person, unread: 0, lastMessage: null }); setTab("messages"); }
-  async function joinWaitlist() { const response = await fetch("/api/superflip/purchase", { method: "POST" }); const data = await response.json(); setNotice(data.message); setSuperflip((value) => value ? { ...value, waitlisted: true } : value); }
-  async function inviteFriend() { const url = `${window.location.origin}/register`; if (navigator.share) { try { await navigator.share({ title: "FlipZero", text: "Присоединяйся ко мне в FlipZero", url }); return; } catch {} } await navigator.clipboard.writeText(url); setNotice("Ссылка-приглашение скопирована."); }
+  function insertEmoji(emoji:string){setDraft((value)=>value+emoji);setEmojiOpen(false)}
+  async function startRecording(){
+    if(recording)return;
+    try{
+      const stream=await navigator.mediaDevices.getUserMedia({audio:true});const recorder=new MediaRecorder(stream);
+      recordingStreamRef.current=stream;recorderRef.current=recorder;chunksRef.current=[];recordingStartedRef.current=Date.now();setRecordSeconds(0);
+      recorder.ondataavailable=(event)=>{if(event.data.size)chunksRef.current.push(event.data)};
+      recorder.onstop=()=>{const duration=Math.max(1,Math.round((Date.now()-recordingStartedRef.current)/1000));const blob=new Blob(chunksRef.current,{type:recorder.mimeType||"audio/webm"});addFiles([new File([blob],"voice-message.webm",{type:blob.type})],duration);stream.getTracks().forEach((track)=>track.stop());recordingStreamRef.current=null;setRecording(false)};
+      recorder.start();setRecording(true);
+    }catch{setNotice("Не удалось получить доступ к микрофону.")}
+  }
+  function stopRecording(){if(recorderRef.current?.state==="recording")recorderRef.current.stop()}
+  async function openChat(person:Person){const conversation=conversations.find((item)=>item.other.id===person.id);followLatestRef.current=true;setMessages([]);setNotice("");setProfileVisible(true);setActive(conversation??{id:"",other:person,unread:0,lastMessage:null});setTab("messages")}
+  async function joinWaitlist(){const response=await fetch("/api/superflip/purchase",{method:"POST"});const data=await response.json();setNotice(data.message);setSuperflip((value)=>value?{...value,waitlisted:true}:value)}
+  async function inviteFriend(){const url=`${window.location.origin}/register`;if(navigator.share){try{await navigator.share({title:"FlipZero",text:"Присоединяйся ко мне в FlipZero",url});return}catch{}}await navigator.clipboard.writeText(url);setNotice("Ссылка-приглашение скопирована.")}
 
-  const content = <section ref={modalRef} tabIndex={embedded ? undefined : -1} className={`social-hub ${embedded ? "social-hub-embedded" : ""}`} role={embedded ? "region" : "dialog"} aria-modal={embedded ? undefined : true}><header><div><small>FLIPZERO SOCIAL</small><h2>{tab === "messages" ? "Сообщения" : tab === "friends" ? "Друзья" : "SuperFlip"}</h2></div>{onClose ? <button onClick={onClose} aria-label="Закрыть"><X size={19} /></button> : null}</header><nav><button className={tab === "messages" ? "active" : ""} onClick={() => setTab("messages")}><MessageCircle size={16} /> Сообщения</button><button className={tab === "friends" ? "active" : ""} onClick={() => setTab("friends")}><Users size={16} /> Друзья {requests.length ? <b>{requests.length}</b> : null}</button><button className={tab === "superflip" ? "active premium" : "premium"} onClick={() => setTab("superflip")}><Crown size={16} /> SuperFlip</button>{isAdmin && onOpenAdmin ? <button className="platform-admin-button" onClick={onOpenAdmin}><ShieldCheck size={16} /> Админ-панель</button> : null}</nav>
-    {loading ? <div className="social-loading"><LoaderCircle className="spin" /> Загрузка…</div> : loadError ? <div className="social-empty" role="alert"><strong>Не удалось загрузить Social Hub</strong><span>{loadError}</span><button onClick={() => { setLoading(true); setLoadError(""); void loadInitial(); }}>Повторить</button></div> : tab === "messages" ? <div className={`direct-layout ${active ? "has-profile" : ""}`}><aside>{conversations.length ? conversations.map((item) => <button key={item.id} className={active?.id === item.id ? "active" : ""} onClick={() => { setMessages([]); setNotice(""); followLatestRef.current = true; setActive(item); }}><Avatar person={item.other} /><span><strong>{item.other.displayName}</strong><small>{item.lastMessage?.text ?? "Новый диалог"}</small></span>{item.unread ? <b>{item.unread}</b> : null}</button>) : <div className="social-list-empty"><span>Диалогов пока нет.</span><button onClick={() => setTab("friends")}>Написать другу</button></div>}</aside><section>{active ? <><div className="direct-title"><button type="button" className="direct-mobile-back" aria-label="Назад к диалогам" onClick={() => { setActive(null); setMessages([]); setMessageCursor(null); }}><ArrowLeft size={19} /></button><Avatar person={active.other} /><strong>{active.other.displayName}</strong><span>@{active.other.username}</span></div><div className="direct-messages" ref={directMessagesRef} onScroll={(event) => { const list = event.currentTarget; followLatestRef.current = list.scrollHeight - list.scrollTop - list.clientHeight < 96; }}>{messageCursor ? <button type="button" className="direct-load-older" onClick={() => void loadOlderMessages()} disabled={loadingOlder}>{loadingOlder ? <><LoaderCircle className="spin" size={14} /> Загружаем…</> : "Загрузить предыдущие сообщения"}</button> : null}{messages.map((message) => <article key={message.id} className={message.senderId === currentUserId ? "mine" : ""}><p>{message.text}</p><time>{new Date(message.createdAt).toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" })}</time></article>)}</div><form className="direct-composer" onSubmit={sendMessage}><input name="text" maxLength={superflip?.capabilities?.directMessageLimit ?? 4000} placeholder={`Написать сообщение…${superflip?.active ? " · SuperFlip до 8000 символов" : ""}`} required /><button disabled={sending} aria-label="Отправить сообщение"><SendHorizontal size={17} /></button></form>{notice ? <p className="direct-notice" role="alert">{notice}</p> : null}</> : <div className="social-empty"><MessageCircle size={32} /><strong>{conversations.length ? "Выберите диалог" : "Начните новый диалог"}</strong><span>{conversations.length ? "Сообщения появятся здесь." : "Откройте список друзей и выберите собеседника."}</span><button onClick={() => setTab("friends")}>Перейти к друзьям</button></div>}</section>{active ? <DirectProfile key={active.other.id} person={active.other} onOpenFriends={() => setTab("friends")} /> : null}</div> : tab === "friends" ? <div className="friends-content"><form className="friend-search" onSubmit={search}><Search size={16} /><input name="q" minLength={2} placeholder="Поиск по username" /><button>Найти</button></form>{notice ? <p className="social-notice">{notice}</p> : null}{requests.length ? <section><h3>Новые заявки</h3>{requests.map((item) => <div className="person-row" key={item.id}><Avatar person={item.from} /><span><strong>{item.from.displayName}</strong><small>@{item.from.username}</small></span><button onClick={() => respond(item.id, "accepted")}>Принять</button><button className="muted" onClick={() => respond(item.id, "declined")}>Отклонить</button></div>)}</section> : null}{results.length ? <section><h3>Результаты поиска</h3>{results.map((person) => <div className="person-row" key={person.id}><Avatar person={person} /><span><strong>{person.displayName}</strong><small>@{person.username}</small></span><button onClick={() => requestFriend(person.id)}><UserPlus size={14} /> Добавить</button></div>)}</section> : null}<section><h3>Мои друзья</h3>{friends.map((person) => <div className="person-row" key={person.id}><Avatar person={person} /><span><strong>{person.displayName}</strong><small>@{person.username}</small></span><button onClick={() => openChat(person)}>Написать</button><button className="muted" onClick={() => removeFriend(person.id)}>Удалить</button></div>)}{!friends.length ? <div className="social-list-empty"><span>Пока нет друзей. Найдите пользователя выше или пригласите знакомого.</span><button onClick={() => void inviteFriend()}>Пригласить друга</button></div> : null}</section></div> : <div className="superflip-panel"><span className="superflip-icon"><Crown size={34} /></span><small>{superflip?.status === "active" ? "SUPERFLIP АКТИВЕН" : superflip?.status === "trial_active" ? "ПОДАРОЧНЫЙ SUPERFLIP" : superflip?.status === "expired" ? "SUPERFLIP ЗАВЕРШЁН" : "SUPERFLIP: СКОРО"}</small><h3>{superflip?.active ? "Ваши расширенные возможности включены" : "Больше возможностей. Больше вашего стиля."}</h3><p>{superflip?.active ? `Личные сообщения до ${superflip.capabilities?.directMessageLimit ?? 8000} символов, профиль до ${superflip.capabilities?.profileBioLimit ?? 500} символов и большие медиафайлы.` : <>Профиль, расширенные загрузки и более длинные личные сообщения. Покупка пока не открыта.</>}</p><div className="premium-features"><span>Профиль до {superflip?.capabilities?.profileBioLimit ?? 190} символов</span><span>Аватар до {superflip?.capabilities?.avatarUploadMb ?? 2} МБ</span><span>Баннер до {superflip?.capabilities?.bannerUploadMb ?? 4} МБ</span></div>{superflip?.source === "gift" && superflip.reason ? <div className="superflip-gift-reason" role="note"><span><Crown size={14} /> ПРИЧИНА ПОДАРКА</span><strong>{superflip.reason}</strong><small>{superflip.grantedAt ? `Выдан ${new Date(superflip.grantedAt).toLocaleString("ru-RU", { day: "2-digit", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit" })}` : "Подарочный доступ SuperFlip"}</small></div> : null}{superflip?.active ? <button disabled>SuperFlip активен{superflip.expiresAt ? ` до ${new Date(superflip.expiresAt).toLocaleDateString("ru-RU")}` : ""}</button> : <button onClick={joinWaitlist} disabled={superflip?.waitlisted}>{superflip?.waitlisted ? "Вы в листе ожидания" : "Сообщить о запуске"}</button>}{notice ? <p className="social-notice">{notice}</p> : null}</div>}</section>;
-  return embedded ? content : <div className="dialog-backdrop" onMouseDown={(e) => e.target === e.currentTarget && onClose?.()}>{content}</div>;
+  const content=<section ref={modalRef} tabIndex={embedded?undefined:-1} className={`social-hub ${embedded?"social-hub-embedded":""}`} role={embedded?"region":"dialog"} aria-modal={embedded?undefined:true}>
+    <header><div><small>FLIPZERO SOCIAL</small><h2>{tab==="messages"?"Сообщения":tab==="friends"?"Друзья":"SuperFlip"}</h2></div>{onClose?<button onClick={onClose} aria-label="Закрыть"><X size={19}/></button>:null}</header>
+    <nav><button className={tab==="messages"?"active":""} onClick={()=>setTab("messages")}><MessageCircle size={16}/> Сообщения</button><button className={tab==="friends"?"active":""} onClick={()=>setTab("friends")}><Users size={16}/> Друзья {requests.length?<b>{requests.length}</b>:null}</button><button className={tab==="superflip"?"active premium":"premium"} onClick={()=>setTab("superflip")}><Crown size={16}/> SuperFlip</button>{isAdmin&&onOpenAdmin?<button className="platform-admin-button" onClick={onOpenAdmin}><ShieldCheck size={16}/> Админ-панель</button>:null}</nav>
+    {loading?<div className="social-loading"><LoaderCircle className="spin"/> Загрузка…</div>:loadError?<div className="social-empty" role="alert"><strong>Не удалось загрузить Social Hub</strong><span>{loadError}</span><button onClick={()=>{setLoading(true);setLoadError("");void loadInitial()}}>Повторить</button></div>
+    :tab==="messages"?<div className={`direct-layout ${active?"has-profile":""} ${profileVisible?"profile-visible":"profile-hidden"}`}>
+      <aside>{conversations.length?conversations.map((item)=><button key={item.id} className={active?.id===item.id?"active":""} onClick={()=>{setMessages([]);setNotice("");followLatestRef.current=true;setProfileVisible(true);setActive(item)}}><Avatar person={item.other}/><span><strong>{item.other.displayName}</strong><small>{item.lastMessage?.text??"Новый диалог"}</small></span>{item.unread?<b>{item.unread}</b>:null}</button>):<div className="social-list-empty"><span>Диалогов пока нет.</span><button onClick={()=>setTab("friends")}>Написать другу</button></div>}</aside>
+      <section className={dragging?"is-dragging":""} onDragEnter={(event)=>{event.preventDefault();setDragging(true)}} onDragOver={(event)=>event.preventDefault()} onDragLeave={(event)=>{if(event.currentTarget===event.target)setDragging(false)}} onDrop={onDrop}>
+        {active?<><div className="direct-title"><button type="button" className="direct-mobile-back" aria-label="Назад к диалогам" onClick={()=>{setActive(null);setMessages([]);setMessageCursor(null)}}><ArrowLeft size={19}/></button><Avatar person={active.other}/><span className="direct-title-copy"><strong>{active.other.displayName}</strong><small>@{active.other.username}</small></span><div className="direct-actions"><button onClick={()=>setCallMode("voice")} title="Голосовой звонок"><Phone size={17}/></button><button onClick={()=>setCallMode("video")} title="Видеозвонок"><Video size={17}/></button><button onClick={()=>setProfileVisible((value)=>!value)} title={profileVisible?"Скрыть профиль":"Показать профиль"}>{profileVisible?<PanelRightClose size={17}/>:<PanelRightOpen size={17}/>}</button></div></div>
+        <div className="direct-messages" ref={directMessagesRef} onScroll={(event)=>{const list=event.currentTarget;followLatestRef.current=list.scrollHeight-list.scrollTop-list.clientHeight<96}}>{messageCursor?<button type="button" className="direct-load-older" onClick={()=>void loadOlderMessages()} disabled={loadingOlder}>{loadingOlder?<><LoaderCircle className="spin" size={14}/> Загружаем…</>:"Загрузить предыдущие сообщения"}</button>:null}{messages.map((message)=><article key={message.id} className={message.senderId===currentUserId?"mine":""}>{message.text?<p>{message.text}</p>:null}{message.attachments?.length?<div className="dm-message-attachments">{message.attachments.map((attachment,index)=>attachment.type==="image"?<a key={attachment.url+index} href={attachment.url} target="_blank" rel="noreferrer" className="dm-message-image"><MediaImage src={attachment.url} alt={attachment.name} sizes="320px"/></a>:attachment.type==="audio"?<div key={attachment.url+index} className="dm-message-audio"><Mic size={15}/><audio controls preload="metadata" src={attachment.url}/></div>:<a key={attachment.url+index} className="dm-message-file" href={attachment.url} target="_blank" rel="noreferrer"><File size={17}/><span><strong>{attachment.name}</strong><small>{Math.ceil(attachment.size/1024)} КБ</small></span></a>)}</div>:null}<time>{new Date(message.createdAt).toLocaleTimeString("ru-RU",{hour:"2-digit",minute:"2-digit"})}</time></article>)}</div>
+        {dragging?<div className="dm-drop-overlay"><FilePlus2 size={34}/><strong>Перетащите файлы сюда</strong><span>До 4 вложений</span></div>:null}
+        <form className="direct-composer" onSubmit={sendMessage}>
+          {pendingFiles.length?<div className="direct-attachment-preview">{pendingFiles.map((item)=><article key={item.id}>{item.previewUrl?<div className="dm-preview-image" style={{backgroundImage:`url("${item.previewUrl}")`}}/>:item.type==="audio"?<Mic size={22}/>:<File size={22}/>}<span><strong>{item.file.name}</strong><small>{Math.ceil(item.file.size/1024)} КБ{item.duration?` · ${item.duration} сек.`:""}</small></span><button type="button" onClick={()=>removePending(item.id)} aria-label="Удалить вложение"><X size={14}/></button></article>)}</div>:null}
+          <div className="direct-composer-row"><input ref={fileInputRef} type="file" hidden multiple accept="image/png,image/jpeg,image/webp,image/gif,audio/*,.pdf,.txt,.zip" onChange={(event)=>{addFiles([...(event.currentTarget.files??[])]);event.currentTarget.value=""}}/><button type="button" onClick={()=>fileInputRef.current?.click()} title="Прикрепить файл"><FilePlus2 size={18}/></button><textarea name="text" rows={1} value={draft} onChange={(event)=>setDraft(event.target.value)} placeholder={superflip?.active?"Написать сообщение · SuperFlip до 4000 символов":"Написать сообщение · до 1000 символов"} aria-invalid={overLimit}/><button type="button" className={recording?"is-recording":""} onClick={recording?stopRecording:()=>void startRecording()} title={recording?"Остановить запись":"Голосовое сообщение"}><Mic size={18}/>{recording?<small>{recordSeconds}</small>:null}</button><button type="button" onClick={()=>setEmojiOpen((value)=>!value)} title="Смайлики"><Smile size={18}/></button><button type="button" disabled title="Стикеры — скоро"><Sparkles size={18}/></button><button className="direct-send" disabled={sending||overLimit||(!draft.trim()&&!pendingFiles.length)} aria-label="Отправить сообщение"><SendHorizontal size={18}/></button></div>
+          <div className="direct-composer-meta"><span>{superflip?.active?"SuperFlip: расширенный лимит 4000 символов":"Free: 1000 символов · SuperFlip даёт до 4000"}</span><b className={overLimit?"over-limit":""}>{draft.length}/{messageLimit}</b></div>
+          {emojiOpen?<div className="direct-emoji-picker">{quickEmoji.map((emoji)=><button type="button" key={emoji} onClick={()=>insertEmoji(emoji)}>{emoji}</button>)}</div>:null}
+        </form>{notice?<p className="direct-notice" role="alert">{notice}</p>:null}
+        </>:<div className="social-empty"><MessageCircle size={32}/><strong>{conversations.length?"Выберите диалог":"Начните новый диалог"}</strong><span>{conversations.length?"Сообщения появятся здесь.":"Откройте список друзей и выберите собеседника."}</span><button onClick={()=>setTab("friends")}>Перейти к друзьям</button></div>}
+      </section>
+      {active&&profileVisible?<DirectProfile key={active.other.id} person={active.other}/>:null}
+      {active&&callMode?<DirectCallOverlay person={active.other} video={callMode==="video"} onClose={()=>setCallMode(null)}/>:null}
+    </div>
+    :tab==="friends"?<div className="friends-content"><form className="friend-search" onSubmit={search}><Search size={16}/><input name="q" minLength={2} placeholder="Поиск по username"/><button>Найти</button></form>{notice?<p className="social-notice">{notice}</p>:null}{requests.length?<section><h3>Новые заявки</h3>{requests.map((item)=><div className="person-row" key={item.id}><Avatar person={item.from}/><span><strong>{item.from.displayName}</strong><small>@{item.from.username}</small></span><button onClick={()=>respond(item.id,"accepted")}>Принять</button><button className="muted" onClick={()=>respond(item.id,"declined")}>Отклонить</button></div>)}</section>:null}{results.length?<section><h3>Результаты поиска</h3>{results.map((person)=><div className="person-row" key={person.id}><Avatar person={person}/><span><strong>{person.displayName}</strong><small>@{person.username}</small></span><button onClick={()=>requestFriend(person.id)}><UserPlus size={14}/> Добавить</button></div>)}</section>:null}<section><h3>Мои друзья</h3>{friends.map((person)=><div className="person-row" key={person.id}><Avatar person={person}/><span><strong>{person.displayName}</strong><small>@{person.username}</small></span><button onClick={()=>openChat(person)}>Написать</button><button className="muted" onClick={()=>removeFriend(person.id)}>Удалить</button></div>)}{!friends.length?<div className="social-list-empty"><span>Пока нет друзей. Найдите пользователя выше или пригласите знакомого.</span><button onClick={()=>void inviteFriend()}>Пригласить друга</button></div>:null}</section></div>
+    :<div className="superflip-panel"><span className="superflip-icon"><Crown size={34}/></span><small>{superflip?.status==="active"?"SUPERFLIP АКТИВЕН":superflip?.status==="trial_active"?"ПОДАРОЧНЫЙ SUPERFLIP":superflip?.status==="expired"?"SUPERFLIP ЗАВЕРШЁН":"SUPERFLIP: СКОРО"}</small><h3>{superflip?.active?"Ваши расширенные возможности включены":"Больше возможностей. Больше вашего стиля."}</h3><p>{superflip?.active?"Используйте увеличенные лимиты профиля, медиа и личных сообщений.":"SuperFlip расширяет личное общение и оформление профиля без изменения привычного интерфейса."}</p><div className="superflip-benefit-grid"><article><MessageCircle/><strong>4000 символов</strong><span>Личные сообщения вместо 1000 в Free.</span></article><article><Star/><strong>Профиль до 500</strong><span>Больше места для описания и персонализации.</span></article><article><ImageIcon/><strong>Баннер до 16 МБ</strong><span>Больше качества для оформления профиля.</span></article><article><Zap/><strong>Анимированные медиа</strong><span>Расширенные возможности аватара и баннера.</span></article></div>{superflip?.source==="gift"&&superflip.reason?<div className="superflip-gift-reason" role="note"><span><Crown size={14}/> ПРИЧИНА ПОДАРКА</span><strong>{superflip.reason}</strong><small>{superflip.grantedAt?`Выдан ${new Date(superflip.grantedAt).toLocaleString("ru-RU",{day:"2-digit",month:"long",year:"numeric",hour:"2-digit",minute:"2-digit"})}`:"Подарочный доступ SuperFlip"}</small></div>:null}{superflip?.active?<button disabled>SuperFlip активен{superflip.expiresAt?` до ${new Date(superflip.expiresAt).toLocaleDateString("ru-RU")}`:""}</button>:<button onClick={joinWaitlist} disabled={superflip?.waitlisted}>{superflip?.waitlisted?"Вы в листе ожидания":"Подключить SuperFlip"}</button>}{notice?<p className="social-notice">{notice}</p>:null}</div>}
+  </section>;
+  return embedded?content:<div className="dialog-backdrop" onMouseDown={(event)=>event.target===event.currentTarget&&onClose?.()}>{content}</div>;
 }
 
-function Avatar({ person }: { person: Person }) { return <i className="social-avatar">{person.avatarUrl ? <MediaImage src={person.avatarUrl} /> : person.displayName.slice(0, 2).toUpperCase()}</i>; }
+function Avatar({person}:{person:Person}){return <i className="social-avatar">{person.avatarUrl?<MediaImage src={person.avatarUrl}/>:person.displayName.slice(0,2).toUpperCase()}</i>}
 
-function DirectProfile({ person, onOpenFriends }: { person: Person; onOpenFriends: () => void }) {
+function DirectProfile({person}:{person:Person}){
   const [details,setDetails]=useState<ProfileDetails|null>(null);
   const [profileError,setProfileError]=useState(false);
-  useEffect(()=>{let cancelled=false;void fetch(`/api/v1/users/${person.id}/profile`,{cache:"no-store"}).then(async r=>r.ok?r.json():null).then(data=>{if(!cancelled){setDetails(data?.profile??null);setProfileError(!data?.profile)}}).catch(()=>{if(!cancelled){setDetails(null);setProfileError(true)}});return()=>{cancelled=true}},[person.id]);
-  const isOnline = (details?.presence ?? person.presence) === "online";
-  return <aside className="direct-profile profile-reference" aria-label={`Профиль ${person.displayName}`}>
-    <div className="direct-profile-cover"><span>FLIPZERO</span></div>
-    <div className="direct-profile-identity">
-      <Avatar person={person} />
-      <span className={`direct-presence ${isOnline ? "online" : ""}`} />
-      <h3>{person.displayName}</h3>
-      <p>@{person.username}</p>
-      <small>{isOnline ? "● В сети" : "Не в сети"}</small>
-      <div className="profile-reference-actions"><button type="button" onClick={onOpenFriends}><Users size={15}/> Открыть друзей</button></div>
-    </div>
-    <section className="profile-reference-about">
-      <h4>О пользователе</h4>
-      <p>{profileError ? "Не удалось загрузить профиль." : details?.bio || "Пользователь пока ничего о себе не рассказал."}</p>
-      {details?.profileStatus ? <span>{details.profileStatus}</span> : null}
-      {details?.profileLocation ? <span><MapPin size={15}/>{details.profileLocation}</span> : null}
-    </section>
-    {details ? <section className="profile-reference-stats"><h4>Статистика</h4><div><span><Star size={16}/><b>{details.globalLevel}</b><small>Уровень</small></span><span><MessageCircle size={16}/><b>{details.stats.messages}</b><small>Сообщений</small></span><span><Users size={16}/><b>{details.stats.servers}</b><small>Пространств</small></span><span><Users size={16}/><b>{details.stats.friends}</b><small>Друзей</small></span></div></section> : null}
-    {details?.servers.length ? <section className="profile-reference-spaces"><h4>Пространства</h4>{details.servers.map(server=><span key={server.id}><i style={{ background: `hsl(${[...server.id].reduce((value, letter) => value + letter.charCodeAt(0), 0) % 360} 48% 38%)` }}>{server.iconUrl ? <MediaImage src={server.iconUrl} /> : server.name.slice(0, 2).toLocaleUpperCase("ru")}</i>{server.name}</span>)}</section> : null}
+  const [commonTab,setCommonTab]=useState<"friends"|"servers">("friends");
+  useEffect(()=>{
+    let cancelled=false;
+    const load=()=>void fetch(`/api/v1/users/${person.id}/profile`,{cache:"no-store"}).then(async(response)=>response.ok?response.json():null).then((data)=>{if(!cancelled){setDetails(data?.profile??null);setProfileError(!data?.profile)}}).catch(()=>{if(!cancelled){setDetails(null);setProfileError(true)}});
+    load();const timer=window.setInterval(()=>{if(document.visibilityState==="visible")load()},15000);
+    return()=>{cancelled=true;window.clearInterval(timer)};
+  },[person.id]);
+  const displayName=details?.displayName??person.displayName;
+  const username=details?.username??person.username;
+  const avatarUrl=details?.avatarUrl??person.avatarUrl;
+  const isOnline=(details?.presence??person.presence)==="online";
+  const avatarPerson={...person,displayName,username,avatarUrl};
+  return <aside className="direct-profile profile-reference" aria-label={`Профиль ${displayName}`}>
+    <div className="direct-profile-cover" style={details?.bannerUrl?{backgroundImage:`linear-gradient(180deg,transparent,#07101d),url("${details.bannerUrl}")`}:undefined}><span>FLIPZERO</span></div>
+    <div className="direct-profile-identity"><Avatar person={avatarPerson}/><span className={`direct-presence ${isOnline?"online":""}`}/><h3>{displayName}</h3><p>@{username}</p><small>{isOnline?"● В сети":"Не в сети"}</small></div>
+    <section className="profile-reference-about"><h4>О пользователе</h4><p>{profileError?"Не удалось загрузить профиль.":details?.bio||"Пользователь пока ничего о себе не рассказал."}</p>{details?.profileStatus?<span>{details.profileStatus}</span>:null}{details?.profileLocation?<span><MapPin size={15}/>{details.profileLocation}</span>:null}</section>
+    {details?<section className="profile-reference-stats"><h4>Статистика</h4><div><span><Star size={16}/><b>{details.globalLevel}</b><small>Уровень</small></span><span><MessageCircle size={16}/><b>{details.stats.messages}</b><small>Сообщений</small></span><span><Users size={16}/><b>{details.stats.servers}</b><small>Пространств</small></span><span><Users size={16}/><b>{details.stats.friends}</b><small>Друзей</small></span></div></section>:null}
+    {details?<section className="direct-common"><div className="direct-common-tabs"><button className={commonTab==="friends"?"active":""} onClick={()=>setCommonTab("friends")}>Общие друзья <b>{details.commonFriends?.length??0}</b></button><button className={commonTab==="servers"?"active":""} onClick={()=>setCommonTab("servers")}>Общие серверы <b>{details.commonServers?.length??0}</b></button></div>{commonTab==="friends"?<div className="direct-common-list">{details.commonFriends?.length?details.commonFriends.map((friend)=><span key={friend.id}><i>{friend.avatarUrl?<MediaImage src={friend.avatarUrl}/>:friend.displayName.slice(0,2)}</i><strong>{friend.displayName}</strong><small>@{friend.username}</small></span>):<p>Общих друзей пока нет.</p>}</div>:<div className="direct-common-list">{details.commonServers?.length?details.commonServers.map((server)=><span key={server.id}><i>{server.iconUrl?<MediaImage src={server.iconUrl}/>:server.name.slice(0,2)}</i><strong>{server.name}</strong></span>):<p>Общих серверов пока нет.</p>}</div>}</section>:null}
   </aside>;
 }
