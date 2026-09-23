@@ -127,7 +127,7 @@ export function UserProfilePopover({
   async function copyId(){try{await navigator.clipboard.writeText(userId);setNotice("ID пользователя скопирован.");}catch{setNotice("Не удалось скопировать ID.");}setMenu(false)}
   function message(){onOpenDirect?.(userId);onClose()}
 
-  const position:CSSProperties|undefined=anchor?{left:Math.min(anchor.x,window.innerWidth-360),top:Math.min(anchor.y,window.innerHeight-520)}:undefined;
+  const position:CSSProperties|undefined=anchor&&typeof window!=="undefined"?{left:Math.max(12,Math.min(anchor.x,window.innerWidth-360)),top:Math.max(12,Math.min(anchor.y,window.innerHeight-520))}:undefined;
   const p=profile;
   return <div className="fz-user-profile-layer" role="presentation" onMouseDown={(event)=>{if(event.target===event.currentTarget&&!full&&!reporting)onClose()}}>
     <section ref={miniRef} className="fz-mini-profile" style={{...position,"--profile-accent":p?.accentColor??"#7c5cff"} as CSSProperties} role="dialog" aria-label={`Профиль ${displayName}`}>
