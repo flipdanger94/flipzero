@@ -13,7 +13,7 @@ import { MemberManagerDialog } from "@/components/member-manager-dialog";
 import { ChannelPermissionsDialog } from "@/components/channel-permissions-dialog";
 import { ModerationDialog } from "@/components/moderation-dialog";
 import { GamificationDialog } from "@/components/gamification-dialog";
-import { PersistentChat, ProfileModal } from "@/components/persistent-chat";
+import { PersistentChat } from "@/components/persistent-chat";
 import { ChannelBoard } from "@/components/channel-board";
 import { ForumChannel } from "@/components/forum-channel";
 import { VoiceRoom, type VoicePresence } from "@/components/voice-room";
