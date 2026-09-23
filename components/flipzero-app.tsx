@@ -98,6 +98,27 @@ export default function Home({ initialSpaceId, initialChannelId }: { initialSpac
   const [, setSpaceLinkCopied] = useState(false);
   const [serverMenuOpen, setServerMenuOpen] = useState(false);
   const [spaceMembers, setSpaceMembers] = useState<SpaceMember[]>([]);
+
+  useEffect(() => {
+    if (!serverMenuOpen) return;
+    function closeServerMenu(event: PointerEvent) {
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+      if (target.closest(".server-context-menu") || target.closest(".server-banner-heading")) return;
+      setServerMenuOpen(false);
+    }
+    function closeServerMenuOnEscape(event: KeyboardEvent) {
+      if (event.key !== "Escape") return;
+      event.preventDefault();
+      setServerMenuOpen(false);
+    }
+    document.addEventListener("pointerdown", closeServerMenu);
+    document.addEventListener("keydown", closeServerMenuOnEscape);
+    return () => {
+      document.removeEventListener("pointerdown", closeServerMenu);
+      document.removeEventListener("keydown", closeServerMenuOnEscape);
+    };
+  }, [serverMenuOpen]);
   const [selectedMember, setSelectedMember] = useState<SpaceMember | null>(null);
   const [spaceRoles, setSpaceRoles] = useState<Array<{id:string;name:string;color:string;position:number;showInMemberList:boolean;isManaged:boolean}>>([]);
   const [membersLoading, setMembersLoading] = useState(false);
