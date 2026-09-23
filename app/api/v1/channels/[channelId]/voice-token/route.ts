@@ -5,6 +5,9 @@ import { getDatabase } from "@/db/client";
 import { channels, members } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
 import { isTrustedMutationRequest } from "@/lib/security-controls";
+import { getChannelPermissions } from "@/lib/space-permissions";
+import { hasPermission, Permission } from "@/lib/permissions";
+import { publishSourcesForPermissions } from "@/lib/voice-grants";
 
 export async function POST(
   request: Request,
@@ -29,6 +32,9 @@ export async function POST(
       { message: "Голосовой канал недоступен." },
       { status: 403 },
     );
+  const access = await getChannelPermissions(channelId, user.id);
+  if (!access.spaceId || !hasPermission(access.permissions, Permission.ViewChannels) || !hasPermission(access.permissions, Permission.ConnectVoice))
+    return NextResponse.json({ code: "FORBIDDEN", message: "Нет права подключаться к этому голосовому каналу." }, { status: 403 });
   const url = process.env.LIVEKIT_URL;
   const apiKey = process.env.LIVEKIT_API_KEY;
   const apiSecret = process.env.LIVEKIT_API_SECRET;
@@ -59,10 +65,12 @@ export async function POST(
     ttl: "2h",
     metadata: JSON.stringify({ username: user.username, channelId }),
   });
+  const publishSources = publishSourcesForPermissions(access.permissions);
   accessToken.addGrant({
     roomJoin: true,
     room,
-    canPublish: true,
+    canPublish: publishSources.length > 0,
+    canPublishSources: publishSources,
     canSubscribe: true,
   });
   return NextResponse.json({ token: await accessToken.toJwt(), url, room });

@@ -5,6 +5,7 @@ import { memberRoles, members, roles, spaces, spaceSuperupSupports, superflipPur
 import { getCurrentUser } from "@/lib/auth";
 import { dispatchDeveloperEvent } from "@/lib/developer-webhooks";
 import { hasPermission, Permission } from "@/lib/permissions";
+import { isTrustedMutationRequest } from "@/lib/security-controls";
 
 async function requireMemberManager(spaceId: string, requiredPermission: number) {
   const user = await getCurrentUser();
@@ -103,12 +104,17 @@ export async function GET(request: Request, { params }: { params: Promise<{ spac
 }
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ spaceId: string }> }) {
+  if (!isTrustedMutationRequest(request)) return NextResponse.json({ code: "FORBIDDEN", message: "Недоверенный источник запроса." }, { status: 403 });
   const { spaceId } = await params;
   const access = await requireMemberManager(spaceId, Permission.ManageRoles);
   if ("error" in access) return access.error;
   const body = await request.json().catch(() => null);
   if (!body || typeof body.userId !== "string" || !Array.isArray(body.roleIds) || body.roleIds.some((id: unknown) => typeof id !== "string")) return NextResponse.json({ code: "INVALID_INPUT", message: "Проверьте список ролей." }, { status: 400 });
   if (body.userId === access.space.ownerId) return NextResponse.json({ code: "OWNER_PROTECTED", message: "Роли владельца защищены." }, { status: 409 });
+  const [target] = await access.database.select({ userId: members.userId }).from(members).where(and(eq(members.spaceId, spaceId), eq(members.userId, body.userId))).limit(1);
+  if (!target) return NextResponse.json({ code: "NOT_FOUND", message: "Участник не найден." }, { status: 404 });
+  const currentRoles = await access.database.select({ position: roles.position }).from(memberRoles).innerJoin(roles, eq(roles.id, memberRoles.roleId)).where(and(eq(memberRoles.spaceId, spaceId), eq(memberRoles.userId, body.userId)));
+  if (!access.owner && Math.max(0, ...currentRoles.map((role) => role.position)) >= access.topPosition) return NextResponse.json({ code: "ROLE_HIERARCHY", message: "Нельзя изменять роли участника своего уровня или выше." }, { status: 403 });
   const requested = [...new Set(body.roleIds as string[])];
   const available = requested.length ? await access.database.select({ id: roles.id, position: roles.position }).from(roles).where(and(eq(roles.spaceId, spaceId), eq(roles.isManaged, false), inArray(roles.id, requested))) : [];
   if (!access.owner && available.some((role) => role.position >= access.topPosition)) return NextResponse.json({ code: "ROLE_HIERARCHY", message: "Нельзя назначать роль на уровне вашей высшей роли или выше." }, { status: 403 });
@@ -123,6 +129,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ sp
 }
 
 export async function DELETE(request: Request, { params }: { params: Promise<{ spaceId: string }> }) {
+  if (!isTrustedMutationRequest(request)) return NextResponse.json({ code: "FORBIDDEN", message: "Недоверенный источник запроса." }, { status: 403 });
   const { spaceId } = await params;
   const access = await requireMemberManager(spaceId, Permission.KickMembers);
   if ("error" in access) return access.error;

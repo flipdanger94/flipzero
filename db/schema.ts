@@ -189,6 +189,15 @@ export const spaceSuperupSupports = pgTable("space_superup_supports", {
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 }, (table) => [index("space_superup_supports_space_idx").on(table.spaceId)]);
 
+export const spaceSounds = pgTable("space_sounds", {
+  id: text("id").primaryKey(),
+  spaceId: text("space_id").notNull().references(() => spaces.id, { onDelete: "cascade" }),
+  assetId: text("asset_id").notNull().references(() => mediaAssets.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [index("space_sounds_space_idx").on(table.spaceId)]);
+
+
 export const spacePlacements = pgTable("space_placements", {
   spaceId: text("space_id").primaryKey().references(() => spaces.id, { onDelete: "cascade" }),
   shardId: text("shard_id").default("primary").notNull(),

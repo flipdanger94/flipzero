@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
-export const metadata: Metadata = { title: "Политика конфиденциальности — FlipZero", description: "Как FlipZero обрабатывает и защищает данные пользователей." };
+export const metadata: Metadata = { title: "Политика конфиденциальности — FlipZero", description: "Как FlipZero обрабатывает и защищает данные пользователей.", alternates: { canonical: "/privacy" }, openGraph: { url: "/privacy", title: "Политика конфиденциальности — FlipZero", images: ["/opengraph-image"] } };
 
 export default function PrivacyPage() {
   return <main className="legal-page"><article><Link href="/">← FlipZero</Link><h1>Политика конфиденциальности</h1><p>FlipZero обрабатывает данные, необходимые для работы аккаунта, сообществ, сообщений, голосовых функций и защиты сервиса.</p><h2>Какие данные используются</h2><p>Данные профиля, технические сведения о сессиях, созданный вами контент и настройки. IP-адрес в истории входов хранится в хешированном виде.</p><h2>Защита</h2><p>Сессии передаются в HttpOnly-cookie, пароли хешируются, а доступ к данным проверяется на сервере.</p><h2>Ваши права</h2><p>В настройках аккаунта можно завершить сессии, запросить экспорт данных или удалить аккаунт.</p><p className="legal-updated">Редакция от 21 сентября 2026 года.</p></article></main>;

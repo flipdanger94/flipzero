@@ -9,6 +9,17 @@ export const createSpaceSchema = z.object({
 
 export const updateSpaceSchema = createSpaceSchema.pick({ name: true, description: true, visibility: true, accentColor: true });
 
+export const spaceTemplateSchema = z.object({
+  version: z.literal(1),
+  categories: z.array(z.object({ name: z.string().trim().min(2).max(32) })).max(30),
+  channels: z.array(z.object({
+    name: z.string().trim().min(2).max(48),
+    topic: z.string().trim().max(240).nullable().optional(),
+    kind: z.enum(["text", "forum", "voice", "stage", "announcement", "board"]),
+    category: z.string().trim().nullable(),
+  })).min(1).max(100),
+});
+
 export const createChannelSchema = z.object({
   name: z.string().trim().min(2).max(48).transform((value) => value.replace(/\s+/g, "-")),
   topic: z.string().trim().max(240).optional().default(""),

@@ -9,6 +9,7 @@ import { createSession } from "@/lib/auth";
 import { loginSchema } from "@/lib/auth-validation";
 import { decryptTotpSecret, hashBackupCode, verifyTotp } from "@/lib/totp";
 import { isTrustedMutationRequest, requestFingerprint } from "@/lib/security-controls";
+import { consumeAuthAttempt } from "@/lib/auth-rate-limit";
 
 const LOGIN_WINDOW_MS = 15 * 60 * 1000;
 const LOGIN_ATTEMPT_LIMIT = 8;
@@ -18,6 +19,7 @@ export async function POST(request: Request) {
   if (!isTrustedMutationRequest(request)) return NextResponse.json({ code: "UNTRUSTED_ORIGIN", message: "Запрос отклонён. Обновите страницу и попробуйте снова." }, { status: 403 });
   const parsed = loginSchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ code: "INVALID_INPUT", message: "Проверьте email и пароль." }, { status: 400 });
+  if (!await consumeAuthAttempt(request, "login")) return NextResponse.json({ code: "TOO_MANY_ATTEMPTS", message: "Слишком много попыток. Повторите вход через 15 минут." }, { status: 429, headers: { "Retry-After": "900", "Cache-Control": "no-store" } });
   const database = getDatabase(); const requestHeaders = await headers(); const userAgent = requestHeaders.get("user-agent")?.slice(0, 500) ?? null; const ipHash = requestFingerprint(request);
   const [user] = await database.select().from(users).where(eq(users.email, parsed.data.email)).limit(1);
   if (user) {

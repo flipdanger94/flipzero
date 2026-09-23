@@ -6,6 +6,7 @@ import { mediaAssets, spaces, users } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
 import { getSuperFlipCapabilities } from "@/lib/superflip";
 import { normalizeSpaceBanner } from "@/lib/banner-image";
+import { isTrustedMutationRequest } from "@/lib/security-controls";
 
 export const runtime = "nodejs";
 
@@ -20,6 +21,7 @@ function imageType(bytes: Buffer) {
 }
 
 export async function POST(request: Request) {
+  if (!isTrustedMutationRequest(request)) return NextResponse.json({ code: "UNTRUSTED_ORIGIN", message: "Запрос отклонён." }, { status: 403 });
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ message: "Требуется вход." }, { status: 401 });
   const access = await getSuperFlipCapabilities(user.id);
@@ -72,6 +74,7 @@ export async function POST(request: Request) {
 }
 
 export async function DELETE(request: Request) {
+  if (!isTrustedMutationRequest(request)) return NextResponse.json({ code: "UNTRUSTED_ORIGIN", message: "Запрос отклонён." }, { status: 403 });
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ message: "Требуется вход." }, { status: 401 });
   const body = await request.json().catch(() => null);

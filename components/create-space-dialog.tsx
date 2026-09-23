@@ -9,6 +9,7 @@ type CreatedSpace = { id: string; name: string; slug: string; description: strin
 export function CreateSpaceDialog({onClose, onCreated }: { onClose: () => void; onCreated: (space: CreatedSpace) => void }) {
   const dialogRef = useModalA11y(onClose);
   const [loading, setLoading] = useState(false);
+  const [templateFile, setTemplateFile] = useState<File | null>(null);
   const [error, setError] = useState("");
 
   async function submit(event: FormEvent<HTMLFormElement>) {
@@ -16,10 +17,13 @@ export function CreateSpaceDialog({onClose, onCreated }: { onClose: () => void; 
     setLoading(true);
     setError("");
     const data = new FormData(event.currentTarget);
-    const response = await fetch("/api/v1/spaces", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ name: data.get("name"), description: data.get("description"), visibility: data.get("visibility"), accentColor: data.get("accentColor") }) });
-    const result = await response.json();
-    if (!response.ok) { setError(result.message ?? "Не удалось создать пространство."); setLoading(false); return; }
-    onCreated(result.space);
+    try {
+      const template = templateFile ? JSON.parse(await templateFile.text()) : undefined;
+      const response = await fetch("/api/v1/spaces", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ name: data.get("name"), description: data.get("description"), visibility: data.get("visibility"), accentColor: data.get("accentColor"), template }) });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.message ?? "Не удалось создать пространство.");
+      onCreated(result.space);
+    } catch (reason) { setError(reason instanceof Error ? reason.message : "Не удалось прочитать шаблон."); setLoading(false); }
   }
 
   return <div className="dialog-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
@@ -36,6 +40,7 @@ export function CreateSpaceDialog({onClose, onCreated }: { onClose: () => void; 
           <label><span>Доступ</span><select name="visibility" defaultValue="invite_only"><option value="invite_only">По приглашению</option><option value="public">Открытое</option><option value="application">По заявке</option><option value="private">Закрытое</option></select></label>
           <label><span>Акцент</span><input className="color-input" name="accentColor" type="color" defaultValue="#ff5c70" /></label>
         </div>
+        <label><span>Шаблон пространства (необязательно)</span><input type="file" accept="application/json,.json" onChange={(event) => setTemplateFile(event.target.files?.[0] ?? null)} /><small>Импортирует категории и каналы без сообщений и личных данных.</small></label>
         <button className="auth-submit" disabled={loading}>{loading ? <><LoaderCircle className="spin" size={18} /> Создаём...</> : "Создать пространство"}</button>
       </form>
     </section>

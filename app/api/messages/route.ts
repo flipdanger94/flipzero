@@ -6,6 +6,7 @@ import { directConversationMembers, directConversations, directMessages, friends
 import { getCurrentUser } from "@/lib/auth";
 import { normalizeDirectMessage } from "@/lib/direct-message";
 import { getSuperFlipCapabilities } from "@/lib/superflip";
+import { isTrustedMutationRequest } from "@/lib/security-controls";
 
 const conversationIdFor = (left: string, right: string) => createHash("sha256").update([left, right].sort().join(":"), "utf8").digest("hex");
 
@@ -64,6 +65,7 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  if (!isTrustedMutationRequest(request)) return NextResponse.json({ code: "UNTRUSTED_ORIGIN", message: "Запрос отклонён." }, { status: 403 });
   const user = await getCurrentUser(); if (!user) return NextResponse.json({ message: "Требуется вход." }, { status: 401 });
   const access = await getSuperFlipCapabilities(user.id);
   const body = await request.json().catch(() => null); const receiverId = String(body?.receiverId ?? ""); const text = normalizeDirectMessage(body?.text, access.capabilities.directMessageLimit);

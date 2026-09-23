@@ -5,7 +5,7 @@ import { getDatabase } from "@/db/client";
 import { channelCategories, channels, memberRoles, members, roles, spacePlacements, spaces } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
 import { DEFAULT_MEMBER_PERMISSIONS, Permission } from "@/lib/permissions";
-import { createSpaceSchema } from "@/lib/space-validation";
+import { createSpaceSchema, spaceTemplateSchema } from "@/lib/space-validation";
 
 function makeSlug(name: string) {
   const base = name.toLocaleLowerCase("ru").normalize("NFKD").replace(/[^\p{L}\p{N}]+/gu, "-").replace(/^-|-$/g, "").slice(0, 36) || "space";
@@ -47,8 +47,11 @@ export async function GET() {
 export async function POST(request: Request) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ code: "UNAUTHENTICATED", message: "Требуется вход." }, { status: 401 });
-  const parsed = createSpaceSchema.safeParse(await request.json().catch(() => null));
+  const body = await request.json().catch(() => null);
+  const parsed = createSpaceSchema.safeParse(body);
   if (!parsed.success) return NextResponse.json({ code: "INVALID_INPUT", message: "Проверьте данные пространства.", issues: parsed.error.flatten() }, { status: 400 });
+  const template = body?.template === undefined ? null : spaceTemplateSchema.safeParse(body.template);
+  if (template && (!template.success || !template.data.channels.some((channel) => channel.kind === "text") || new Set(template.data.categories.map((category) => category.name.toLowerCase())).size !== template.data.categories.length || new Set(template.data.channels.map((channel) => channel.name.toLowerCase())).size !== template.data.channels.length || template.data.channels.some((channel) => channel.category && !template.data.categories.some((category) => category.name === channel.category)))) return NextResponse.json({ code: "INVALID_TEMPLATE", message: "Шаблон содержит некорректные категории или каналы." }, { status: 400 });
 
   const database = getDatabase();
   const spaceId = randomUUID();
@@ -57,8 +60,8 @@ export async function POST(request: Request) {
   const slug = makeSlug(parsed.data.name);
   const textCategoryId = randomUUID();
   const voiceCategoryId = randomUUID();
-  const defaultCategories = [{ id: textCategoryId, spaceId, name: "Общение", position: 0 }, { id: voiceCategoryId, spaceId, name: "Голосовые", position: 1 }];
-  const defaultChannels = [
+  const defaultCategories = template?.success ? template.data.categories.map((category, position) => ({ id: randomUUID(), spaceId, name: category.name, position })) : [{ id: textCategoryId, spaceId, name: "Общение", position: 0 }, { id: voiceCategoryId, spaceId, name: "Голосовые", position: 1 }];
+  const defaultChannels = template?.success ? template.data.channels.map((channel, position) => ({ id: randomUUID(), spaceId, parentId: defaultCategories.find((category) => category.name === channel.category)?.id ?? null, name: channel.name, topic: channel.topic ?? null, kind: channel.kind, position })) : [
     { id: randomUUID(), spaceId, parentId: textCategoryId, name: "добро-пожаловать", topic: "Начните знакомство с пространством", kind: "text" as const, position: 0 },
     { id: randomUUID(), spaceId, parentId: textCategoryId, name: "общий-чат", topic: "Главный канал сообщества", kind: "text" as const, position: 1 },
     { id: randomUUID(), spaceId, parentId: voiceCategoryId, name: "Лаунж", topic: "Голосовая комната", kind: "voice" as const, position: 2 },
@@ -73,7 +76,7 @@ export async function POST(request: Request) {
     ]);
     await tx.insert(members).values({ userId: user.id, spaceId });
     await tx.insert(memberRoles).values([{ userId: user.id, spaceId, roleId: ownerRoleId }, { userId: user.id, spaceId, roleId: memberRoleId }]);
-    await tx.insert(channelCategories).values(defaultCategories);
+    if (defaultCategories.length) await tx.insert(channelCategories).values(defaultCategories);
     await tx.insert(channels).values(defaultChannels);
   });
 

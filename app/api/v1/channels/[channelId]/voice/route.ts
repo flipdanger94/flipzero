@@ -5,6 +5,7 @@ import { channels, users, voiceStates } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
 import { getChannelPermissions } from "@/lib/space-permissions";
 import { hasPermission, Permission } from "@/lib/permissions";
+import { isTrustedMutationRequest } from "@/lib/security-controls";
 
 async function accessVoice(channelId: string) {
   const user = await getCurrentUser();
@@ -23,7 +24,8 @@ export async function GET(_: Request, { params }: { params: Promise<{ channelId:
   return NextResponse.json({ participants });
 }
 
-export async function POST(_: Request, { params }: { params: Promise<{ channelId: string }> }) {
+export async function POST(request: Request, { params }: { params: Promise<{ channelId: string }> }) {
+  if (!isTrustedMutationRequest(request)) return NextResponse.json({ code: "UNTRUSTED_ORIGIN", message: "Запрос отклонён." }, { status: 403 });
   const { channelId } = await params; const access = await accessVoice(channelId); if ("error" in access) return access.error;
   if (!hasPermission(access.state.permissions, Permission.ConnectVoice)) return NextResponse.json({ code: "FORBIDDEN", message: "Нет права подключаться к голосовому каналу." }, { status: 403 });
   await access.db.insert(voiceStates).values({ userId: access.user.id, channelId }).onConflictDoUpdate({ target: voiceStates.userId, set: { channelId, selfMuted: false, selfDeafened: false, streaming: false, joinedAt: new Date(), updatedAt: new Date() } });
@@ -31,6 +33,7 @@ export async function POST(_: Request, { params }: { params: Promise<{ channelId
 }
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ channelId: string }> }) {
+  if (!isTrustedMutationRequest(request)) return NextResponse.json({ code: "UNTRUSTED_ORIGIN", message: "Запрос отклонён." }, { status: 403 });
   const { channelId } = await params; const access = await accessVoice(channelId); if ("error" in access) return access.error;
   const body = await request.json().catch(() => null);
   const [current] = await access.db.select().from(voiceStates).where(and(eq(voiceStates.userId, access.user.id), eq(voiceStates.channelId, channelId))).limit(1);
@@ -43,7 +46,8 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ ch
   return NextResponse.json({ ok: true });
 }
 
-export async function DELETE(_: Request, { params }: { params: Promise<{ channelId: string }> }) {
+export async function DELETE(request: Request, { params }: { params: Promise<{ channelId: string }> }) {
+  if (!isTrustedMutationRequest(request)) return NextResponse.json({ code: "UNTRUSTED_ORIGIN", message: "Запрос отклонён." }, { status: 403 });
   const { channelId } = await params; const access = await accessVoice(channelId); if ("error" in access) return access.error;
   await access.db.delete(voiceStates).where(and(eq(voiceStates.userId, access.user.id), eq(voiceStates.channelId, channelId)));
   return NextResponse.json({ connected: false });

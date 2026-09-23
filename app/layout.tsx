@@ -17,13 +17,11 @@ export const metadata: Metadata = {
   },
   description: "Общайтесь в текстовых и голосовых каналах, проводите события и развивайте своё сообщество в FlipZero.",
   alternates: {
-    canonical: "/",
     languages: { "ru": "/" },
   },
   openGraph: {
     type: "website",
     locale: "ru_RU",
-    url: "/",
     siteName: "FlipZero",
     title: "FlipZero — чаты, голос и сообщества",
     description: "Общайтесь в текстовых и голосовых каналах, проводите события и развивайте своё сообщество в FlipZero.",
@@ -31,8 +29,6 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "FlipZero — чаты, голос и сообщества",
-    description: "Общайтесь в текстовых и голосовых каналах, проводите события и развивайте своё сообщество в FlipZero.",
     images: ["/opengraph-image"],
   },
   icons: {

@@ -6,7 +6,7 @@
   "build": { "frontendDist": "https://flipzeroapp.vercel.app/app" },
   "app": {
     "windows": [{ "title": "FlipZero", "width": 1280, "height": 800, "minWidth": 920, "minHeight": 640, "resizable": true }],
-    "security": { "csp": null }
+    "security": { "csp": "object-src 'none'; base-uri 'self'; frame-ancestors 'none'" }
   },
   "bundle": { "active": true, "targets": ["nsis"], "windows": { "webviewInstallMode": { "type": "downloadBootstrapper", "silent": true } } }
 }

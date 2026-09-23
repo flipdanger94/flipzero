@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import {
   ArrowRight,
   Code2,
@@ -17,6 +18,11 @@ import {
   Video,
 } from "lucide-react";
 import { BrandMark } from "@/components/brand-mark";
+
+export const metadata: Metadata = {
+  alternates: { canonical: "/" },
+  openGraph: { url: "/", title: "FlipZero — чаты, голос и сообщества", images: ["/opengraph-image"] },
+};
 
 const featureCards = [
   { icon: MessageCircle, title: "Чаты без ограничений", text: "Общайся в личных и групповых чатах, делись файлами и эмоциями." },
@@ -47,17 +53,17 @@ function Logo() {
 
 function HeroProduct() {
   return (
-    <div className="fz-stage" aria-label="Интерфейс FlipZero">
+    <div className="fz-stage" aria-hidden="true">
       <div className="fz-stage-glow" />
       <section className="fz-app-preview">
         <aside className="fz-app-rail">
           <span className="fz-app-brand"><BrandMark size={24} /></span>
-          {["+", "✦", "◉", "◆", "⬢", "◌"].map((item, index) => <i key={index}>{item}</i>)}
+          {[MessageCircle, Users, Video, Gamepad2, ShieldCheck, Mic2].map((Icon, index) => <i key={index}><Icon size={17} /></i>)}
         </aside>
 
         <aside className="fz-app-sidebar">
           <div className="fz-server-title">
-            <span><i>PC</i><strong>Pixel Craft</strong></span><small>12 436 участников</small>
+            <span><i>PC</i><strong>Pixel Craft</strong></span><small>Пример сообщества</small>
           </div>
           <p>Главное</p>
           {["общий-чат", "анонсы", "мероприятия", "творчество", "мемы", "вопросы"].map((name, index) => (
@@ -70,21 +76,21 @@ function HeroProduct() {
           <div className="fz-app-user"><i>AL</i><span><strong>Alexander</strong><small>#1001</small></span><Mic2 size={13} /></div>
         </aside>
 
-        <main className="fz-app-chat">
+        <div className="fz-app-chat">
           <header><Hash size={18} /><strong>общий-чат</strong><span>Общайся • Делись • Создавай вместе</span><Search size={18} /><Users size={18} /></header>
           <div className="fz-app-feed">
             <article>
               <i className="avatar avatar-luna">LU</i>
-              <div><p><strong>Luna 💜</strong><time>Сегодня, 14:28</time></p><span>Ребят, посмотрите на этот арт, который я сделала сегодня! ✨</span><div className="fz-art-card"><div className="fz-art-moon" /><div className="fz-art-city" /></div><footer><b>❤️ 284</b><b>🔥 42</b><b>⭐ 27</b></footer></div>
+              <div><p><strong>Luna 💜</strong><time>Сегодня, 14:28</time></p><span>Ребят, посмотрите на этот арт, который я сделала сегодня! ✨</span><div className="fz-art-card"><div className="fz-art-moon" /><div className="fz-art-city" /></div><footer><b>❤️</b><b>🔥</b><b>⭐</b></footer></div>
             </article>
             <article><i className="avatar avatar-max">MX</i><div><p><strong>Max</strong><time>Сегодня, 14:31</time></p><span>Выглядит потрясающе! 🔥<br />Можно добавить это в галерею пространства?</span></div></article>
             <article><i className="avatar avatar-sakura">SA</i><div><p><strong>Sakura 🌸</strong><time>Сегодня, 14:32</time></p><span>Да, конечно! Сейчас закину ещё пару вариантов 🙂</span></div></article>
           </div>
-          <div className="fz-app-composer"><span>＋</span><p>Написать сообщение в #общий-чат...</p><b>GIF</b><b>☺</b><button>➤</button></div>
-        </main>
+          <div className="fz-app-composer"><span>＋</span><p>Написать сообщение в #общий-чат...</p><b>GIF</b><b>☺</b><span className="fz-demo-send"><ArrowRight size={15} /></span></div>
+        </div>
 
         <aside className="fz-app-members">
-          <header><strong>Участники — 1 245</strong><Search size={15} /></header>
+          <header><strong>Участники</strong><Search size={15} /></header>
           <small>ВЛАДЕЛЕЦ — 1</small>
           {members.map(([name, state, initials], index) => (
             <div key={name}><i className={"member-avatar m" + index}>{initials}</i><span><strong>{name}{index === 0 ? " 👑" : ""}</strong><small>{state}</small></span></div>
@@ -111,7 +117,6 @@ export default function LandingPage() {
             <Link className="fz-nav-super" href="/superflip"><Crown size={14} /> SUPER FLIP</Link>
             <Link href="/developers">Для разработчиков</Link>
           </nav>
-          <div className="fz-locale"><Globe2 size={17} /><span>RU</span></div>
           <Link className="fz-header-button" href="/app">Открыть FlipZero</Link>
           <details className="fz-mobile-menu">
             <summary aria-label="Открыть меню"><Menu size={20} /></summary>
@@ -134,8 +139,8 @@ export default function LandingPage() {
         <div className="fz-container fz-hero-grid">
           <div className="fz-hero-copy">
             <span className="fz-eyebrow pill"><i /> Место для твоего сообщества</span>
-            <h1>Ваши люди.<br /><em>Ваше место.</em></h1>
-            <p>Чаты, голос, видео и сообщества в одном месте. Создайте своё пространство и общайтесь с друзьями в браузере или приложении для Windows.</p>
+            <h1>Твои люди.<br /><em>Твоё место.</em></h1>
+            <p>Чаты, голос, видео и сообщества в одном месте. Создай своё пространство и общайся с друзьями в браузере или приложении для Windows.</p>
             <div className="fz-actions">
               <Link className="fz-button fz-button-primary" href="/app">Открыть FlipZero <ArrowRight size={17} /></Link>
               <Link className="fz-button fz-button-secondary" href="/download"><Download size={18} /> Скачать для Windows</Link>
@@ -151,7 +156,7 @@ export default function LandingPage() {
 
         <div className="fz-container fz-feature-strip" id="features">
           {featureCards.map(({ icon: Icon, title, text }) => (
-            <article key={title}><i><Icon size={23} /></i><h3>{title}</h3><p>{text}</p></article>
+            <article key={title}><i><Icon size={23} /></i><h2>{title}</h2><p>{text}</p></article>
           ))}
         </div>
       </section>
@@ -171,12 +176,12 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <section className="fz-levels"><div className="fz-container"><span className="fz-eyebrow">ПРОГРЕСС</span><h2>Общайтесь и открывайте достижения</h2><p>Участвуйте в жизни сообщества, набирайте опыт и следите за своим уровнем в профиле.</p></div></section>
+      <section className="fz-levels"><div className="fz-container"><span className="fz-eyebrow">ПРОГРЕСС</span><h2>Общайся и открывай достижения</h2><p>Участвуй в жизни сообщества, набирай опыт и следи за своим уровнем в профиле.</p></div></section>
 
       <section className="fz-superflip" id="superflip">
         <div className="fz-container">
           <div className="fz-superflip-mark"><Crown size={34} /></div>
-          <div><span className="fz-eyebrow">SUPER FLIP</span><h2>SUPER FLIP</h2><p>Раздел SuperFlip доступен внутри FlipZero. Настраивайте профиль и используйте дополнительные возможности общения. Подробности — на отдельной странице.</p></div>
+          <div><span className="fz-eyebrow">SUPER FLIP</span><h2>SUPER FLIP</h2><p>Раздел SuperFlip доступен внутри FlipZero. Настраивай профиль и используй дополнительные возможности общения. Подробности — на отдельной странице.</p></div>
           <Link className="fz-button fz-button-super" href="/superflip">Подробнее о SUPER FLIP <ArrowRight size={17} /></Link>
         </div>
       </section>
@@ -224,10 +229,11 @@ export default function LandingPage() {
 
           <div className="fz-footer-bottom">
             <span>© 2026 FlipZero. Больше, чем общение.</span>
-            <span className="fz-footer-status"><i /> Сервис работает</span>
+            <a href="https://github.com/flipdanger94/flipzero/issues">Связаться с нами</a>
           </div>
         </div>
       </footer>
+
 
       <script
         type="application/ld+json"
@@ -237,7 +243,7 @@ export default function LandingPage() {
           name: "FlipZero",
           url: "https://flipzeroapp.vercel.app/",
           applicationCategory: "CommunicationApplication",
-          operatingSystem: "Windows, macOS, Linux, Android, Web",
+          operatingSystem: "Windows, Web",
           description: "Платформа для чатов, голосовой и видеосвязи и сообществ."
         }) }}
       />

@@ -25,6 +25,8 @@ const releases: Record<string, { migrationUrl: URL; title: string; check: string
   "release-0016": { migrationUrl: new URL("../../../../drizzle/0015_role_member_badges.sql", import.meta.url), title: "Роли и статус участников", check: "SELECT (EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='roles' AND column_name='show_in_member_list') AND EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='users' AND column_name='last_seen_at')) AS applied" },
   "release-0017": { migrationUrl: new URL("../../../../drizzle/0016_password_reset.sql", import.meta.url), title: "Восстановление пароля", check: "SELECT (to_regclass('public.password_reset_tokens') IS NOT NULL AND to_regclass('public.password_reset_attempts') IS NOT NULL) AS applied" },
   "release-0018": { migrationUrl: new URL("../../../../drizzle/0017_superup.sql", import.meta.url), title: "Поддержка SuperUp", check: "SELECT to_regclass('public.space_superup_supports') IS NOT NULL AS applied" },
+  "release-0019": { migrationUrl: new URL("../../../../drizzle/0018_soundboard.sql", import.meta.url), title: "Звуковая панель", check: "SELECT to_regclass('public.space_sounds') IS NOT NULL AS applied" },
+
 };
 
 export async function POST(_request: Request, context: { params: Promise<{ release: string }> }) {
