@@ -34,7 +34,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ chan
   return NextResponse.json({
     messages: (threadRootId ? rows : rows.reverse()).map((row) => ({ ...row, reactions: reactionRows.filter((item) => item.messageId === row.id) })),
     permissions: {
-      canSend: access.owner || hasPermission(access.permissions, SpacePermission.SendMessages),
+      canSend: (access.channel.kind !== "announcement" || access.channel.ownerId === access.user.id) && (access.owner || hasPermission(access.permissions, SpacePermission.SendMessages)),
       canReact: access.owner || hasPermission(access.permissions, SpacePermission.AddReactions),
       canAttach: access.owner || hasPermission(access.permissions, SpacePermission.AttachFiles),
     },
