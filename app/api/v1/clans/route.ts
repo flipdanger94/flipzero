@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { and, asc, desc, eq, ilike, or } from "drizzle-orm";
+import { and, asc, desc, eq, ilike, inArray, or } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { getDatabase } from "@/db/client";
 import { clanMembers, clanRequests, clans, users } from "@/db/schema";
@@ -27,7 +27,13 @@ export async function GET(request:Request) {
   const pending=await db.select({clanId:clanRequests.clanId,id:clanRequests.id,kind:clanRequests.kind,status:clanRequests.status})
     .from(clanRequests).where(and(eq(clanRequests.userId,user.id),eq(clanRequests.status,"pending")));
   const pendingByClan=new Map(pending.map(item=>[item.clanId,item]));
-  return NextResponse.json({membership:null,clans:rows.map(clan=>({...clan,pendingRequest:pendingByClan.get(clan.id)??null,full:clan.memberCount>=50}))});
+  const invitedIds=pending.filter(item=>item.kind==="invite").map(item=>item.clanId);
+  const invited=!query&&invitedIds.length?await db.select({
+    id:clans.id,name:clans.name,tag:clans.tag,description:clans.description,avatarUrl:clans.avatarUrl,bannerUrl:clans.bannerUrl,
+    joinType:clans.joinType,memberCount:clans.memberCount,leaderId:clans.leaderId,createdAt:clans.createdAt,
+  }).from(clans).where(inArray(clans.id,invitedIds)):[];
+  const merged=[...invited,...rows.filter(row=>!invited.some(invite=>invite.id===row.id))].slice(0,50);
+  return NextResponse.json({membership:null,clans:merged.map(clan=>({...clan,pendingRequest:pendingByClan.get(clan.id)??null,full:clan.memberCount>=50}))});
 }
 
 export async function POST(request:Request) {
@@ -47,6 +53,7 @@ export async function POST(request:Request) {
     await db.transaction(async(tx)=>{
       await tx.insert(clans).values({id,name,tag,description,joinType,memberCount:1,leaderId:user.id});
       await tx.insert(clanMembers).values({clanId:id,userId:user.id,role:"leader"});
+      await tx.update(clanRequests).set({status:"cancelled",respondedAt:new Date()}).where(and(eq(clanRequests.userId,user.id),eq(clanRequests.status,"pending")));
     });
   }catch(error){
     const message=String((error as {message?:string})?.message??"");
