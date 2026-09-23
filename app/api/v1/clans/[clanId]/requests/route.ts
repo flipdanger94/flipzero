@@ -35,6 +35,7 @@ export async function PATCH(request:Request,{params}:{params:Promise<{clanId:str
         .where(and(eq(clans.id,clanId),lt(clans.memberCount,CLAN_MEMBER_LIMIT))).returning({id:clans.id});
       if(!slot) throw new Error("CLAN_FULL");
       await tx.insert(clanMembers).values({clanId,userId:application.userId,role:"member"});
+      await tx.update(clanRequests).set({status:"cancelled",respondedAt:new Date()}).where(and(eq(clanRequests.userId,application.userId),eq(clanRequests.status,"pending")));
       await tx.update(clanRequests).set({status:"accepted",respondedAt:new Date()}).where(eq(clanRequests.id,requestId));
       await tx.insert(notifications).values({id:randomUUID(),userId:application.userId,actorId:user.id,type:"clan_application_accepted",title:"Заявка в клан принята",body:"Добро пожаловать в клан!",entityType:"clan",entityId:clanId});
     });
