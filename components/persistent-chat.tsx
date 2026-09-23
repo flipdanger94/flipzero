@@ -99,11 +99,7 @@ export function PersistentChat({ channelId, channelName, spaceId, currentUserId,
     return () => { active = false; };
   }, [spaceId]);
   useEffect(() => {
-    if (mentionQuery === null) {
-      setMentionItems([]);
-      setMentionLoading(false);
-      return;
-    }
+    if (mentionQuery === null) return;
     const controller = new AbortController();
     const timer = window.setTimeout(async () => {
       setMentionLoading(true);
