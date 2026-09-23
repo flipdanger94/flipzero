@@ -12,17 +12,18 @@ export async function POST(request: Request) {
   const userId = typeof body?.userId === "string" ? body.userId : null;
   const email = typeof body?.email === "string" ? body.email.trim().toLowerCase() : null;
   const reason = typeof body?.reason === "string" ? body.reason.trim().slice(0, 500) : "Подарок администратора";
-  const months = Number.isFinite(body?.months) ? Math.max(1, Math.min(Number(body.months), 120)) : 1;
+  const period = body?.period === "year" || body?.period === "forever" ? body.period : "month";
+  const months = period === "year" ? 12 : 1;
   if (!userId && !email) return NextResponse.json({ message: "Укажите userId или email." }, { status: 400 });
   const database = getDatabase();
   const [target] = await database.select({ id: users.id, email: users.email }).from(users).where(userId ? eq(users.id, userId) : eq(users.email, email!)).limit(1);
   if (!target) return NextResponse.json({ message: "Пользователь не найден." }, { status: 404 });
-  const grantId = randomUUID(); const expiresAt = subscriptionExpiry(months);
+  const grantId = randomUUID(); const expiresAt = period === "forever" ? null : subscriptionExpiry(months);
   await database.transaction(async (tx) => {
     await tx.insert(superflipPurchases).values({ id: grantId, userId: target.id, grantedBy: access.user.id, expiresAt, source: "gift", reason });
-    await tx.insert(adminAuditLogs).values({ id: randomUUID(), adminId: access.user.id, action: "superflip.grant", targetUserId: target.id, metadata: { grantId, months, reason } });
+    await tx.insert(adminAuditLogs).values({ id: randomUUID(), adminId: access.user.id, action: "superflip.grant", targetUserId: target.id, metadata: { grantId, period, months: period === "forever" ? null : months, reason } });
   });
-  return NextResponse.json({ grant: { id: grantId, userId: target.id, expiresAt, source: "gift" } }, { status: 201 });
+  return NextResponse.json({ grant: { id: grantId, userId: target.id, expiresAt, period, source: "gift" } }, { status: 201 });
 }
 
 export async function DELETE(request: Request) {
