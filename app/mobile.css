@@ -1496,3 +1496,4 @@ html[data-motion="off"] *::after {
     z-index: 11 !important;
   }
 }
+@media(max-width:760px){.app-shell .composer>button:nth-of-type(2),.app-shell .composer>button:nth-of-type(3){display:grid}}
