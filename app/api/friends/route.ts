@@ -12,9 +12,11 @@ export async function GET() {
   const blockedIds=new Set(blockRows.map(row=>row.blockerId===user.id?row.blockedId:row.blockerId));
   const links = (await database.select().from(friends).where(eq(friends.userId, user.id))).filter(link=>!blockedIds.has(link.friendId));
   const pending = (await database.select().from(friendRequests).where(and(eq(friendRequests.toId, user.id), eq(friendRequests.status, "pending"))).orderBy(desc(friendRequests.createdAt))).filter(item=>!blockedIds.has(item.fromId));
+  const outgoingPending = (await database.select().from(friendRequests).where(and(eq(friendRequests.fromId, user.id), eq(friendRequests.status, "pending"))).orderBy(desc(friendRequests.createdAt))).filter(item=>!blockedIds.has(item.toId));
   const friendUsers = await Promise.all(links.map(async (link) => (await database.select({ id: users.id, username: users.username, displayName: users.displayName, avatarUrl: users.avatarUrl, presence: users.presence }).from(users).where(eq(users.id, link.friendId)).limit(1))[0]));
-  const requests = await Promise.all(pending.map(async (request) => ({ ...request, from: (await database.select({ id: users.id, username: users.username, displayName: users.displayName, avatarUrl: users.avatarUrl }).from(users).where(eq(users.id, request.fromId)).limit(1))[0] })));
-  return NextResponse.json({ friends: friendUsers.filter(Boolean), requests, unreadRequests: requests.length });
+  const requests = await Promise.all(pending.map(async (request) => ({ ...request, from: (await database.select({ id: users.id, username: users.username, displayName: users.displayName, avatarUrl: users.avatarUrl, presence: users.presence }).from(users).where(eq(users.id, request.fromId)).limit(1))[0] })));
+  const outgoingRequests = await Promise.all(outgoingPending.map(async (request) => ({ ...request, to: (await database.select({ id: users.id, username: users.username, displayName: users.displayName, avatarUrl: users.avatarUrl, presence: users.presence }).from(users).where(eq(users.id, request.toId)).limit(1))[0] })));
+  return NextResponse.json({ friends: friendUsers.filter(Boolean), requests, outgoingRequests: outgoingRequests.filter((item)=>Boolean(item.to)), unreadRequests: requests.length });
 }
 
 export async function POST(request: Request) {
@@ -60,7 +62,13 @@ export async function PATCH(request: Request) {
 
 export async function DELETE(request: Request) {
   const user = await getCurrentUser(); if (!user) return NextResponse.json({ message: "Требуется вход." }, { status: 401 });
-  const friendId = new URL(request.url).searchParams.get("friendId") ?? ""; if (!friendId) return NextResponse.json({ message: "Укажите друга." }, { status: 400 });
+  const url = new URL(request.url);
+  const requestId = url.searchParams.get("requestId") ?? "";
+  if (requestId) {
+    await getDatabase().delete(friendRequests).where(and(eq(friendRequests.id, requestId), eq(friendRequests.fromId, user.id), eq(friendRequests.status, "pending")));
+    return NextResponse.json({ ok: true });
+  }
+  const friendId = url.searchParams.get("friendId") ?? ""; if (!friendId) return NextResponse.json({ message: "Укажите друга." }, { status: 400 });
   await getDatabase().delete(friends).where(or(and(eq(friends.userId, user.id), eq(friends.friendId, friendId)), and(eq(friends.userId, friendId), eq(friends.friendId, user.id))));
   return NextResponse.json({ ok: true });
 }
