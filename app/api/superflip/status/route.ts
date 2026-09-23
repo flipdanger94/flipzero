@@ -30,6 +30,8 @@ export async function GET() {
     active,
     capabilities: active ? SUPERFLIP_CAPABILITIES : STANDARD_CAPABILITIES,
     source: grant?.source ?? null,
+    reason: grant?.reason ?? null,
+    grantedAt: grant?.grantedAt ?? null,
     expiresAt: grant?.expiresAt ?? null,
     waitlisted: Boolean(waitlist),
     history,
