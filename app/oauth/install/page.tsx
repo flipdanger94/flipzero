@@ -54,19 +54,19 @@ function InstallContent() {
       <div className="oauth-app-icon"><Bot size={28} /></div>
       <p className="oauth-kicker">УСТАНОВКА ПРИЛОЖЕНИЯ</p>
       <h1>{app.name}</h1>
-      <p className="install-description">{app.description || "Приложение FlipZero запрашивает доступ к событиям выбранного сервера."}</p>
+      <p className="install-description">{app.description || "Приложение FlipZero запрашивает доступ к событиям выбранного пространства."}</p>
 
-      <div className="install-permission"><ShieldCheck size={17} /><div><strong>events:read</strong><span>Приложение сможет получать выбранные webhook-события только с сервера, куда вы его установите.</span></div></div>
+      <div className="install-permission"><ShieldCheck size={17} /><div><strong>events:read</strong><span>Приложение сможет получать выбранные webhook-события только из пространства, куда вы его установите.</span></div></div>
       {error ? <div className="auth-error" role="alert">{error}</div> : null}
 
       <div className="install-space-list">
-        <small>ВАШИ СЕРВЕРЫ</small>
+        <small>ВАШИ ПРОСТРАНСТВА</small>
         {spaces.map((space) => <article key={space.id} className={space.installed ? "installed" : ""}>
           <span style={{ background: space.accentColor }}>{space.name.slice(0, 2).toLocaleUpperCase("ru")}</span>
           <div><strong>{space.name}</strong><small>{space.installed ? "Приложение установлено" : "Можно установить приложение"}</small></div>
           <button onClick={() => toggle(space)} disabled={workingId !== null}>{workingId === space.id ? <LoaderCircle className="spin" size={14} /> : space.installed ? <><Check size={14} /> Установлено</> : <><Server size={14} /> Установить</>}</button>
         </article>)}
-        {!spaces.length ? <p className="developer-empty">У вас нет серверов, которыми вы владеете.</p> : null}
+        {!spaces.length ? <p className="developer-empty">У вас нет пространств, которыми вы владеете.</p> : null}
       </div>
 
       <a className="install-back" href="/app">Вернуться в FlipZero</a>

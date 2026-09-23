@@ -178,7 +178,7 @@ function PreferencesSection({ kind }: { kind: "privacy" | "notifications" }) {
   }
   async function unblock(id:string){setBlockBusy(id);const r=await fetch(`/api/blocks?userId=${encodeURIComponent(id)}`,{method:"DELETE"});if(r.ok)setBlocked(items=>items.filter(item=>item.id!==id));setBlockBusy("")}
   const items = kind === "privacy" ? [
-    ["directMessages", "Личные сообщения", "Разрешить участникам общих серверов писать вам."],
+    ["directMessages", "Личные сообщения", "Разрешить участникам общих пространств писать вам."],
     ["friendRequests", "Запросы в друзья", "Получать новые запросы в друзья."],
     ["profileDiscovery", "Публичный профиль", "Показывать профиль участникам FlipZero."],
   ] as const : [
