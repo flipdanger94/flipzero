@@ -69,6 +69,14 @@ export async function POST(request:Request,{params}:{params:Promise<{clanId:stri
     }catch{return NextResponse.json({message:"Приглашение уже отправлено."},{status:409});}
   }
 
+  if(action==="decline_invite"){
+    const requestId=String(body?.requestId??"");
+    const [invite]=await db.select({id:clanRequests.id}).from(clanRequests).where(and(eq(clanRequests.id,requestId),eq(clanRequests.clanId,clanId),eq(clanRequests.userId,user.id),eq(clanRequests.kind,"invite"),eq(clanRequests.status,"pending"))).limit(1);
+    if(!invite) return NextResponse.json({message:"Приглашение не найдено."},{status:404});
+    await db.update(clanRequests).set({status:"declined",respondedAt:new Date()}).where(eq(clanRequests.id,requestId));
+    return NextResponse.json({ok:true});
+  }
+
   if(action==="accept_invite"){
     const requestId=String(body?.requestId??"");
     const [invite]=await db.select().from(clanRequests).where(and(eq(clanRequests.id,requestId),eq(clanRequests.clanId,clanId),eq(clanRequests.userId,user.id),eq(clanRequests.kind,"invite"),eq(clanRequests.status,"pending"))).limit(1);
