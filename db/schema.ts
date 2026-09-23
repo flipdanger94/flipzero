@@ -9,6 +9,10 @@ export const achievementRarity = pgEnum("achievement_rarity", ["common", "rare",
 export const platformRole = pgEnum("platform_role", ["user", "admin"]);
 export const superflipSource = pgEnum("superflip_source", ["purchase", "gift"]);
 export const friendRequestStatus = pgEnum("friend_request_status", ["pending", "accepted", "declined"]);
+export const clanJoinType = pgEnum("clan_join_type", ["open", "application", "closed"]);
+export const clanRole = pgEnum("clan_role", ["leader", "officer", "member"]);
+export const clanRequestKind = pgEnum("clan_request_kind", ["application", "invite"]);
+export const clanRequestStatus = pgEnum("clan_request_status", ["pending", "accepted", "declined", "cancelled"]);
 
 const timestamps = {
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
@@ -494,3 +498,61 @@ export const profileCosmetics = pgTable("profile_cosmetics", {
   showcasedPath: progressPath("showcased_path").default("social").notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });
+
+
+export const clans = pgTable("clans", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  tag: text("tag").notNull(),
+  description: text("description"),
+  avatarUrl: text("avatar_url"),
+  bannerUrl: text("banner_url"),
+  joinType: clanJoinType("join_type").default("open").notNull(),
+  memberCount: integer("member_count").default(1).notNull(),
+  leaderId: text("leader_id").notNull().references(() => users.id, { onDelete: "restrict" }),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [
+  uniqueIndex("clans_name_unique").on(table.name),
+  uniqueIndex("clans_tag_unique").on(table.tag),
+  index("clans_join_type_members_idx").on(table.joinType, table.memberCount),
+]);
+
+export const clanMembers = pgTable("clan_members", {
+  clanId: text("clan_id").notNull().references(() => clans.id, { onDelete: "cascade" }),
+  userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  role: clanRole("role").default("member").notNull(),
+  joinedAt: timestamp("joined_at", { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [
+  primaryKey({ columns: [table.clanId, table.userId] }),
+  uniqueIndex("clan_members_user_unique").on(table.userId),
+  index("clan_members_clan_role_idx").on(table.clanId, table.role),
+]);
+
+export const clanRequests = pgTable("clan_requests", {
+  id: text("id").primaryKey(),
+  clanId: text("clan_id").notNull().references(() => clans.id, { onDelete: "cascade" }),
+  userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  actorId: text("actor_id").references(() => users.id, { onDelete: "set null" }),
+  kind: clanRequestKind("kind").notNull(),
+  status: clanRequestStatus("status").default("pending").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  respondedAt: timestamp("responded_at", { withTimezone: true }),
+}, (table) => [
+  index("clan_requests_clan_status_idx").on(table.clanId, table.status, table.createdAt),
+  index("clan_requests_user_status_idx").on(table.userId, table.status, table.createdAt),
+]);
+
+export const clanMessages = pgTable("clan_messages", {
+  id: text("id").primaryKey(),
+  clanId: text("clan_id").notNull().references(() => clans.id, { onDelete: "cascade" }),
+  authorId: text("author_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  content: text("content").notNull(),
+  attachments: jsonb("attachments").default([]).notNull(),
+  editedAt: timestamp("edited_at", { withTimezone: true }),
+  deletedAt: timestamp("deleted_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [
+  index("clan_messages_clan_created_idx").on(table.clanId, table.createdAt),
+  index("clan_messages_author_idx").on(table.authorId),
+]);

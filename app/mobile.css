@@ -1999,3 +1999,11 @@ html[data-motion="off"] *::after {
   .friend-row-v2{grid-template-columns:minmax(0,1fr) auto!important;padding-inline:4px!important}.friend-row-actions button.icon{width:40px!important;height:40px!important;min-width:40px!important}
   .superflip-panel-v2{padding:28px 14px calc(var(--mobile-bottom-nav,66px) + 20px)!important}
 }
+
+@media(max-width:767px){
+  .app-shell .mobile-tab-bar.mobile-tab-bar-six{grid-template-columns:repeat(6,minmax(0,1fr))}
+  .app-shell .mobile-tab-bar.mobile-tab-bar-six button{font-size:.43rem}
+}
+@media(max-width:430px){
+  .app-shell .mobile-tab-bar.mobile-tab-bar-six button span{font-size:.4rem}
+}

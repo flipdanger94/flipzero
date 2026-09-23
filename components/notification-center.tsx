@@ -1,7 +1,7 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { Bell, CheckCheck, Crown, MessageCircle, UserPlus, X } from "lucide-react";
+import { Bell, CheckCheck, Crown, MessageCircle, Swords, UserPlus, X } from "lucide-react";
 
 type Item={
   id:string;
@@ -15,7 +15,7 @@ type Item={
   actor:{id:string;username:string;displayName:string;avatarUrl:string|null}|null;
 };
 
-export function NotificationCenter({onOpenMessages,onOpenFriends}:{onOpenMessages:(userId:string|null)=>void;onOpenFriends:()=>void}){
+export function NotificationCenter({onOpenMessages,onOpenFriends,onOpenClans}:{onOpenMessages:(userId:string|null)=>void;onOpenFriends:()=>void;onOpenClans:()=>void}){
  const [open,setOpen]=useState(false),[items,setItems]=useState<Item[]>([]),[unread,setUnread]=useState(0);
  const load=useCallback(async()=>{const r=await fetch("/api/notifications",{cache:"no-store"});if(r.ok){const d=await r.json();setItems(d.notifications??[]);setUnread(d.unread??0)}},[]);
 
@@ -30,6 +30,7 @@ export function NotificationCenter({onOpenMessages,onOpenFriends}:{onOpenMessage
   setOpen(false);
   if(item.type==="friend_request")onOpenFriends();
   else if(item.type==="direct_message"||item.type==="friend_accepted"||item.type==="direct_call")onOpenMessages(item.actor?.id??null);
+  else if(item.type.startsWith("clan_")||item.entityType==="clan")onOpenClans();
  }
 
  async function readAll(){
@@ -65,7 +66,7 @@ export function NotificationCenter({onOpenMessages,onOpenFriends}:{onOpenMessage
     <div className="notification-list" tabIndex={0}>
      {items.length?items.map(item=><article key={item.id} className={item.readAt?"":"unread"}>
       <button type="button" className="notification-open" onClick={()=>void read(item)}>
-       <i>{item.type==="friend_request"||item.type==="friend_accepted"?<UserPlus size={17}/>:item.type==="superflip_gift"?<Crown size={17}/>:<MessageCircle size={17}/>}</i>
+       <i>{item.type==="friend_request"||item.type==="friend_accepted"?<UserPlus size={17}/>:item.type==="superflip_gift"?<Crown size={17}/>:item.type.startsWith("clan_")?<Swords size={17}/>:<MessageCircle size={17}/>}</i>
        <span><strong>{item.title}</strong><small>{item.body}</small><time>{new Date(item.createdAt).toLocaleString("ru-RU",{day:"2-digit",month:"short",hour:"2-digit",minute:"2-digit"})}</time></span>
       </button>
       <button type="button" className="notification-dismiss" aria-label={`Удалить уведомление «${item.title}»`} title="Удалить уведомление" onClick={()=>void dismiss(item)}><X size={16}/></button>
