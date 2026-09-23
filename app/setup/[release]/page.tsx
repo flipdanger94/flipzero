@@ -24,6 +24,7 @@ const releases: Record<string, { number: string; title: string; description: str
   "release-0015": { number: "0015", title: "Developer integrations", description: "Добавляет установки приложений, OAuth, API-токены и Webhooks." },
   "release-0016": { number: "0016", title: "Роли участников", description: "Позволяет показывать выбранные роли справа от имени участника." },
   "release-0017": { number: "0017", title: "Восстановление пароля", description: "Добавляет одноразовые ссылки сброса пароля и ограничения частоты запросов." },
+  "release-0018": { number: "0018", title: "Поддержка SuperUp", description: "Добавляет распределение поддержки пространств для участников с SuperFlip." },
 };
 
 export default function DynamicReleaseSetupPage() {

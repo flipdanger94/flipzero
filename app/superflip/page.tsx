@@ -13,15 +13,13 @@ import {
   Sparkles,
   Sticker,
   UserRound,
-  Video,
 } from "lucide-react";
 import { BrandMark } from "@/components/brand-mark";
-import BillingToggle from "./billing-toggle";
 import styles from "./superflip.module.css";
 
 export const metadata: Metadata = {
   title: "SUPER FLIP",
-  description: "Черновая страница тарифа SUPER FLIP с расширенными возможностями FlipZero.",
+  description: "Возможности SuperFlip в FlipZero и запись в лист ожидания.",
   alternates: { canonical: "/superflip" },
   openGraph: {
     title: "SUPER FLIP | FlipZero",
@@ -31,47 +29,19 @@ export const metadata: Metadata = {
 };
 
 const perks = [
-  {
-    icon: Sticker,
-    title: "Твои эмодзи — везде",
-    text: "Кастомные эмодзи и стикеры из своих сообществ доступны во всех чатах и сообществах.",
-  },
-  {
-    icon: UserRound,
-    title: "Профиль, который выделяется",
-    text: "Анимированный аватар и баннер, бейдж SUPER FLIP, 4-значный тег и отдельный профиль под каждое сообщество.",
-  },
-  {
-    icon: Video,
-    title: "Стрим в 1440p при 60 FPS",
-    text: "До 1440p / 60 FPS в SUPER FLIP против 720p / 30 FPS на бесплатном тарифе.",
-  },
-  {
-    icon: FileUp,
-    title: "Файлы до 500 МБ",
-    text: "До 500 МБ на один файл в SUPER FLIP против 25 МБ на Free.",
-  },
-  {
-    icon: Palette,
-    title: "Кастомные темы",
-    text: "Персонализация интерфейса FlipZero через дополнительные темы приложения.",
-  },
+  { icon: UserRound, title: "Больше места в профиле", text: "Описание профиля до 500 символов вместо 190." },
+  { icon: FileUp, title: "Медиа профиля", text: "Аватар до 8 МБ и баннер до 16 МБ; поддерживаются анимированные изображения." },
+  { icon: Sparkles, title: "Длинные сообщения", text: "До 8000 символов в личном сообщении вместо 4000." },
+  { icon: BadgeCheck, title: "Статус SuperFlip", text: "Активный доступ отображается в настройках аккаунта." },
+  { icon: Crown, title: "Поддержка SuperUp", text: "Поддержите одно пространство; его уровень зависит от количества участников с активным SuperFlip." },
 ];
-
 const comparison = [
-  ["4-значный тег после юзернейма", "Недоступно", "Доступно"],
-  ["Отдельный профиль под каждое сообщество", "Недоступно", "Доступно"],
-  ["Бейдж подписчика SUPER FLIP", "Недоступно", "Доступно"],
-  ["Анимированный аватар и баннер", "Недоступно", "Доступно"],
-  ["Кастомные эмодзи/стикеры в любом сообществе", "Недоступно", "Доступно"],
-  ["Качество войса / демонстрации экрана", "до 720p / 30 FPS", "до 1440p / 60 FPS"],
-  ["Максимальный размер загружаемого файла", "25 МБ", "500 МБ"],
-  ["Символов в одном сообщении", "2 000", "4 000"],
-  ["Количество сообществ для участия", "100", "200"],
-  ["Сохранённые фоны для видеозвонков", "1", "15"],
-  ["Сообщений в закладках", "50", "300"],
-  ["Ранний доступ к новым функциям", "Недоступно", "Доступно"],
-  ["Кастомные темы приложения", "Недоступно", "Доступно"],
+  ["Описание профиля", "190 символов", "500 символов"],
+  ["Аватар", "2 МБ", "8 МБ"],
+  ["Баннер профиля", "4 МБ", "16 МБ"],
+  ["Личное сообщение", "4000 символов", "8000 символов"],
+  ["Анимированные медиа профиля", "Недоступно", "Доступно"],
+  ["Поддержка пространства SuperUp", "Недоступно", "Одно пространство"],
 ];
 
 function Availability({ value, premium = false }: { value: string; premium?: boolean }) {
@@ -114,7 +84,7 @@ export default function SuperFlipPage() {
       <section className={styles.hero}>
         <div className={styles.heroGrid}>
           <div className={styles.heroCopy}>
-            <span className={styles.draftBadge}><Sparkles size={15} /> Черновой тариф</span>
+            <span className={styles.draftBadge}><Sparkles size={15} /> Доступ по приглашению</span>
             <div className={styles.crownOrb}><Crown size={48} /></div>
             <p className={styles.kicker}>FLIPZERO PREMIUM</p>
             <h1>FlipZero <em>SUPER FLIP</em></h1>
@@ -122,17 +92,17 @@ export default function SuperFlipPage() {
               Расширенные возможности для общения, персонализации и сообществ в FlipZero.
             </p>
 
-            <BillingToggle />
+            <p className={styles.disclaimer}>Покупка ещё не запущена. Запишитесь в лист ожидания в приложении.</p>
 
             <div className={styles.heroActions}>
               <Link className={styles.primaryButton} href="/app">
-                <Crown size={18} /> Оформить SUPER FLIP <ArrowRight size={17} />
+                <Crown size={18} /> Открыть лист ожидания <ArrowRight size={17} />
               </Link>
               <a className={styles.supportLink} href="#support">Просто хотите поддержать проект? Задонать</a>
             </div>
 
             <p className={styles.disclaimer}>
-              Цена и лимиты на этой странице пока являются черновыми и должны быть подтверждены перед запуском.
+              Действующий доступ выдают администраторы; оплата и стоимость пока не объявлены.
             </p>
           </div>
 
@@ -148,15 +118,15 @@ export default function SuperFlipPage() {
                 <span className={styles.crownMini}><Crown size={14} /></span>
               </div>
               <h2>Ваш профиль</h2>
-              <p>@username <span>#0001</span></p>
+              <p>@username</p>
               <div className={styles.badgeRow}>
                 <b><Crown size={13} /> SUPER FLIP</b>
                 <b><ShieldCheck size={13} /> Профиль</b>
               </div>
               <div className={styles.profileStats}>
                 <span><ImageIcon size={18} /><small>Анимированный<br />баннер</small></span>
-                <span><Palette size={18} /><small>Кастомная<br />тема</small></span>
-                <span><Sticker size={18} /><small>Эмодзи<br />везде</small></span>
+                <span><Palette size={18} /><small>Больше<br />медиа</small></span>
+                <span><Sticker size={18} /><small>Сообщения<br />8000</small></span>
               </div>
             </div>
           </div>
@@ -167,7 +137,7 @@ export default function SuperFlipPage() {
         <div className={styles.sectionHeader}>
           <span>КЛЮЧЕВЫЕ ПРЕИМУЩЕСТВА</span>
           <h2>Больше возможностей.<br />Больше твоего стиля.</h2>
-          <p>Пять ключевых направлений SUPER FLIP из текущего чернового тарифа.</p>
+          <p>Возможности, которые уже доступны при активном SuperFlip.</p>
         </div>
 
         <div className={styles.perkGrid}>
@@ -186,7 +156,7 @@ export default function SuperFlipPage() {
         <div className={styles.sectionHeader}>
           <span>СРАВНЕНИЕ</span>
           <h2>Free или SUPER FLIP?</h2>
-          <p>Точные значения ниже взяты из текущего черновика тарифа и требуют финального утверждения перед запуском.</p>
+          <p>Сравнение действующих лимитов профиля и сообщений.</p>
         </div>
 
         <div className={styles.tableShell}>
@@ -230,9 +200,9 @@ export default function SuperFlipPage() {
           <h2>Больше от FlipZero.<br />В одном уровне.</h2>
           <p>Перейдите в приложение, чтобы открыть раздел SUPER FLIP.</p>
           <Link className={styles.primaryButton} href="/app">
-            Оформить SUPER FLIP <ArrowRight size={17} />
+            Открыть лист ожидания <ArrowRight size={17} />
           </Link>
-          <small>Тариф, цена и лимиты пока находятся на этапе согласования.</small>
+          <small>Покупка пока не открыта; запишитесь в лист ожидания.</small>
         </div>
       </section>
     </main>

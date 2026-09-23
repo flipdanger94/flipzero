@@ -232,7 +232,7 @@ function SuperFlipSettings() {
 }
 
 function SuperUpSettings() {
-  return <><SettingsHeading kicker="SUPERUP" title="Поддержка пространств" description="SuperUp — планируемая система общих бонусов для участников пространства. Уровни конкретного пространства можно посмотреть в его настройках." /><div className="superup-levels"><article><b>1</b><strong>Старт</strong><span>План: 2 поддержки</span><small>Дополнительные эмодзи и качество голоса</small></article><article><b>2</b><strong>Рост</strong><span>План: 7 поддержек</span><small>Оформление и расширенные загрузки</small></article><article><b>3</b><strong>Максимум</strong><span>План: 14 поддержек</span><small>Дополнительные лимиты и персонализация</small></article></div><div className="settings-callout superup-callout"><Gem size={22} /><span><strong>SuperUp скоро</strong><small>Пороги и бонусы уточняются. Поддержка пока недоступна.</small></span></div></>;
+  return <><SettingsHeading kicker="SUPERUP" title="Поддержка пространств" description="Активный SuperFlip позволяет поддержать одно пространство. Выберите пространство и откройте раздел SuperUp в его настройках." /><div className="settings-callout superup-callout"><Gem size={22} /><span><strong>Уровни 2, 7 и 14 поддержек</strong><small>Текущий уровень, сторонники и ваша поддержка отображаются в настройках пространства. Дополнительные бонусы ещё готовятся.</small></span></div></>;
 }
 
 function SettingsHeading({ kicker, title, description }: { kicker: string; title: string; description: string }) {

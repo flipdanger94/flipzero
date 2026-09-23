@@ -21,6 +21,7 @@ const releases = [
   ["0015", "Developer integrations", "Bot installs, OAuth Authorization Code, API tokens и Webhooks", "0014_developer_integrations.sql"],
   ["0016", "Роли участников", "Показ выбранных ролей рядом с участниками пространства", "0015_role_member_badges.sql"],
   ["0017", "Восстановление пароля", "Одноразовые ссылки и ограничения запросов", "0016_password_reset.sql"],
+  ["0018", "Поддержка SuperUp", "Распределение поддержки пространств", "0017_superup.sql"],
 ] as const;
 
 export default function SetupIndexPage() {
