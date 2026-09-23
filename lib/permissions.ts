@@ -12,6 +12,11 @@ export const Permission = {
   ConnectVoice: 1 << 10,
   SpeakVoice: 1 << 11,
   Stream: 1 << 12,
+  AttachFiles: 1 << 13,
+  AddReactions: 1 << 14,
+  EmbedLinks: 1 << 15,
+  MentionRoles: 1 << 16,
+  ReadHistory: 1 << 17,
   Administrator: 1 << 30,
   // Backward-compatible aliases used by the v1 channel API.
   VIEW_CHANNEL: 1 << 0,
@@ -36,4 +41,9 @@ export const DEFAULT_MEMBER_PERMISSIONS = combinePermissions(
   Permission.CreateInvites,
   Permission.ConnectVoice,
   Permission.SpeakVoice,
+  Permission.AttachFiles,
+  Permission.AddReactions,
+  Permission.EmbedLinks,
+  Permission.MentionRoles,
+  Permission.ReadHistory,
 );
