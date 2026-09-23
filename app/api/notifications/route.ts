@@ -22,3 +22,14 @@ export async function PATCH(request:Request){
  const id=String(body?.id??"");if(!id)return NextResponse.json({message:"Укажите уведомление."},{status:400});
  await db.update(notifications).set({readAt:now}).where(and(eq(notifications.id,id),eq(notifications.userId,user.id)));return NextResponse.json({ok:true});
 }
+
+
+export async function DELETE(request:Request){
+ const user=await getCurrentUser();if(!user)return NextResponse.json({message:"Требуется вход."},{status:401});
+ const body=await request.json().catch(()=>null);const id=String(body?.id??"");
+ if(!id)return NextResponse.json({message:"Укажите уведомление."},{status:400});
+ const db=getDatabase();
+ const deleted=await db.delete(notifications).where(and(eq(notifications.id,id),eq(notifications.userId,user.id))).returning({id:notifications.id});
+ if(!deleted.length)return NextResponse.json({message:"Уведомление не найдено."},{status:404});
+ return NextResponse.json({ok:true});
+}
