@@ -61,11 +61,20 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ sp
     const [updated] = await access.database.update(roles).set({ showInMemberList: body.showInMemberList }).where(and(eq(roles.id, body.id), eq(roles.spaceId, spaceId))).returning();
     return NextResponse.json({ role: updated });
   }
-  const parsed = roleSchema.safeParse(body);
-  if (!parsed.success || typeof body?.id !== "string") return NextResponse.json({ code: "INVALID_INPUT", message: "Проверьте данные роли." }, { status: 400 });
-  const [existing] = await access.database.select({ isManaged: roles.isManaged }).from(roles).where(and(eq(roles.id, body.id), eq(roles.spaceId, spaceId))).limit(1);
+  if (typeof body?.id !== "string") return NextResponse.json({ code: "INVALID_INPUT", message: "Проверьте данные роли." }, { status: 400 });
+  const [existing] = await access.database.select({ isManaged: roles.isManaged, permissions: roles.permissions }).from(roles).where(and(eq(roles.id, body.id), eq(roles.spaceId, spaceId))).limit(1);
   if (!existing) return NextResponse.json({ code: "NOT_FOUND", message: "Роль не найдена." }, { status: 404 });
-  if (existing.isManaged) return NextResponse.json({ code: "PROTECTED_ROLE", message: "Системную роль нельзя изменять." }, { status: 409 });
+
+  if (existing.isManaged) {
+    const styleSchema = roleSchema.pick({ name: true, color: true });
+    const parsedStyle = styleSchema.safeParse(body);
+    if (!parsedStyle.success) return NextResponse.json({ code: "INVALID_INPUT", message: "Проверьте название и цвет системной роли." }, { status: 400 });
+    const [updated] = await access.database.update(roles).set(parsedStyle.data).where(and(eq(roles.id, body.id), eq(roles.spaceId, spaceId))).returning();
+    return NextResponse.json({ role: updated });
+  }
+
+  const parsed = roleSchema.safeParse(body);
+  if (!parsed.success) return NextResponse.json({ code: "INVALID_INPUT", message: "Проверьте данные роли." }, { status: 400 });
   const [updated] = await access.database.update(roles).set(parsed.data).where(and(eq(roles.id, body.id), eq(roles.spaceId, spaceId))).returning();
   return NextResponse.json({ role: updated });
 }
