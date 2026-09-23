@@ -29,7 +29,7 @@ const roleLabel:Record<ClanRole,string>={leader:"Лидер",officer:"Офице
 const joinTypeLabel:Record<JoinType,string>={open:"Открытый",application:"По заявке",closed:"По приглашению"};
 const quickEmoji=["😀","😂","😍","😎","🤔","😭","🙏","👍","❤️","🔥","✨","🎉","⚔️","🛡️","🏆","💜"];
 
-export function ClanHub({currentUserId}:{currentUserId:string}) {
+export function ClanHub({currentUserId,onOpenDirect}:{currentUserId:string;onOpenDirect?:(userId:string)=>void}) {
   const [loading,setLoading]=useState(true);
   const [error,setError]=useState("");
   const [notice,setNotice]=useState("");
@@ -97,7 +97,7 @@ export function ClanHub({currentUserId}:{currentUserId:string}) {
     return()=>{window.clearTimeout(syncTimer);source.close();eventSourceRef.current=null};
   },[detail?.clan.id,tab,loadMessages]);
 
-  useEffect(()=>()=>{pendingFiles.forEach(file=>file.previewUrl&&URL.revokeObjectURL(file.previewUrl));eventSourceRef.current?.close()},[pendingFiles]);
+  useEffect(()=>()=>{eventSourceRef.current?.close()},[]);
 
   const canModerate=detail?.permissions.moderate??false;
   const canManage=detail?.permissions.manage??false;
@@ -279,7 +279,7 @@ export function ClanHub({currentUserId}:{currentUserId:string}) {
 
     {createOpen?<div className="clan-modal-backdrop" role="presentation" onMouseDown={event=>{if(event.target===event.currentTarget)setCreateOpen(false)}}><form className="clan-create-modal" onSubmit={createClan}><button type="button" className="clan-modal-close" onClick={()=>setCreateOpen(false)} aria-label="Закрыть"><X size={19}/></button><span><Swords size={24}/></span><h3>Создать клан</h3><p>До 50 участников. Вы автоматически станете лидером.</p><div className="clan-create-grid"><label><span>Название</span><input name="name" minLength={3} maxLength={32} required placeholder="Например, Zero Knights"/></label><label><span>Тег</span><input name="tag" minLength={2} maxLength={5} required placeholder="ZERO"/></label><label className="wide"><span>Описание</span><textarea name="description" rows={3} maxLength={500} placeholder="Расскажите о клане"/></label><label><span>Тип вступления</span><select name="joinType" defaultValue="application"><option value="open">Открытый</option><option value="application">По заявке</option><option value="closed">Только по приглашению</option></select></label><label><span>Аватар</span><input type="file" accept="image/*" onChange={event=>setCreateAvatar(event.target.files?.[0]??null)}/></label><label className="wide"><span>Баннер</span><input type="file" accept="image/*" onChange={event=>setCreateBanner(event.target.files?.[0]??null)}/></label></div><button className="clan-primary" disabled={busy}>{busy?<><LoaderCircle className="spin" size={16}/>Создаём…</>:"Создать клан"}</button></form></div>:null}
 
-    {profileUser?<UserProfilePopover key={profileUser.userId} userId={profileUser.userId} displayName={profileUser.displayName} onClose={()=>setProfileUser(null)}/>:null}
+    {profileUser?<UserProfilePopover key={profileUser.userId} userId={profileUser.userId} displayName={profileUser.displayName} onClose={()=>setProfileUser(null)} onOpenDirect={onOpenDirect}/>:null}
     {confirm?.kind==="leave"?<ConfirmDialog title="Покинуть клан?" description="Вы потеряете доступ к клановому чату и списку участников." confirmLabel="Покинуть" destructive onCancel={()=>setConfirm(null)} onConfirm={()=>void leaveClan()}/>:null}
     {confirm?.kind==="delete"&&detail?<ConfirmDialog title={`Удалить клан «${detail.clan.name}»?`} description="Все данные клана и сообщения будут удалены без возможности восстановления." confirmLabel="Удалить клан" destructive confirmationText={detail.clan.name} onCancel={()=>setConfirm(null)} onConfirm={()=>void deleteClan()}/>:null}
     {confirm?.kind==="kick"&&confirm.member?<ConfirmDialog title={`Исключить ${confirm.member.displayName}?`} description="Участник потеряет доступ к клану и чату." confirmLabel="Исключить" destructive onCancel={()=>setConfirm(null)} onConfirm={()=>{const member=confirm.member!;setConfirm(null);void memberAction(member,"kick")}}/>:null}
