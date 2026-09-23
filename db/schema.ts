@@ -29,6 +29,7 @@ export const users = pgTable("users", {
   profileLinks: jsonb("profile_links").$type<string[]>().default([]).notNull(),
   accentColor: text("accent_color").default("#ff5c70").notNull(),
   presence: presenceStatus("presence").default("offline").notNull(),
+  lastSeenAt: timestamp("last_seen_at", { withTimezone: true }),
   emailVerifiedAt: timestamp("email_verified_at", { withTimezone: true }),
   globalXp: bigint("global_xp", { mode: "number" }).default(0).notNull(),
   globalLevel: integer("global_level").default(1).notNull(),

@@ -738,3 +738,16 @@
 .fz-levels{padding:65px 0;background:linear-gradient(125deg,#0b1830,#131033)}.fz-levels h2{max-width:760px;margin:12px 0;font-size:clamp(2rem,4vw,3.6rem);letter-spacing:-.04em}.fz-levels p{max-width:650px;color:#c0cce3;font-size:1.1rem;line-height:1.6}.auth-password-hint{color:#aab8d1;font-size:.85rem;line-height:1.4}
 @media(max-width:600px){.fz-profile-editor{position:absolute;inset:0;max-height:100%;border-radius:0;padding:16px 18px}.fz-levels{padding:48px 0}}
 .role-display-toggle{display:flex!important;align-items:center;gap:10px;padding:12px 14px;margin-bottom:14px;border:1px solid #35486d;border-radius:11px;background:#101c30;color:#d9e4fa;font-size:.92rem;line-height:1.4;cursor:pointer}.role-display-toggle input{accent-color:#6589ff;width:17px;height:17px;flex:0 0 auto}.member-role-badge{max-width:115px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;border:1px solid color-mix(in srgb,var(--role-color),transparent 50%);border-radius:6px;padding:3px 7px;color:var(--role-color);background:color-mix(in srgb,var(--role-color),transparent 88%);font-size:.73rem}.fz-space-initials{display:inline-grid;place-items:center;width:27px;height:27px;border-radius:8px;background:#334474;color:#eaf0ff;font-size:.68rem;font-style:normal;font-weight:800}
+/* Conversation rhythm and compact channel controls. */
+.app-shell .persistent-message.grouped-message{padding-top:2px;padding-bottom:2px}
+.app-shell .persistent-message .message-time-gutter{font-size:.55rem;color:transparent;align-self:start;line-height:1.4;padding-top:4px;text-align:center}
+.app-shell .persistent-message.grouped-message:hover .message-time-gutter{color:var(--muted)}
+.app-shell .persistent-message.grouped-message .message-body>p{margin-top:0}
+.app-shell .channel-group .category-actions{opacity:0;transition:opacity .15s}
+.app-shell .channel-group:hover .category-actions,.app-shell .channel-group:focus-within .category-actions{opacity:1}
+@media (hover:none){.app-shell .channel-group .category-actions{opacity:1}}
+.app-shell .real-member-list h2{display:flex;justify-content:space-between;gap:8px}
+.app-shell .real-member-list h2 small{color:#62c495;font-size:.65rem}
+.app-shell .member.is-offline{opacity:.64}
+.app-shell .member.is-offline .mini-avatar i{background:#747783}
+.app-shell .member.is-online .mini-avatar i{background:#47d89a}
