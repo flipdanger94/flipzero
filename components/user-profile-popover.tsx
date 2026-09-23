@@ -46,19 +46,20 @@ export function UserProfilePopover({
   const [notice,setNotice]=useState("");
   const [busy,setBusy]=useState(false);
   const [reporting,setReporting]=useState(false);
-  const [ignored,setIgnored]=useState(false);
+  const [ignored,setIgnored]=useState(()=>{
+    if(typeof window==="undefined") return false;
+    try{return (JSON.parse(localStorage.getItem("flipzero:ignored-users:v1")??"[]") as string[]).includes(userId)}catch{return false}
+  });
   const fullRef=useModalA11y(()=>setFull(false),full);
   const reportRef=useModalA11y(()=>setReporting(false),reporting);
 
   useEffect(()=>{
     let cancelled=false;
     const controller=new AbortController();
-    setProfile(null);setError("");
     void fetch(`/api/v1/users/${userId}/profile`,{cache:"no-store",signal:controller.signal})
       .then(async response=>({ok:response.ok,data:await response.json()}))
       .then(({ok,data})=>{if(cancelled)return;if(ok&&data.profile)setProfile(data.profile);else setError(data.message??"Не удалось загрузить профиль.")})
       .catch(()=>{if(!cancelled)setError("Не удалось загрузить профиль.")});
-    try{setIgnored(JSON.parse(localStorage.getItem("flipzero:ignored-users:v1")??"[]").includes(userId))}catch{}
     return()=>{cancelled=true;controller.abort()};
   },[userId]);
 
@@ -150,7 +151,7 @@ export function UserProfilePopover({
           {notice?<p className="fz-mini-notice" role="status">{notice}</p>:null}
         </div>
         {menu?<div className="fz-profile-menu" role="menu">
-          <button role="menuitem" onClick={()=>setFull(true)}>Полный профиль</button>
+          <button role="menuitem" onClick={()=>{setMenu(false);setFull(true)}}>Полный профиль</button>
           <button role="menuitem" onClick={toggleIgnore}><VolumeX size={15}/>{ignored?"Не игнорировать":"Игнорировать"}</button>
           {p.isFriend?<button role="menuitem" onClick={()=>void friendAction()}><UserMinus size={15}/>Удалить из друзей</button>:null}
           <i/>
