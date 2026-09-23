@@ -1,6 +1,6 @@
 "use client";
 
-import { type CSSProperties, type FormEvent, Fragment, useEffect, useRef, useState } from "react";
+import { type CSSProperties, type FormEvent, type ReactNode, Fragment, useEffect, useRef, useState } from "react";
 import { CornerUpLeft, ExternalLink, Gamepad2, Link2, LoaderCircle, MapPin, MessageCircle, MessageSquareText, Mic, Pin, Search, SendHorizontal, ShieldCheck, Smile, Sparkles, Square, Star, Trash2, Users, X, ShieldAlert, UserX } from "lucide-react";
 import { MediaImage } from "./media-image";
 import { ImageUpload } from "./image-upload";
@@ -9,7 +9,43 @@ import { useModalA11y } from "@/hooks/use-modal-a11y";
 
 type Attachment = { type: "voice"; url: string; duration: number; mimeType: string };
 type ChatMessage = { id: string; authorId: string; displayName: string; username: string; avatarUrl?: string | null; content: string; attachments?: Attachment[]; replyToId: string | null; editedAt?: string | null; pinnedAt?: string | null; createdAt: string; reactions: Array<{ emoji: string; userId: string }> };
+type MentionSuggestion =
+  | { type: "user"; id: string; username: string; displayName: string; nickname: string | null; avatarUrl?: string | null; online?: boolean }
+  | { type: "role"; id: string; name: string; color: string };
 const quickEmoji = ["😀", "😂", "😍", "🥰", "😎", "🤔", "😭", "🙏", "👍", "👏", "❤️", "🔥", "✨", "🎉", "💜", "👋"];
+
+function escapeRegExp(value: string) {
+  let escaped = "";
+  for (const character of value) {
+    if ("\\^$.*+?()[]{}|".includes(character)) escaped += "\\";
+    escaped += character;
+  }
+  return escaped;
+}
+
+function renderMentionContent(content: string, roleNames: string[]): ReactNode[] {
+  const roleSet = new Set(roleNames.map((name) => name.toLocaleLowerCase("ru")));
+  const rolePattern = [...roleNames].sort((a, b) => b.length - a.length).map(escapeRegExp).join("|");
+  const targetPattern = rolePattern ? "(?:" + rolePattern + "|[\\p{L}\\p{N}_.-]+)" : "[\\p{L}\\p{N}_.-]+";
+  const mentionRegex = new RegExp("(^|\\s)(@" + targetPattern + ")(?=$|\\s|[.,!?;:])", "giu");
+  const nodes: ReactNode[] = [];
+  let cursor = 0;
+  let key = 0;
+
+  for (const match of content.matchAll(mentionRegex)) {
+    const start = match.index ?? 0;
+    const prefix = match[1] ?? "";
+    const mention = match[2] ?? "";
+    if (start > cursor) nodes.push(content.slice(cursor, start));
+    if (prefix) nodes.push(prefix);
+    const isRole = roleSet.has(mention.slice(1).toLocaleLowerCase("ru"));
+    nodes.push(<span className={"chat-mention " + (isRole ? "role-mention" : "user-mention")} key={"mention-" + key++}>{mention}</span>);
+    cursor = start + match[0].length;
+  }
+
+  if (cursor < content.length) nodes.push(content.slice(cursor));
+  return nodes;
+}
 
 function LinkPreview({ content }: { content: string }) {
   const match = content.match(/https?:\/\/[^\s<]+/i);
@@ -20,7 +56,7 @@ function LinkPreview({ content }: { content: string }) {
 }
 
 export function PersistentChat({ channelId, channelName, spaceId, currentUserId, ownerId, searchQuery, onOpenDirect }: { channelId: string; channelName: string; spaceId: string; currentUserId: string; ownerId?: string; searchQuery: string; onOpenDirect?: (userId:string)=>void }) {
-  const [messages, setMessages] = useState<ChatMessage[]>([]); const [reportingMessage,setReportingMessage]=useState<ChatMessage|null>(null); const [profile, setProfile] = useState<ChatMessage | null>(null); const [draft, setDraft] = useState(""); const [reply, setReply] = useState<ChatMessage | null>(null); const [loading, setLoading] = useState(true); const [error, setError] = useState(""); const [recording, setRecording] = useState(false); const [recordSeconds, setRecordSeconds] = useState(0); const [emojiOpen, setEmojiOpen] = useState(false);
+  const [messages, setMessages] = useState<ChatMessage[]>([]); const [reportingMessage,setReportingMessage]=useState<ChatMessage|null>(null); const [profile, setProfile] = useState<ChatMessage | null>(null); const [draft, setDraft] = useState(""); const [reply, setReply] = useState<ChatMessage | null>(null); const [loading, setLoading] = useState(true); const [error, setError] = useState(""); const [recording, setRecording] = useState(false); const [recordSeconds, setRecordSeconds] = useState(0); const [emojiOpen, setEmojiOpen] = useState(false); const [mentionQuery, setMentionQuery] = useState<string | null>(null); const [mentionItems, setMentionItems] = useState<MentionSuggestion[]>([]); const [mentionIndex, setMentionIndex] = useState(0); const [mentionStart, setMentionStart] = useState(-1); const [mentionLoading, setMentionLoading] = useState(false); const [roleNames, setRoleNames] = useState<string[]>([]);
   const recorderRef = useRef<MediaRecorder | null>(null); const streamRef = useRef<MediaStream | null>(null); const chunksRef = useRef<Blob[]>([]); const startedRef = useRef(0);
   const composerRef = useRef<HTMLTextAreaElement | null>(null);
   const messageListRef = useRef<HTMLDivElement | null>(null); const followLatestRef = useRef(true); const mutationRef = useRef(false); const revisionRef = useRef(0);
@@ -52,9 +88,69 @@ export function PersistentChat({ channelId, channelName, spaceId, currentUserId,
   useEffect(() => { const list = messageListRef.current; if (list && followLatestRef.current) list.scrollTop = list.scrollHeight; }, [messages]);
   useEffect(() => { if (!recording) return; const timer = window.setInterval(() => { const seconds = Math.floor((Date.now() - startedRef.current) / 1000); setRecordSeconds(seconds); if (seconds >= 60 && recorderRef.current?.state === "recording") recorderRef.current.stop(); }, 250); return () => window.clearInterval(timer); }, [recording]);
   useEffect(() => { if (!emojiOpen) return; const close = (event: KeyboardEvent) => { if (event.key === "Escape") setEmojiOpen(false); }; window.addEventListener("keydown", close); return () => window.removeEventListener("keydown", close); }, [emojiOpen]);
+  useEffect(() => {
+    let active = true;
+    fetch("/api/v1/spaces/" + spaceId + "/roles")
+      .then(async (response) => ({ ok: response.ok, data: await response.json() }))
+      .then(({ ok, data }) => {
+        if (active && ok) setRoleNames((data.roles ?? []).map((role: { name?: string }) => role.name).filter((name: unknown): name is string => typeof name === "string"));
+      })
+      .catch(() => {});
+    return () => { active = false; };
+  }, [spaceId]);
+  useEffect(() => {
+    if (mentionQuery === null) return;
+    const controller = new AbortController();
+    const timer = window.setTimeout(async () => {
+      setMentionLoading(true);
+      try {
+        const response = await fetch("/api/v1/spaces/" + spaceId + "/mentions?q=" + encodeURIComponent(mentionQuery), { signal: controller.signal });
+        const data = await response.json();
+        if (!response.ok || controller.signal.aborted) return;
+        const items = (data.items ?? []) as MentionSuggestion[];
+        setMentionItems(items);
+        setMentionIndex(0);
+        const searchedRoles = items.filter((item): item is Extract<MentionSuggestion, { type: "role" }> => item.type === "role").map((item) => item.name);
+        if (searchedRoles.length) setRoleNames((current) => [...new Set([...current, ...searchedRoles])]);
+      } catch {
+        if (!controller.signal.aborted) setMentionItems([]);
+      } finally {
+        if (!controller.signal.aborted) setMentionLoading(false);
+      }
+    }, 110);
+    return () => { controller.abort(); window.clearTimeout(timer); };
+  }, [mentionQuery, spaceId]);
   useEffect(() => () => streamRef.current?.getTracks().forEach((track) => track.stop()), []);
   async function post(content: string, attachments: Attachment[] = []) { mutationRef.current = true; revisionRef.current++; try { const response = await fetch(`/api/v1/channels/${channelId}/messages`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ content, attachments, replyToId: reply?.id }) }); const data = await response.json(); if (!response.ok) { setError(data.message ?? "Не удалось отправить сообщение."); return; } followLatestRef.current = true; setMessages((items) => [...items, data.message]); setDraft(""); setReply(null); void fetch("/api/v1/gamification/award", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ source: "message", spaceId, idempotencyKey: `message:${data.message.id}` }) }); } catch { setError("Не удалось отправить сообщение. Проверьте соединение."); } finally { mutationRef.current = false; } }
-  async function send(event: FormEvent) { event.preventDefault(); const content = draft.trim(); if (content) { setEmojiOpen(false); await post(content); } }
+  async function send(event: FormEvent) { event.preventDefault(); const content = draft.trim(); if (content) { setEmojiOpen(false); setMentionQuery(null); setMentionItems([]); await post(content); } }
+  function syncMentionQuery(value: string, cursor: number) {
+    const beforeCursor = value.slice(0, cursor);
+    const match = beforeCursor.match(/(?:^|\s)@([\p{L}\p{N}_.-]{0,48})$/u);
+    if (!match) {
+      setMentionQuery(null);
+      setMentionItems([]);
+      setMentionStart(-1);
+      return;
+    }
+    setMentionStart(beforeCursor.lastIndexOf("@"));
+    setMentionQuery(match[1] ?? "");
+    setMentionIndex(0);
+    setEmojiOpen(false);
+  }
+  function chooseMention(item: MentionSuggestion) {
+    const input = composerRef.current;
+    const cursor = input?.selectionStart ?? draft.length;
+    const start = mentionStart >= 0 ? mentionStart : Math.max(0, cursor - (mentionQuery?.length ?? 0) - 1);
+    const label = item.type === "user" ? "@" + item.username : "@" + item.name;
+    const next = draft.slice(0, start) + label + " " + draft.slice(cursor);
+    const caret = start + label.length + 1;
+    setDraft(next);
+    setMentionQuery(null);
+    setMentionItems([]);
+    setMentionIndex(0);
+    setMentionStart(-1);
+    requestAnimationFrame(() => { input?.focus(); input?.setSelectionRange(caret, caret); });
+  }
   function insertEmoji(emoji: string) { const input = composerRef.current; const start = input?.selectionStart ?? draft.length; const end = input?.selectionEnd ?? draft.length; setDraft((current) => `${current.slice(0,start)}${emoji}${current.slice(end)}`); setEmojiOpen(false); requestAnimationFrame(() => { input?.focus(); input?.setSelectionRange(start + emoji.length,start + emoji.length); }); }
   async function startRecording() { try { const stream = await navigator.mediaDevices.getUserMedia({ audio: true }); const recorder = new MediaRecorder(stream); streamRef.current = stream; recorderRef.current = recorder; chunksRef.current = []; startedRef.current = Date.now(); setRecordSeconds(0); recorder.ondataavailable = (event) => { if (event.data.size) chunksRef.current.push(event.data); }; recorder.onstop = () => { const duration = Math.max(1, Math.round((Date.now() - startedRef.current) / 1000)); const blob = new Blob(chunksRef.current, { type: recorder.mimeType || "audio/webm" }); const reader = new FileReader(); reader.onloadend = () => { if (typeof reader.result === "string") void post("Голосовое сообщение", [{ type: "voice", url: reader.result, duration, mimeType: blob.type }]); }; reader.readAsDataURL(blob); stream.getTracks().forEach((track) => track.stop()); setRecording(false); }; recorder.start(); setRecording(true); } catch { setError("Не удалось получить доступ к микрофону."); } }
   function stopRecording() { if (recorderRef.current?.state === "recording") recorderRef.current.stop(); }
@@ -62,7 +158,7 @@ export function PersistentChat({ channelId, channelName, spaceId, currentUserId,
   async function pin(messageId: string) { await fetch(`/api/v1/channels/${channelId}/messages`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ action: "pin", messageId }) }); await load(); }
   function reportMessage(message: ChatMessage) { if (message.authorId !== currentUserId) setReportingMessage(message); }
   async function remove(messageId: string) { await fetch(`/api/v1/channels/${channelId}/messages?messageId=${messageId}`, { method: "DELETE" }); setMessages((items) => items.filter((item) => item.id !== messageId)); }
-  return <>{reportingMessage ? <ReportDialog targetType="message" targetId={reportingMessage.id} onClose={() => setReportingMessage(null)} onSuccess={() => setError("Жалоба на сообщение отправлена модерации.")} /> : null}{profile ? <ProfileModal userId={profile.authorId} displayName={profile.displayName} onClose={() => setProfile(null)} onOpenDirect={onOpenDirect} /> : null}<div className="message-list" ref={messageListRef} onScroll={(event) => { const list = event.currentTarget; followLatestRef.current = list.scrollHeight - list.scrollTop - list.clientHeight < 96; }}><div className="channel-intro"><div className="intro-icon"><MessageSquareText size={31} /></div><h1>#{channelName}</h1><p>Сообщения сохраняются и доступны всем участникам пространства.</p></div>{loading ? <div className="chat-loading"><LoaderCircle className="spin" /> Загружаем сообщения...</div> : messages.length ? messages.map((message, index) => { const previous = messages[index - 1]; const elapsed = previous ? new Date(message.createdAt).getTime() - new Date(previous.createdAt).getTime() : 0; const newDay = !previous || new Date(message.createdAt).toDateString() !== new Date(previous.createdAt).toDateString(); const separated = newDay || elapsed > 30 * 60_000; const grouped = !separated && previous.authorId === message.authorId && elapsed < 5 * 60_000 && !message.replyToId; return <Fragment key={message.id}>{separated ? <div className="day-divider"><span>{new Date(message.createdAt).toLocaleDateString("ru-RU", { day: "numeric", month: "long", year: "numeric", ...(newDay ? {} : { hour: "2-digit", minute: "2-digit" }) })}</span></div> : null}<article className={`message persistent-message ${grouped ? "grouped-message" : ""}`}>{grouped ? <div className="message-time-gutter" title={new Date(message.createdAt).toLocaleString("ru-RU")}>{new Date(message.createdAt).toLocaleTimeString("ru-RU", { hour:"2-digit", minute:"2-digit" })}</div> : <div className="avatar avatar-coral">{message.avatarUrl ? <MediaImage src={message.avatarUrl} /> : message.displayName.split(/\s+/).map((part) => part[0]).join("").slice(0, 2)}</div>}<div className="message-body">{!grouped ? <div className="message-meta"><button type="button" className="profile-name-trigger" onClick={() => setProfile(message)}>{message.displayName}</button><time>{new Date(message.createdAt).toLocaleString("ru-RU", { hour: "2-digit", minute: "2-digit" })}</time>{message.editedAt ? <small>изменено</small> : null}{message.pinnedAt ? <Pin size={12} /> : null}</div> : null}{message.replyToId ? <small className="reply-mark"><CornerUpLeft size={11} /> Ответ на сообщение</small> : null}<p>{message.content}</p>{message.attachments?.filter((item) => item.type === "voice").map((item, index) => <div className="voice-message" key={index}><Mic size={16} /><audio controls preload="metadata" src={item.url} /><span>{item.duration} сек.</span></div>)}<LinkPreview content={message.content} /><div className="reactions">{[...new Set(message.reactions.map((item) => item.emoji))].map((emoji) => <button key={emoji} onClick={() => react(message.id, emoji)}>{emoji} {message.reactions.filter((item) => item.emoji === emoji).length}</button>)}<button onClick={() => react(message.id, "🔥")}>🔥</button></div></div><div className="message-actions"><button title="Ответить" onClick={() => setReply(message)}><CornerUpLeft size={14} /></button>{message.authorId !== currentUserId ? <button title="Пожаловаться" onClick={() => void reportMessage(message)}><ShieldAlert size={14} /></button> : null}{ownerId === currentUserId ? <button title="Закрепить" onClick={() => pin(message.id)}><Pin size={14} /></button> : null}{message.authorId === currentUserId || ownerId === currentUserId ? <button title="Удалить" onClick={() => remove(message.id)}><Trash2 size={14} /></button> : null}</div></article></Fragment>;}) : <div className="search-empty"><Search size={24} /><strong>{searchQuery ? "Ничего не найдено" : "Начните разговор"}</strong><span>{searchQuery ? "Попробуйте другой запрос." : "Первое сообщение появится здесь."}</span></div>}{error ? <div className="auth-error">{error}</div> : null}</div><div className="composer-wrap">{emojiOpen ? <div className="composer-emoji-picker" role="group" aria-label="Выберите эмодзи">{quickEmoji.map((emoji) => <button key={emoji} type="button" aria-label={`Вставить ${emoji}`} onClick={() => insertEmoji(emoji)}>{emoji}</button>)}</div> : null}{reply ? <div className="replying"><span>Ответ для <b>{reply.displayName}</b></span><button onClick={() => setReply(null)}>×</button></div> : null}<form className={`composer ${recording ? "is-recording" : ""}`} onSubmit={send}><textarea ref={composerRef} aria-label={`Сообщение в канале ${channelName}`} placeholder={`Написать в #${channelName}`} rows={1} value={draft} onChange={(event) => setDraft(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); event.currentTarget.form?.requestSubmit(); } }} />{recording ? <span className="recording-time"><i /> Запись {recordSeconds} сек.</span> : null}<button type="button" title={recording ? "Остановить и отправить" : "Записать голосовое сообщение"} onClick={recording ? stopRecording : startRecording}>{recording ? <Square size={18} /> : <Mic size={20} />}</button><button type="button" title="Выбрать эмодзи" aria-label="Выбрать эмодзи" aria-expanded={emojiOpen} onClick={() => setEmojiOpen((open) => !open)} disabled={recording}><Smile size={20} /></button><button className="send-button" disabled={!draft.trim()}><SendHorizontal size={18} /></button></form></div></>;
+  return <>{reportingMessage ? <ReportDialog targetType="message" targetId={reportingMessage.id} onClose={() => setReportingMessage(null)} onSuccess={() => setError("Жалоба на сообщение отправлена модерации.")} /> : null}{profile ? <ProfileModal userId={profile.authorId} displayName={profile.displayName} onClose={() => setProfile(null)} onOpenDirect={onOpenDirect} /> : null}<div className="message-list" ref={messageListRef} onScroll={(event) => { const list = event.currentTarget; followLatestRef.current = list.scrollHeight - list.scrollTop - list.clientHeight < 96; }}><div className="channel-intro"><div className="intro-icon"><MessageSquareText size={31} /></div><h1>#{channelName}</h1><p>Сообщения сохраняются и доступны всем участникам пространства.</p></div>{loading ? <div className="chat-loading"><LoaderCircle className="spin" /> Загружаем сообщения...</div> : messages.length ? messages.map((message, index) => { const previous = messages[index - 1]; const elapsed = previous ? new Date(message.createdAt).getTime() - new Date(previous.createdAt).getTime() : 0; const newDay = !previous || new Date(message.createdAt).toDateString() !== new Date(previous.createdAt).toDateString(); const separated = newDay || elapsed > 30 * 60_000; const grouped = !separated && previous.authorId === message.authorId && elapsed < 5 * 60_000 && !message.replyToId; return <Fragment key={message.id}>{separated ? <div className="day-divider"><span>{new Date(message.createdAt).toLocaleDateString("ru-RU", { day: "numeric", month: "long", year: "numeric", ...(newDay ? {} : { hour: "2-digit", minute: "2-digit" }) })}</span></div> : null}<article className={`message persistent-message ${grouped ? "grouped-message" : ""}`}>{grouped ? <div className="message-time-gutter" title={new Date(message.createdAt).toLocaleString("ru-RU")}>{new Date(message.createdAt).toLocaleTimeString("ru-RU", { hour:"2-digit", minute:"2-digit" })}</div> : <div className="avatar avatar-coral">{message.avatarUrl ? <MediaImage src={message.avatarUrl} /> : message.displayName.split(/\s+/).map((part) => part[0]).join("").slice(0, 2)}</div>}<div className="message-body">{!grouped ? <div className="message-meta"><button type="button" className="profile-name-trigger" onClick={() => setProfile(message)}>{message.displayName}</button><time>{new Date(message.createdAt).toLocaleString("ru-RU", { hour: "2-digit", minute: "2-digit" })}</time>{message.editedAt ? <small>изменено</small> : null}{message.pinnedAt ? <Pin size={12} /> : null}</div> : null}{message.replyToId ? <small className="reply-mark"><CornerUpLeft size={11} /> Ответ на сообщение</small> : null}<p>{renderMentionContent(message.content, roleNames)}</p>{message.attachments?.filter((item) => item.type === "voice").map((item, index) => <div className="voice-message" key={index}><Mic size={16} /><audio controls preload="metadata" src={item.url} /><span>{item.duration} сек.</span></div>)}<LinkPreview content={message.content} /><div className="reactions">{[...new Set(message.reactions.map((item) => item.emoji))].map((emoji) => <button key={emoji} onClick={() => react(message.id, emoji)}>{emoji} {message.reactions.filter((item) => item.emoji === emoji).length}</button>)}<button onClick={() => react(message.id, "🔥")}>🔥</button></div></div><div className="message-actions"><button title="Ответить" onClick={() => setReply(message)}><CornerUpLeft size={14} /></button>{message.authorId !== currentUserId ? <button title="Пожаловаться" onClick={() => void reportMessage(message)}><ShieldAlert size={14} /></button> : null}{ownerId === currentUserId ? <button title="Закрепить" onClick={() => pin(message.id)}><Pin size={14} /></button> : null}{message.authorId === currentUserId || ownerId === currentUserId ? <button title="Удалить" onClick={() => remove(message.id)}><Trash2 size={14} /></button> : null}</div></article></Fragment>;}) : <div className="search-empty"><Search size={24} /><strong>{searchQuery ? "Ничего не найдено" : "Начните разговор"}</strong><span>{searchQuery ? "Попробуйте другой запрос." : "Первое сообщение появится здесь."}</span></div>}{error ? <div className="auth-error">{error}</div> : null}</div><div className="composer-wrap">{mentionQuery !== null ? <div className="mention-picker" role="listbox" aria-label="Упоминания"><header><strong>Упоминания</strong><small>Люди и роли</small></header>{mentionLoading ? <div className="mention-picker-state"><LoaderCircle className="spin" size={16} /> Ищем…</div> : mentionItems.length ? mentionItems.map((item, index) => <button key={item.type + ":" + item.id} type="button" role="option" aria-selected={index === mentionIndex} className={index === mentionIndex ? "active" : ""} onMouseDown={(event) => event.preventDefault()} onClick={() => chooseMention(item)}>{item.type === "user" ? <><span className="mention-avatar">{item.avatarUrl ? <MediaImage src={item.avatarUrl} /> : (item.nickname || item.displayName).slice(0, 2).toLocaleUpperCase("ru")}<i className={item.online ? "online" : ""} /></span><span className="mention-copy"><strong>{item.nickname || item.displayName}</strong><small>@{item.username}{item.nickname && item.nickname !== item.displayName ? " · " + item.displayName : ""}</small></span><em>{item.online ? "В сети" : "Участник"}</em></> : <><span className="mention-role-icon" style={{ "--mention-role-color": item.color } as CSSProperties}><ShieldCheck size={16} /></span><span className="mention-copy"><strong>@{item.name}</strong><small>Роль сообщества</small></span><em>Роль</em></>}</button>) : <div className="mention-picker-state">Ничего не найдено</div>}</div> : null}{emojiOpen ? <div className="composer-emoji-picker" role="group" aria-label="Выберите эмодзи">{quickEmoji.map((emoji) => <button key={emoji} type="button" aria-label={"Вставить " + emoji} onClick={() => insertEmoji(emoji)}>{emoji}</button>)}</div> : null}{reply ? <div className="replying"><span>Ответ для <b>{reply.displayName}</b></span><button onClick={() => setReply(null)}>×</button></div> : null}<form className={"composer " + (recording ? "is-recording" : "")} onSubmit={send}><textarea ref={composerRef} aria-label={"Сообщение в канале " + channelName} placeholder={"Написать в #" + channelName + " · @ для упоминания"} rows={1} value={draft} onChange={(event) => { const value = event.target.value; setDraft(value); syncMentionQuery(value, event.target.selectionStart ?? value.length); }} onKeyDown={(event) => { if (mentionQuery !== null && mentionItems.length) { if (event.key === "ArrowDown") { event.preventDefault(); setMentionIndex((index) => (index + 1) % mentionItems.length); return; } if (event.key === "ArrowUp") { event.preventDefault(); setMentionIndex((index) => (index - 1 + mentionItems.length) % mentionItems.length); return; } if ((event.key === "Enter" || event.key === "Tab") && !event.shiftKey) { event.preventDefault(); chooseMention(mentionItems[mentionIndex] ?? mentionItems[0]); return; } if (event.key === "Escape") { event.preventDefault(); setMentionQuery(null); setMentionItems([]); return; } } if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); event.currentTarget.form?.requestSubmit(); } }} />{recording ? <span className="recording-time"><i /> Запись {recordSeconds} сек.</span> : null}<button type="button" title={recording ? "Остановить и отправить" : "Записать голосовое сообщение"} onClick={recording ? stopRecording : startRecording}>{recording ? <Square size={18} /> : <Mic size={20} />}</button><button type="button" title="Выбрать эмодзи" aria-label="Выбрать эмодзи" aria-expanded={emojiOpen} onClick={() => { setMentionQuery(null); setMentionItems([]); setEmojiOpen((open) => !open); }} disabled={recording}><Smile size={20} /></button><button className="send-button" disabled={!draft.trim()}><SendHorizontal size={18} /></button></form></div></>;
 }
 
 
