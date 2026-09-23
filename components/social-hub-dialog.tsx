@@ -21,6 +21,7 @@ type ProfileDetails = {
   commonFriends:CommonFriend[]; commonServers:CommonServer[];
 };
 type FriendRequest = { id: string; from: Person };
+type OutgoingFriendRequest = { id: string; to: Person };
 type Conversation = { id: string; other: Person; unread: number; lastMessage: { text: string; createdAt: string } | null };
 type DirectAttachment = { type:"image"|"audio"|"file"; url:string; name:string; mimeType:string; size:number; duration?:number };
 type DirectMessage = { id: string; senderId: string; receiverId: string; text: string; attachments?:DirectAttachment[]; createdAt: string };
@@ -37,6 +38,7 @@ export function SocialHubDialog({ currentUserId, initialTab = "messages", initia
   const [notice, setNotice] = useState("");
   const [friends, setFriends] = useState<Person[]>([]);
   const [requests, setRequests] = useState<FriendRequest[]>([]);
+  const [outgoingRequests,setOutgoingRequests]=useState<OutgoingFriendRequest[]>([]);
   const [blocked, setBlocked] = useState<Person[]>([]);
   const [results, setResults] = useState<Person[]>([]);
   const [friendView,setFriendView]=useState<FriendView>("online");
@@ -72,7 +74,7 @@ export function SocialHubDialog({ currentUserId, initialTab = "messages", initia
   const loadFriends = useCallback(async () => {
     const response = await fetch("/api/friends", { cache:"no-store" });
     const data = await response.json();
-    if (response.ok) { setFriends(data.friends ?? []); setRequests(data.requests ?? []); }
+    if (response.ok) { setFriends(data.friends ?? []); setRequests(data.requests ?? []); setOutgoingRequests(data.outgoingRequests ?? []); }
   }, []);
   const loadConversations = useCallback(async () => {
     const response = await fetch("/api/messages", { cache:"no-store" });
@@ -145,6 +147,7 @@ export function SocialHubDialog({ currentUserId, initialTab = "messages", initia
   async function requestFriend(toId:string){const response=await fetch("/api/friends",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({toId})});const data=await response.json();setNotice(response.ok?"Заявка отправлена.":data.message);await loadFriends()}
   async function respond(requestId:string,status:"accepted"|"declined"){await fetch("/api/friends",{method:"PATCH",headers:{"content-type":"application/json"},body:JSON.stringify({requestId,status})});await loadFriends();await loadConversations()}
   async function removeFriend(friendId:string){await fetch(`/api/friends?friendId=${friendId}`,{method:"DELETE"});await loadFriends()}
+  async function cancelFriendRequest(requestId:string){const response=await fetch(`/api/friends?requestId=${requestId}`,{method:"DELETE"});if(response.ok){setNotice("Заявка отменена.");await loadFriends()}else setNotice("Не удалось отменить заявку.")}
   async function unblock(userId:string){const response=await fetch(`/api/blocks?userId=${userId}`,{method:"DELETE"});if(response.ok){setNotice("Пользователь разблокирован.");await Promise.all([loadBlocked(),loadFriends()])}else setNotice("Не удалось разблокировать пользователя.")}
 
   function addFiles(files: File[], duration?:number) {
@@ -228,10 +231,10 @@ export function SocialHubDialog({ currentUserId, initialTab = "messages", initia
         {active&&callMode?<DirectCallOverlay person={active.other} video={callMode==="video"} onClose={()=>setCallMode(null)}/>:null}
       </div>
       :tab==="friends"?<div className="friends-hub-v2">
-        <nav className="friends-tabs"><button className={friendView==="online"?"active":""} onClick={()=>setFriendView("online")}><UserCheck size={15}/>В сети</button><button className={friendView==="all"?"active":""} onClick={()=>setFriendView("all")}><Users size={15}/>Все</button><button className={friendView==="pending"?"active":""} onClick={()=>setFriendView("pending")}><Clock3 size={15}/>Ожидание{requests.length?<b>{requests.length}</b>:null}</button><button className={friendView==="blocked"?"active":""} onClick={()=>setFriendView("blocked")}><Ban size={15}/>Заблокированные</button><button className={friendView==="add"?"active add": "add"} onClick={()=>setFriendView("add")}><UserPlus size={15}/>Добавить в друзья</button></nav>
+        <nav className="friends-tabs"><button className={friendView==="online"?"active":""} onClick={()=>setFriendView("online")}><UserCheck size={15}/>В сети</button><button className={friendView==="all"?"active":""} onClick={()=>setFriendView("all")}><Users size={15}/>Все</button><button className={friendView==="pending"?"active":""} onClick={()=>setFriendView("pending")}><Clock3 size={15}/>Ожидание{requests.length+outgoingRequests.length?<b>{requests.length+outgoingRequests.length}</b>:null}</button><button className={friendView==="blocked"?"active":""} onClick={()=>setFriendView("blocked")}><Ban size={15}/>Заблокированные</button><button className={friendView==="add"?"active add": "add"} onClick={()=>setFriendView("add")}><UserPlus size={15}/>Добавить в друзья</button></nav>
         {notice?<p className="social-notice">{notice}</p>:null}
         {friendView==="add"?<div className="friend-add-panel"><h3>Добавить в друзья</h3><p>Найдите пользователя по username и отправьте запрос.</p><form className="friend-search" onSubmit={search}><Search size={16}/><input name="q" minLength={2} placeholder="Введите username"/><button>Найти</button></form>{results.length?<section><h3>Результаты</h3>{results.map((person)=><FriendRow key={person.id} person={person} onProfile={(anchor)=>setProfilePopup({person,anchor})} actions={<><button className="icon" aria-label="Написать сообщение" title="Написать сообщение" onClick={()=>void openChat(person)}><MessageCircle size={16}/></button><button className="icon" aria-label="Добавить в друзья" title="Добавить в друзья" onClick={()=>void requestFriend(person.id)}><UserPlus size={16}/></button></>}/>)}</section>:null}</div>
-        :friendView==="pending"?<div className="friend-list-v2">{requests.length?requests.map((item)=><FriendRow key={item.id} person={item.from} onProfile={(anchor)=>setProfilePopup({person:item.from,anchor})} subtitle="Хочет добавить вас в друзья" actions={<><button className="icon positive" aria-label="Принять" title="Принять" onClick={()=>void respond(item.id,"accepted")}><UserCheck size={16}/></button><button className="icon danger" aria-label="Отклонить" title="Отклонить" onClick={()=>void respond(item.id,"declined")}><X size={16}/></button></>}/>):<EmptyFriends title="Нет ожидающих заявок" text="Когда кто-то добавит вас в друзья, запрос появится здесь."/>}</div>
+        :friendView==="pending"?<div className="friend-list-v2">{requests.map((item)=><FriendRow key={"in:"+item.id} person={item.from} onProfile={(anchor)=>setProfilePopup({person:item.from,anchor})} subtitle="Хочет добавить вас в друзья" actions={<><button className="icon positive" aria-label="Принять" title="Принять" onClick={()=>void respond(item.id,"accepted")}><UserCheck size={16}/></button><button className="icon danger" aria-label="Отклонить" title="Отклонить" onClick={()=>void respond(item.id,"declined")}><X size={16}/></button></>}/>)}{outgoingRequests.map((item)=><FriendRow key={"out:"+item.id} person={item.to} onProfile={(anchor)=>setProfilePopup({person:item.to,anchor})} subtitle="Исходящая заявка" actions={<button className="icon danger" aria-label="Отменить заявку" title="Отменить заявку" onClick={()=>void cancelFriendRequest(item.id)}><X size={16}/></button>}/>)}{!requests.length&&!outgoingRequests.length?<EmptyFriends title="Нет ожидающих заявок" text="Входящие и исходящие заявки появятся здесь."/>:null}</div>
         :friendView==="blocked"?<div className="friend-list-v2">{blocked.length?blocked.map((person)=><FriendRow key={person.id} person={person} onProfile={(anchor)=>setProfilePopup({person,anchor})} subtitle="Заблокирован" actions={<button className="icon" aria-label="Разблокировать" title="Разблокировать" onClick={()=>void unblock(person.id)}><ShieldCheck size={16}/></button>}/>):<EmptyFriends title="Список блокировок пуст" text="Заблокированные пользователи появятся здесь."/>}</div>
         :<div className="friend-list-v2">{friendRows.length?friendRows.map((person)=><FriendRow key={person.id} person={person} onProfile={(anchor)=>setProfilePopup({person,anchor})} subtitle={person.presence==="online"?"В сети":"Не в сети"} actions={<><button className="icon" aria-label="Написать сообщение" title="Написать сообщение" onClick={()=>void openChat(person)}><MessageCircle size={16}/></button><button className="icon danger" aria-label="Удалить из друзей" title="Удалить из друзей" onClick={()=>void removeFriend(person.id)}><X size={16}/></button></>}/>):<EmptyFriends title={friendView==="online"?"Сейчас никто из друзей не в сети":"Список друзей пуст"} text={friendView==="online"?"Когда друзья появятся в сети, они будут здесь.":"Добавьте пользователя по username."}/>}</div>}
       </div>
