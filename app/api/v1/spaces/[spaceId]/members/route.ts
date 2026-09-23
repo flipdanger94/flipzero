@@ -113,7 +113,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ sp
   const available = requested.length ? await access.database.select({ id: roles.id, position: roles.position }).from(roles).where(and(eq(roles.spaceId, spaceId), eq(roles.isManaged, false), inArray(roles.id, requested))) : [];
   if (!access.owner && available.some((role) => role.position >= access.topPosition)) return NextResponse.json({ code: "ROLE_HIERARCHY", message: "Нельзя назначать роль на уровне вашей высшей роли или выше." }, { status: 403 });
   if (available.length !== requested.length) return NextResponse.json({ code: "INVALID_ROLE", message: "Одна из ролей недоступна." }, { status: 400 });
-  const [memberRole] = await access.database.select({ id: roles.id }).from(roles).where(and(eq(roles.spaceId, spaceId), eq(roles.name, "Участник"))).limit(1);
+  const [memberRole] = await access.database.select({ id: roles.id }).from(roles).where(and(eq(roles.spaceId, spaceId), eq(roles.isManaged, true))).orderBy(asc(roles.position)).limit(1);
   await access.database.transaction(async (tx) => {
     await tx.delete(memberRoles).where(and(eq(memberRoles.userId, body.userId), eq(memberRoles.spaceId, spaceId)));
     const roleIds = [...(memberRole ? [memberRole.id] : []), ...requested];
