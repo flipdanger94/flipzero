@@ -184,6 +184,7 @@ export const roles = pgTable("roles", {
   position: integer("position").default(0).notNull(),
   permissions: bigint("permissions", { mode: "number" }).default(0).notNull(),
   isManaged: boolean("is_managed").default(false).notNull(),
+  showInMemberList: boolean("show_in_member_list").default(false).notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 }, (table) => [index("roles_space_position_idx").on(table.spaceId, table.position)]);
 

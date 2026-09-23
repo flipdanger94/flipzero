@@ -19,6 +19,7 @@ const releases = [
   ["0013", "Профили пользователей", "Локация, статус и ссылки профиля", "0012_user_profiles.sql"],
   ["0014", "Voice states", "Состояния участников в голосовых комнатах", "0013_voice_states.sql"],
   ["0015", "Developer integrations", "Bot installs, OAuth Authorization Code, API tokens и Webhooks", "0014_developer_integrations.sql"],
+  ["0016", "Роли участников", "Показ выбранных ролей рядом с участниками пространства", "0015_role_member_badges.sql"],
 ] as const;
 
 export default function SetupIndexPage() {

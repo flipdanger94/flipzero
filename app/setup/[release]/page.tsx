@@ -21,6 +21,7 @@ const releases: Record<string, { number: string; title: string; description: str
   "release-0009": { number: "0009", title: "Space placements", description: "Создаёт размещение пространств по шардам и регионам." },
   "release-0013": { number: "0013", title: "Профили пользователей", description: "Добавляет локацию, пользовательский статус и ссылки профиля." },
   "release-0014": { number: "0014", title: "Voice states", description: "Создаёт состояния участников в голосовых комнатах." },
+  "release-0016": { number: "0016", title: "Роли участников", description: "Позволяет показывать выбранные роли справа от имени участника." },
 };
 
 export default function DynamicReleaseSetupPage() {
