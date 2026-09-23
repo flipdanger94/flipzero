@@ -23,7 +23,7 @@ export function superFlipGiftNotificationBody(period: SuperFlipGiftPeriod, reaso
 
 export const SUPERFLIP_CAPABILITIES = {
   profileBioLimit: 500,
-  directMessageLimit: 8000,
+  directMessageLimit: 1000,
   avatarUploadMb: 8,
   bannerUploadMb: 16,
   animatedProfileMedia: true,
