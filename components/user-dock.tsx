@@ -31,11 +31,9 @@ export function UserDock({
   const [menu,setMenu]=useState<"input"|"output"|null>(null);
   const [inputs,setInputs]=useState<MediaDeviceInfo[]>([]);
   const [outputs,setOutputs]=useState<MediaDeviceInfo[]>([]);
-  const [prefs,setPrefs]=useState<AudioPrefs>({});
+  const [prefs,setPrefs]=useState<AudioPrefs>(()=>readPrefs());
   const [muted,setMuted]=useState(false);
   const [deafened,setDeafened]=useState(false);
-
-  useEffect(()=>setPrefs(readPrefs()),[]);
   useEffect(()=>{
     if(!menu)return;
     let cancelled=false;
