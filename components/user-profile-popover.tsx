@@ -152,12 +152,12 @@ export function UserProfilePopover({
         </div>
         {menu?<div className="fz-profile-menu" role="menu">
           <button role="menuitem" onClick={()=>{setMenu(false);setFull(true)}}>Полный профиль</button>
-          <button role="menuitem" onClick={toggleIgnore}><VolumeX size={15}/>{ignored?"Не игнорировать":"Игнорировать"}</button>
+          {!p.isOwnProfile?<><button role="menuitem" onClick={toggleIgnore}><VolumeX size={15}/>{ignored?"Не игнорировать":"Игнорировать"}</button>
           {p.isFriend?<button role="menuitem" onClick={()=>void friendAction()}><UserMinus size={15}/>Удалить из друзей</button>:null}
           <i/>
           <button role="menuitem" className="danger" onClick={()=>void block()}><Ban size={15}/>Заблокировать</button>
           <button role="menuitem" className="danger" onClick={()=>setReporting(true)}><Flag size={15}/>Пожаловаться</button>
-          <i/>
+          <i/></>:null}
           <button role="menuitem" onClick={()=>void copyId()}><Copy size={15}/>Копировать ID</button>
         </div>:null}
       </>}
@@ -169,7 +169,7 @@ export function UserProfilePopover({
         <div className="fz-full-banner" style={p.bannerUrl?{backgroundImage:`linear-gradient(180deg,transparent,#08101e),url("${p.bannerUrl}")`}:undefined}/>
         <div className="fz-full-avatar">{p.avatarUrl?<MediaImage src={p.avatarUrl}/>:p.displayName.slice(0,2)}<i className={p.presence==="online"?"online":""}/></div>
         <h2>{p.displayName}</h2><p>@{p.username}</p><small>Уровень {p.globalLevel} · {p.presence==="online"?"в сети":"не в сети"}</small>
-        {!p.isOwnProfile?<div className="fz-profile-icon-actions fz-full-actions"><button onClick={message} aria-label="Написать сообщение" title="Написать сообщение"><MessageCircle/></button><button onClick={()=>setCallMode("voice")} aria-label="Голосовой звонок" title="Голосовой звонок"><Phone/></button><button onClick={()=>setCallMode("video")} aria-label="Видеозвонок" title="Видеозвонок"><Video/></button><button onClick={()=>void friendAction()} aria-label="Действие с друзьями" title="Действие с друзьями">{p.isFriend?<UserMinus/>:<UserPlus/>}</button></div>:null}
+        {!p.isOwnProfile?<div className="fz-profile-icon-actions fz-full-actions"><button onClick={message} aria-label="Написать сообщение" title="Написать сообщение"><MessageCircle/></button><button onClick={()=>setCallMode("voice")} aria-label="Голосовой звонок" title="Голосовой звонок"><Phone/></button><button onClick={()=>setCallMode("video")} aria-label="Видеозвонок" title="Видеозвонок"><Video/></button><button onClick={()=>void friendAction()} aria-label={p.friendshipStatus==="friends"?"Удалить из друзей":"Добавить в друзья"} title={p.friendshipStatus==="friends"?"Удалить из друзей":p.friendshipStatus==="outgoing"?"Заявка отправлена":"Добавить в друзья"} disabled={busy||p.friendshipStatus==="outgoing"}>{p.friendshipStatus==="friends"?<UserMinus/>:p.friendshipStatus==="outgoing"?<Check/>:<UserPlus/>}</button></div>:null}
         <section><h3>О пользователе</h3><p>{p.bio||"Описание не заполнено."}</p>{p.profileStatus?<span>{p.profileStatus}</span>:null}</section>
         <div className="fz-full-stats"><span><b>{p.stats.messages}</b><small>сообщений</small></span><span><b>{p.stats.friends}</b><small>друзей</small></span><span><b>{p.stats.servers}</b><small>серверов</small></span></div>
       </aside>
