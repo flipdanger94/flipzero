@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray } from "drizzle-orm";
+import { and, desc, eq, inArray } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getDatabase } from "@/db/client";
@@ -35,7 +35,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ spac
   if (!channelId) return NextResponse.json({ code: "INVALID_INPUT", message: "Не указан канал." }, { status: 400 });
   const access = await requireOwner(spaceId, channelId); if ("error" in access) return access.error;
   const [roleItems, memberItems, overrideItems] = await Promise.all([
-    access.database.select().from(roles).where(eq(roles.spaceId, spaceId)).orderBy(asc(roles.position)),
+    access.database.select().from(roles).where(eq(roles.spaceId, spaceId)).orderBy(desc(roles.position)),
     access.database.select({ id: users.id, username: users.username, displayName: users.displayName, avatarUrl: users.avatarUrl }).from(members).innerJoin(users, eq(users.id, members.userId)).where(eq(members.spaceId, spaceId)).limit(150),
     access.database.select().from(channelOverrides).where(eq(channelOverrides.channelId, channelId)),
   ]);
