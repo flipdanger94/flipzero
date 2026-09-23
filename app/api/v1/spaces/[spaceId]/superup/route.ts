@@ -28,7 +28,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ spa
   const graceStart = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
   const [allocation] = await db.select().from(spaceSuperupSupports).where(eq(spaceSuperupSupports.userId, user.id)).limit(1);
   const [entitlement] = await db.select({ id: superflipPurchases.id }).from(superflipPurchases).where(and(eq(superflipPurchases.userId, user.id), activeGrant(now))).limit(1);
-  const supports = await db.select({ userId: spaceSuperupSupports.userId, displayName: users.displayName, expiresAt: sql<Date | null>`max(${superflipPurchases.expiresAt}) filter (where ${superflipPurchases.revokedAt} is null)`, active: sql<boolean>`coalesce(bool_or(${superflipPurchases.revokedAt} is null and (${superflipPurchases.expiresAt} is null or ${superflipPurchases.expiresAt} > ${now})), false)` })
+  const supports = await db.select({ userId: spaceSuperupSupports.userId, displayName: users.displayName, expiresAt: sql<Date | null>`max(${superflipPurchases.expiresAt}) filter (where ${superflipPurchases.revokedAt} is null)`, active: sql<boolean>`coalesce(bool_or(${superflipPurchases.revokedAt} is null and (${superflipPurchases.expiresAt} is null or ${gt(superflipPurchases.expiresAt, now)})), false)` })
     .from(spaceSuperupSupports).innerJoin(users, eq(users.id, spaceSuperupSupports.userId))
     .leftJoin(superflipPurchases, eq(superflipPurchases.userId, spaceSuperupSupports.userId))
     .where(eq(spaceSuperupSupports.spaceId, spaceId))
