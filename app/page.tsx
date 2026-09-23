@@ -189,6 +189,46 @@ export default function LandingPage() {
           <div className="fz-actions"><Link className="fz-button fz-button-primary" href="/app">Открыть FlipZero</Link><Link className="fz-button fz-button-secondary" href="/register">Создать аккаунт</Link></div>
         </div>
       </section>
+
+      <footer className="fz-footer">
+        <div className="fz-container">
+          <div className="fz-footer-main">
+            <div className="fz-footer-brand">
+              <Link href="/" aria-label="FlipZero — главная"><Logo /></Link>
+              <p>Чаты, голос, видео и сообщества в одном пространстве — без лишних барьеров.</p>
+              <Link className="fz-footer-app-link" href="/app">Открыть FlipZero <ArrowRight size={15} /></Link>
+            </div>
+
+            <nav className="fz-footer-column" aria-label="Продукт">
+              <strong>Продукт</strong>
+              <a href="#features">Возможности</a>
+              <a href="#voice">Голос и видео</a>
+              <a href="#communities">Сообщества</a>
+              <Link href="/superflip">SUPER FLIP</Link>
+            </nav>
+
+            <nav className="fz-footer-column" aria-label="Ресурсы">
+              <strong>Ресурсы</strong>
+              <Link href="/download">Скачать</Link>
+              <Link href="/developers">Для разработчиков</Link>
+              <Link href="/login">Войти</Link>
+              <Link href="/register">Создать аккаунт</Link>
+            </nav>
+
+            <nav className="fz-footer-column" aria-label="Документы">
+              <strong>Документы</strong>
+              <Link href="/privacy">Конфиденциальность</Link>
+              <Link href="/terms">Условия использования</Link>
+            </nav>
+          </div>
+
+          <div className="fz-footer-bottom">
+            <span>© 2026 FlipZero. Больше, чем общение.</span>
+            <span className="fz-footer-status"><i /> Сервис работает</span>
+          </div>
+        </div>
+      </footer>
+
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify({
