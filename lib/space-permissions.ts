@@ -16,7 +16,12 @@ export async function getChannelPermissions(channelId: string, userId: string) {
   const assigned = await db.select({ roleId: memberRoles.roleId }).from(memberRoles)
     .where(and(eq(memberRoles.userId, userId), eq(memberRoles.spaceId, base.spaceId)));
   const roleIds = assigned.map((item) => item.roleId);
-  let permissions = 0;
+  let permissions =
+    Permission.AttachFiles |
+    Permission.AddReactions |
+    Permission.EmbedLinks |
+    Permission.MentionRoles |
+    Permission.ReadHistory;
   if (roleIds.length) {
     const roleRows = await db.select({ permissions: roles.permissions }).from(roles)
       .where(and(eq(roles.spaceId, base.spaceId), inArray(roles.id, roleIds)));
