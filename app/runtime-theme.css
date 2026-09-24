@@ -1,0 +1,52 @@
+/* Runtime account theme layer. Loaded last so account themes affect the whole product shell. */
+.app-shell,
+.app-shell .chat-panel,
+.app-shell .board-view,
+.app-shell .platform-workspace,
+.social-hub,
+.admin-dialog,
+.account-settings,
+.voice-room{
+  background-color:var(--bg)!important;
+}
+.app-shell .channel-panel,
+.app-shell .member-panel,
+.app-shell .user-dock,
+.social-nav-rail,
+.direct-layout>aside,
+.account-settings-nav{
+  background-color:var(--panel)!important;
+}
+.app-shell .space-rail,
+.app-shell .chat-header,
+.account-settings-main,
+.notification-popover,
+.dock-device-menu{
+  background-color:var(--deep)!important;
+}
+.app-shell .channel.active,
+.app-shell .channel-row.active,
+.app-shell .mobile-tab-bar button.active,
+.theme-choices button.active{
+  border-color:color-mix(in srgb,var(--accent) 52%,transparent)!important;
+  background:color-mix(in srgb,var(--accent) 16%,var(--raised))!important;
+}
+.app-shell .channel.active>span:first-child,
+.app-shell .channel-row.active .channel>span:first-child,
+.app-shell .header-actions>button.is-active,
+.app-shell .mobile-tab-bar button.active,
+.account-settings-nav button.active,
+.member-voice-indicator{
+  color:var(--accent)!important;
+}
+.app-shell button:focus-visible,
+.account-settings button:focus-visible,
+.social-hub button:focus-visible{
+  outline-color:var(--accent)!important;
+}
+.theme-preview-note{margin:0 0 10px;color:var(--muted);font-size:12px;line-height:1.45}
+.theme-choices .theme-preview{width:100%;height:58px;border:2px solid;border-radius:9px;display:grid;grid-template-columns:22% 1fr;grid-template-rows:1fr 1fr;gap:4px;padding:5px;overflow:hidden}
+.theme-choices .theme-preview i{width:auto!important;height:auto!important;border:0!important;border-radius:4px!important}
+.theme-choices .theme-preview i:first-child{grid-row:1/-1}
+.theme-choices .theme-preview i:nth-child(2){grid-column:2;grid-row:1}
+.theme-choices .theme-preview i:nth-child(3){grid-column:2;grid-row:2}
