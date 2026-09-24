@@ -18,6 +18,7 @@ import {
   VideoOff,
 } from "lucide-react";
 import { ConnectionQuality, Room, RoomEvent, Track } from "livekit-client";
+import { MediaImage } from "./media-image";
 
 type VoiceStatus = "idle" | "connecting" | "connected" | "reconnecting";
 export type VoicePresence = { id: string; name: string; username?: string | null; avatarUrl?: string | null; muted: boolean; deafened?: boolean; camera: boolean; sharing: boolean; streaming?: boolean; speaking: boolean };
@@ -603,7 +604,7 @@ export function VoiceRoom({
         ) : null}
         {connected && presence.length ? <div className="voice-participant-grid" aria-label="Участники голосового канала">
           {presence.map((participant) => <article key={participant.id} className={`voice-participant-card ${participant.speaking ? "speaking" : ""} ${participant.streaming || participant.sharing ? "is-streaming" : ""}`}>
-            <span className="voice-participant-avatar">{participant.avatarUrl ? <img src={participant.avatarUrl} alt="" /> : participant.name.slice(0,2).toLocaleUpperCase("ru")}</span>
+            <span className="voice-participant-avatar">{participant.avatarUrl ? <MediaImage src={participant.avatarUrl} /> : participant.name.slice(0,2).toLocaleUpperCase("ru")}</span>
             <div className="voice-participant-copy"><strong title={participant.name}>{participant.name}</strong><small>{participant.streaming || participant.sharing ? "В эфире" : participant.camera ? "Камера включена" : participant.muted ? "Микрофон выключен" : "В голосовом канале"}</small></div>
             <div className="voice-participant-icons" aria-label="Состояние участника">{participant.muted ? <MicOff size={15} aria-label="Микрофон выключен" /> : null}{participant.deafened ? <Headphones size={15} aria-label="Звук выключен" /> : null}</div>
             {participant.streaming || participant.sharing ? <button type="button" className="voice-watch-stream" onClick={() => focusStream(participant.id)} aria-label={`Смотреть стрим ${participant.name}`}>{selectedStreamId===participant.id?"Смотрим":"Смотреть стрим"}</button> : null}
