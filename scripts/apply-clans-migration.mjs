@@ -9,8 +9,13 @@ if (!databaseUrl) {
 
 const client = postgres(databaseUrl, { max: 1, prepare: false, connect_timeout: 10 });
 try {
+  // Profile and member lists used by clans depend on last_seen_at.
+  const memberSql = await readFile(new URL("../drizzle/0015_role_member_badges.sql", import.meta.url), "utf8");
+  await client.unsafe(memberSql);
   const sql = await readFile(new URL("../drizzle/0019_clans.sql", import.meta.url), "utf8");
   await client.unsafe(sql);
+  const progressSql = await readFile(new URL("../drizzle/0020_clan_progress.sql", import.meta.url), "utf8");
+  await client.unsafe(progressSql);
   const [result] = await client`SELECT to_regclass('public.clan_members') IS NOT NULL AS applied`;
   if (!result.applied) throw new Error("clan_members table was not created");
   console.log("[clans] schema ready");

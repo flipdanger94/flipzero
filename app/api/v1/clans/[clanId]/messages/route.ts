@@ -7,6 +7,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { getClanRole, normalizeClanAttachments } from "@/lib/clans";
 import { getSuperFlipCapabilities } from "@/lib/superflip";
 import { isTrustedMutationRequest } from "@/lib/security-controls";
+import { levelFromXp } from "@/lib/gamification";
 
 export async function GET(request:Request,{params}:{params:Promise<{clanId:string}>}) {
   const user=await getCurrentUser();
@@ -20,13 +21,13 @@ export async function GET(request:Request,{params}:{params:Promise<{clanId:strin
   let query=db.select({
     id:clanMessages.id,clanId:clanMessages.clanId,authorId:clanMessages.authorId,content:clanMessages.content,
     attachments:clanMessages.attachments,createdAt:clanMessages.createdAt,editedAt:clanMessages.editedAt,
-    username:users.username,displayName:users.displayName,avatarUrl:users.avatarUrl,globalLevel:users.globalLevel,
+    username:users.username,displayName:users.displayName,avatarUrl:users.avatarUrl,globalXp:users.globalXp,
   }).from(clanMessages).innerJoin(users,eq(users.id,clanMessages.authorId))
     .where(and(eq(clanMessages.clanId,clanId),isNull(clanMessages.deletedAt)))
     .orderBy(desc(clanMessages.createdAt)).limit(100);
   const rows=await query;
   const filtered=before?rows.filter(row=>row.createdAt.toISOString()<before):rows;
-  return NextResponse.json({messages:filtered.slice(0,50).reverse()});
+  return NextResponse.json({messages:filtered.slice(0,50).reverse().map(({globalXp,...message})=>({...message,globalLevel:levelFromXp(globalXp)}))});
 }
 
 export async function POST(request:Request,{params}:{params:Promise<{clanId:string}>}) {
@@ -48,5 +49,5 @@ export async function POST(request:Request,{params}:{params:Promise<{clanId:stri
   if(!raw&&!attachments.length) return NextResponse.json({message:"Введите сообщение или добавьте вложение."},{status:400});
   const id=randomUUID(), now=new Date();
   await getDatabase().insert(clanMessages).values({id,clanId,authorId:user.id,content:raw,attachments});
-  return NextResponse.json({message:{id,clanId,authorId:user.id,content:raw,attachments,createdAt:now.toISOString(),editedAt:null,username:user.username,displayName:user.displayName,avatarUrl:user.avatarUrl,globalLevel:user.globalLevel}},{status:201});
+  return NextResponse.json({message:{id,clanId,authorId:user.id,content:raw,attachments,createdAt:now.toISOString(),editedAt:null,username:user.username,displayName:user.displayName,avatarUrl:user.avatarUrl,globalLevel:levelFromXp(user.globalXp)}},{status:201});
 }

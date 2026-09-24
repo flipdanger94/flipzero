@@ -1,4 +1,5 @@
 "use client";
+import { ClanTag } from "./clan-tag";
 
 import { useEffect, useRef, useState } from "react";
 import { Bell, BookOpen, Check, ChevronDown, Columns3, Compass, Copy, Hash, HelpCircle, Home as HomeIcon, LoaderCircle, Menu, MessageCircle, MessagesSquare, Mic, MicOff, MonitorUp, Plus, Radio, Search, Settings2, Share2, ShieldCheck, Swords, Trash2, UserRound, Users, Video, Volume2, X } from "lucide-react";
@@ -45,7 +46,7 @@ function channelIcon(channel: ApiChannel) {
 }
 type ApiCategory = { id: string; spaceId: string; name: string; position: number };
 type ApiSpace = { id: string; ownerId?: string; name: string; slug: string; description: string | null; iconUrl?: string | null; bannerUrl?: string | null; visibility?: string; accentColor: string; categories: ApiCategory[]; channels: ApiChannel[] };
-type SpaceMember = { userId: string; nickname: string | null; username: string | null; displayName: string; avatarUrl: string | null; level: number; roleIds?: string[]; online?: boolean };
+type SpaceMember = { clan?:import("./clan-tag").ClanTagData|null; userId: string; nickname: string | null; username: string | null; displayName: string; avatarUrl: string | null; level: number; roleIds?: string[]; online?: boolean };
 type CurrentUser = AccountProfile;
 type AppNotice = { message: string; tone: "error" | "success" };
 export default function Home({ initialSpaceId, initialChannelId }: { initialSpaceId?: string; initialChannelId?: string } = {}) {
@@ -95,6 +96,7 @@ export default function Home({ initialSpaceId, initialChannelId }: { initialSpac
   const [showAccountSettings, setShowAccountSettings] = useState(false);
   const [accountSettingsSection, setAccountSettingsSection] = useState<AccountSettingsSection>("profile");
   const [platformView, setPlatformView] = useState<"social" | "admin" | "clans" | null>(null);
+  useEffect(()=>{const open=(event:Event)=>{const id=(event as CustomEvent<string>).detail;setPlatformView("clans");window.history.replaceState(null,"",`/app?clan=${encodeURIComponent(id)}`);window.dispatchEvent(new CustomEvent("flipzero:clan-selected",{detail:id}));};window.addEventListener("flipzero:open-clan",open);return()=>window.removeEventListener("flipzero:open-clan",open)},[]);
   const [socialRoute, setSocialRoute] = useState<{ tab: "messages" | "friends" | "superflip"; userId: string | null; nonce: number }>({ tab: "messages", userId: null, nonce: 0 });
   const [mobileChannelsOpen, setMobileChannelsOpen] = useState(false);
   const [channelLinkCopied, setChannelLinkCopied] = useState(false);
@@ -430,7 +432,7 @@ export default function Home({ initialSpaceId, initialChannelId }: { initialSpac
 
       <aside className="member-panel">
         <div className="real-member-list">
-          {membersLoading ? <div className="members-loading">Загрузка участников…</div> : memberGroups.length ? <>{memberGroups.map((group) => <section className="member-section member-role-group" key={group.key}><h2><span style={group.color ? { color: group.color } : undefined}>{group.label.toLocaleUpperCase("ru")} — {group.members.length}</span></h2>{group.members.map((member) => <button className={`member ${member.online ? "is-online" : "is-offline"}`} key={member.userId} type="button" aria-label={`Открыть профиль ${member.nickname || member.displayName} — ${member.online ? "в сети" : "не в сети"}`} title={`Открыть профиль ${member.nickname || member.displayName}`} onClick={() => openExclusiveOverlay(() => setSelectedMember(member))}><span className="mini-avatar avatar-coral">{member.avatarUrl ? <MediaImage src={member.avatarUrl} /> : (member.displayName || member.username || "?").slice(0, 2).toLocaleUpperCase("ru")}<i /></span><span><strong>{member.nickname || member.displayName}</strong><small>@{member.username || "участник"} · {member.online ? "в сети" : "не в сети"}</small></span></button>)}</section>)}{membersCursor ? <button className="members-load-more" onClick={() => void loadMoreMembers()} disabled={membersLoadingMore}>{membersLoadingMore ? <><LoaderCircle className="spin" size={14} /> Загружаем…</> : "Показать ещё"}</button> : null}</> : <div className="members-loading">В этом пространстве пока нет участников.</div>}
+          {membersLoading ? <div className="members-loading">Загрузка участников…</div> : memberGroups.length ? <>{memberGroups.map((group) => <section className="member-section member-role-group" key={group.key}><h2><span style={group.color ? { color: group.color } : undefined}>{group.label.toLocaleUpperCase("ru")} — {group.members.length}</span></h2>{group.members.map((member) => <button className={`member ${member.online ? "is-online" : "is-offline"}`} key={member.userId} type="button" aria-label={`Открыть профиль ${member.nickname || member.displayName} — ${member.online ? "в сети" : "не в сети"}`} title={`Открыть профиль ${member.nickname || member.displayName}`} onClick={() => openExclusiveOverlay(() => setSelectedMember(member))}><span className="mini-avatar avatar-coral">{member.avatarUrl ? <MediaImage src={member.avatarUrl} /> : (member.displayName || member.username || "?").slice(0, 2).toLocaleUpperCase("ru")}<i /></span><span><strong>{member.nickname || member.displayName}</strong><ClanTag clan={member.clan}/><small>@{member.username || "участник"} · {member.online ? "в сети" : "не в сети"}</small></span></button>)}</section>)}{membersCursor ? <button className="members-load-more" onClick={() => void loadMoreMembers()} disabled={membersLoadingMore}>{membersLoadingMore ? <><LoaderCircle className="spin" size={14} /> Загружаем…</> : "Показать ещё"}</button> : null}</> : <div className="members-loading">В этом пространстве пока нет участников.</div>}
         </div>
       </aside>
       <button className="mobile-drawer-backdrop" aria-label="Закрыть меню каналов" onClick={() => setMobileChannelsOpen(false)} />

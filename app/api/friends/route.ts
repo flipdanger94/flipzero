@@ -1,3 +1,4 @@
+import { clanTagsForUsers } from "@/lib/clan-tags";
 import { randomUUID } from "node:crypto";
 import { and, desc, eq, or } from "drizzle-orm";
 import { NextResponse } from "next/server";
@@ -16,7 +17,8 @@ export async function GET() {
   const friendUsers = await Promise.all(links.map(async (link) => (await database.select({ id: users.id, username: users.username, displayName: users.displayName, avatarUrl: users.avatarUrl, presence: users.presence }).from(users).where(eq(users.id, link.friendId)).limit(1))[0]));
   const requests = await Promise.all(pending.map(async (request) => ({ ...request, from: (await database.select({ id: users.id, username: users.username, displayName: users.displayName, avatarUrl: users.avatarUrl, presence: users.presence }).from(users).where(eq(users.id, request.fromId)).limit(1))[0] })));
   const outgoingRequests = await Promise.all(outgoingPending.map(async (request) => ({ ...request, to: (await database.select({ id: users.id, username: users.username, displayName: users.displayName, avatarUrl: users.avatarUrl, presence: users.presence }).from(users).where(eq(users.id, request.toId)).limit(1))[0] })));
-  return NextResponse.json({ friends: friendUsers.filter(Boolean), requests, outgoingRequests: outgoingRequests.filter((item)=>Boolean(item.to)), unreadRequests: requests.length });
+  const tags=await clanTagsForUsers([...friendUsers.map(item=>item?.id).filter((id):id is string=>Boolean(id)),...requests.map(item=>item.from?.id).filter((id):id is string=>Boolean(id)),...outgoingRequests.map(item=>item.to?.id).filter((id):id is string=>Boolean(id))]);
+  return NextResponse.json({ friends: friendUsers.filter(Boolean).map(item=>({...item,clan:tags.get(item.id)??null})), requests:requests.map(item=>({...item,from:{...item.from,clan:tags.get(item.from?.id)??null}})), outgoingRequests: outgoingRequests.filter((item)=>Boolean(item.to)).map(item=>({...item,to:{...item.to,clan:tags.get(item.to.id)??null}})), unreadRequests: requests.length });
 }
 
 export async function POST(request: Request) {

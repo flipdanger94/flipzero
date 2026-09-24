@@ -27,6 +27,7 @@ const releases: Record<string, { migrationUrl: URL; title: string; check: string
   "release-0018": { migrationUrl: new URL("../../../../drizzle/0017_superup.sql", import.meta.url), title: "Поддержка SuperUp", check: "SELECT to_regclass('public.space_superup_supports') IS NOT NULL AS applied" },
   "release-0019": { migrationUrl: new URL("../../../../drizzle/0018_soundboard.sql", import.meta.url), title: "Звуковая панель", check: "SELECT to_regclass('public.space_sounds') IS NOT NULL AS applied" },
   "release-0020": { migrationUrl: new URL("../../../../drizzle/0019_clans.sql", import.meta.url), title: "Кланы", check: "SELECT (to_regclass('public.clans') IS NOT NULL AND to_regclass('public.clan_members') IS NOT NULL AND to_regclass('public.clan_requests') IS NOT NULL AND to_regclass('public.clan_messages') IS NOT NULL) AS applied" },
+  "release-0021": { migrationUrl: new URL("../../../../drizzle/0020_clan_progress.sql", import.meta.url), title: "Прогресс кланов", check: "SELECT EXISTS(SELECT 1 FROM information_schema.columns WHERE table_name='clan_members' AND column_name='contribution_xp') AS applied" },
 
 };
 

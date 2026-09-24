@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { and, desc, eq, gte, sql } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { getDatabase } from "@/db/client";
-import { achievementDefinitions, members, pathProgress, userAchievements, users, xpEvents } from "@/db/schema";
+import { achievementDefinitions, clanMembers, clans, members, pathProgress, userAchievements, users, xpEvents } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
 import { levelFromXp, pathForSource, SOURCE_XP } from "@/lib/gamification";
 
@@ -33,6 +33,8 @@ export async function POST(request: Request) {
 
     await tx.update(users).set({ globalXp: sql`${users.globalXp} + ${amount}`, updatedAt: new Date() }).where(eq(users.id, user.id));
     await tx.update(members).set({ xp: sql`${members.xp} + ${amount}` }).where(and(eq(members.userId, user.id), eq(members.spaceId, spaceId)));
+    const [clanContribution] = await tx.update(clanMembers).set({contributionXp:sql`${clanMembers.contributionXp} + ${amount}`}).where(eq(clanMembers.userId,user.id)).returning({clanId:clanMembers.clanId});
+    if(clanContribution) await tx.update(clans).set({xp:sql`${clans.xp} + ${amount}`}).where(eq(clans.id,clanContribution.clanId));
     for (const scopeId of ["global", spaceId]) {
       await tx.insert(pathProgress).values({ userId: user.id, scopeId, path, xp: amount, level: 1 }).onConflictDoUpdate({ target: [pathProgress.userId, pathProgress.scopeId, pathProgress.path], set: { xp: sql`${pathProgress.xp} + ${amount}`, updatedAt: new Date() } });
     }

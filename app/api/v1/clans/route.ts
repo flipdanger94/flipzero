@@ -6,6 +6,7 @@ import { clanMembers, clanRequests, clans, users } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
 import { getClanMembership, normalizeClanDescription, normalizeClanJoinType, normalizeClanName, normalizeClanTag } from "@/lib/clans";
 import { isTrustedMutationRequest } from "@/lib/security-controls";
+import { validTagColor, validTagIcon } from "@/lib/clan-progress";
 
 export async function GET(request:Request) {
   const user=await getCurrentUser();
@@ -21,7 +22,7 @@ export async function GET(request:Request) {
   const url=new URL(request.url);
   const query=(url.searchParams.get("q")??"").trim().slice(0,64);
   const rows=await db.select({
-    id:clans.id,name:clans.name,tag:clans.tag,description:clans.description,avatarUrl:clans.avatarUrl,bannerUrl:clans.bannerUrl,
+    id:clans.id,name:clans.name,tag:clans.tag,tagColor:clans.tagColor,tagIcon:clans.tagIcon,xp:clans.xp,description:clans.description,avatarUrl:clans.avatarUrl,bannerUrl:clans.bannerUrl,
     joinType:clans.joinType,memberCount:clans.memberCount,leaderId:clans.leaderId,createdAt:clans.createdAt,
   }).from(clans).where(query?or(ilike(clans.name,`%${query}%`),ilike(clans.tag,`%${query}%`)):undefined).orderBy(asc(clans.memberCount),asc(clans.name)).limit(50);
   const pending=await db.select({clanId:clanRequests.clanId,id:clanRequests.id,kind:clanRequests.kind,status:clanRequests.status})
@@ -29,7 +30,7 @@ export async function GET(request:Request) {
   const pendingByClan=new Map(pending.map(item=>[item.clanId,item]));
   const invitedIds=pending.filter(item=>item.kind==="invite").map(item=>item.clanId);
   const invited=!query&&invitedIds.length?await db.select({
-    id:clans.id,name:clans.name,tag:clans.tag,description:clans.description,avatarUrl:clans.avatarUrl,bannerUrl:clans.bannerUrl,
+    id:clans.id,name:clans.name,tag:clans.tag,tagColor:clans.tagColor,tagIcon:clans.tagIcon,xp:clans.xp,description:clans.description,avatarUrl:clans.avatarUrl,bannerUrl:clans.bannerUrl,
     joinType:clans.joinType,memberCount:clans.memberCount,leaderId:clans.leaderId,createdAt:clans.createdAt,
   }).from(clans).where(inArray(clans.id,invitedIds)):[];
   const merged=[...invited,...rows.filter(row=>!invited.some(invite=>invite.id===row.id))].slice(0,50);
@@ -43,15 +44,17 @@ export async function POST(request:Request) {
   const body=await request.json().catch(()=>null);
   const name=normalizeClanName(body?.name), tag=normalizeClanTag(body?.tag), joinType=normalizeClanJoinType(body?.joinType);
   const description=normalizeClanDescription(body?.description);
+  const tagColor=body?.tagColor??"#8B77FF", tagIcon=body?.tagIcon??"shield";
   if(!name) return NextResponse.json({message:"Название клана должно содержать от 3 до 32 символов."},{status:400});
   if(!tag) return NextResponse.json({message:"Тег должен содержать 2–5 букв или цифр."},{status:400});
   if(!joinType) return NextResponse.json({message:"Выберите тип вступления."},{status:400});
+  if(!validTagColor(tagColor)||!validTagIcon(tagIcon))return NextResponse.json({message:"Некорректный цвет или значок тега."},{status:400});
 
   const db=getDatabase();
   const id=randomUUID();
   try{
     await db.transaction(async(tx)=>{
-      await tx.insert(clans).values({id,name,tag,description,joinType,memberCount:1,leaderId:user.id});
+      await tx.insert(clans).values({id,name,tag,tagColor,tagIcon,description,joinType,memberCount:1,leaderId:user.id});
       await tx.insert(clanMembers).values({clanId:id,userId:user.id,role:"leader"});
       await tx.update(clanRequests).set({status:"cancelled",respondedAt:new Date()}).where(and(eq(clanRequests.userId,user.id),eq(clanRequests.status,"pending")));
     });

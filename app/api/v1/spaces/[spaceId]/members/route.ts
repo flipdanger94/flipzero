@@ -1,6 +1,8 @@
 import { and, asc, eq, gt, inArray, or, sql } from "drizzle-orm";
 import { after, NextResponse } from "next/server";
 import { getDatabase } from "@/db/client";
+import { clanTagsForUsers } from "@/lib/clan-tags";
+import { levelFromXp } from "@/lib/gamification";
 import { memberRoles, members, roles, spaces, spaceSuperupSupports, superflipPurchases, users } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
 import { dispatchDeveloperEvent } from "@/lib/developer-webhooks";
@@ -61,6 +63,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ spac
       userId: members.userId,
       nickname: members.nickname,
       level: members.level,
+      globalXp:users.globalXp,
       joinedAt: members.joinedAt,
       username: users.username,
       displayName: users.displayName,
@@ -85,6 +88,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ spac
     .innerJoin(superflipPurchases, eq(superflipPurchases.userId, spaceSuperupSupports.userId))
     .where(and(eq(spaceSuperupSupports.spaceId, spaceId), inArray(spaceSuperupSupports.userId, userIds), sql`${superflipPurchases.revokedAt} is null`, or(sql`${superflipPurchases.expiresAt} is null`, gt(superflipPurchases.expiresAt, new Date())))) : [];
   const supporterIds = new Set(supporters.map((item) => item.userId));
+  const clanTags=await clanTagsForUsers(userIds);
   const last = page.at(-1);
 
   return NextResponse.json({
@@ -92,6 +96,8 @@ export async function GET(request: Request, { params }: { params: Promise<{ spac
     roles: spaceRoles,
     members: page.map((member) => ({
       ...member,
+      globalLevel:levelFromXp(member.globalXp),
+      clan:clanTags.get(member.userId)??null,
       online: Boolean(member.lastSeenAt && member.lastSeenAt.getTime() > Date.now() - 90_000),
       superupSupporter: supporterIds.has(member.userId),
       lastSeenAt: undefined,

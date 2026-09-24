@@ -6,6 +6,7 @@ import {
   UserMinus, UserPlus, Video, VolumeX, X,
 } from "lucide-react";
 import { MediaImage } from "./media-image";
+import { ClanTag, type ClanTagData } from "./clan-tag";
 import { DirectCallOverlay } from "./direct-call-overlay";
 import { useModalA11y } from "@/hooks/use-modal-a11y";
 
@@ -17,6 +18,7 @@ type Profile = {
   profileStatus:string|null; isOwnProfile:boolean; isFriend:boolean; friendshipStatus:"friends"|"outgoing"|"incoming"|"none";
   incomingRequestId:string|null; stats:{messages:number;friends:number;servers:number}; commonFriends:CommonFriend[];
   commonServers:CommonServer[]; servers:Array<{id:string;name:string;iconUrl:string|null}>;
+  clan:ClanTagData|null;
 };
 
 type Anchor = { x:number; y:number } | null;
@@ -56,6 +58,7 @@ export function UserProfilePopover({
   useEffect(()=>{
     let cancelled=false;
     const controller=new AbortController();
+    queueMicrotask(()=>{if(!cancelled){setProfile(null);setError("")}});
     void fetch(`/api/v1/users/${userId}/profile`,{cache:"no-store",signal:controller.signal})
       .then(async response=>({ok:response.ok,data:await response.json()}))
       .then(({ok,data})=>{if(cancelled)return;if(ok&&data.profile)setProfile(data.profile);else setError(data.message??"Не удалось загрузить профиль.")})
@@ -138,7 +141,7 @@ export function UserProfilePopover({
         </div>
         <div className="fz-mini-body">
           <div className="fz-mini-avatar">{p.avatarUrl?<MediaImage src={p.avatarUrl}/>:p.displayName.slice(0,2).toLocaleUpperCase("ru")}<i className={p.presence==="online"?"online":""}/></div>
-          <div className="fz-mini-identity"><strong>{p.displayName}</strong><span>@{p.username}</span><small>Уровень {p.globalLevel} · {p.presence==="online"?"в сети":"не в сети"}</small></div>
+          <div className="fz-mini-identity"><strong>{p.displayName}</strong><ClanTag clan={p.clan}/><span>@{p.username}</span><small>Уровень {p.globalLevel} · {p.presence==="online"?"в сети":"не в сети"}</small></div>
           {!p.isOwnProfile?<div className="fz-profile-icon-actions">
             <button type="button" onClick={message} aria-label="Написать сообщение" title="Написать сообщение"><MessageCircle size={17}/></button>
             <button type="button" onClick={()=>setCallMode("voice")} aria-label="Голосовой звонок" title="Голосовой звонок"><Phone size={17}/></button>
@@ -168,7 +171,7 @@ export function UserProfilePopover({
       <aside>
         <div className="fz-full-banner" style={p.bannerUrl?{backgroundImage:`linear-gradient(180deg,transparent,#08101e),url("${p.bannerUrl}")`}:undefined}/>
         <div className="fz-full-avatar">{p.avatarUrl?<MediaImage src={p.avatarUrl}/>:p.displayName.slice(0,2)}<i className={p.presence==="online"?"online":""}/></div>
-        <h2>{p.displayName}</h2><p>@{p.username}</p><small>Уровень {p.globalLevel} · {p.presence==="online"?"в сети":"не в сети"}</small>
+        <h2>{p.displayName}</h2><ClanTag clan={p.clan} details/><p>@{p.username}</p><small>Уровень {p.globalLevel} · {p.presence==="online"?"в сети":"не в сети"}</small>
         {!p.isOwnProfile?<div className="fz-profile-icon-actions fz-full-actions"><button onClick={message} aria-label="Написать сообщение" title="Написать сообщение"><MessageCircle/></button><button onClick={()=>setCallMode("voice")} aria-label="Голосовой звонок" title="Голосовой звонок"><Phone/></button><button onClick={()=>setCallMode("video")} aria-label="Видеозвонок" title="Видеозвонок"><Video/></button><button onClick={()=>void friendAction()} aria-label={p.friendshipStatus==="friends"?"Удалить из друзей":"Добавить в друзья"} title={p.friendshipStatus==="friends"?"Удалить из друзей":p.friendshipStatus==="outgoing"?"Заявка отправлена":"Добавить в друзья"} disabled={busy||p.friendshipStatus==="outgoing"}>{p.friendshipStatus==="friends"?<UserMinus/>:p.friendshipStatus==="outgoing"?<Check/>:<UserPlus/>}</button></div>:null}
         <section><h3>О пользователе</h3><p>{p.bio||"Описание не заполнено."}</p>{p.profileStatus?<span>{p.profileStatus}</span>:null}</section>
         <div className="fz-full-stats"><span><b>{p.stats.messages}</b><small>сообщений</small></span><span><b>{p.stats.friends}</b><small>друзей</small></span><span><b>{p.stats.servers}</b><small>серверов</small></span></div>

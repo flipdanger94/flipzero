@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { and, asc, desc, eq, gt, ilike, inArray, isNull, or, sql } from "drizzle-orm";
 import { after, NextResponse } from "next/server";
 import { getDatabase } from "@/db/client";
+import { clanTagsForUsers } from "@/lib/clan-tags";
 import { channels, channelNotificationSettings, members, messages, moderationCases, moderationFlags, reactions, spaces, users } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
 import { dispatchDeveloperEvent } from "@/lib/developer-webhooks";
@@ -30,9 +31,10 @@ export async function GET(request: Request, { params }: { params: Promise<{ chan
   if (pinned) conditions.push(sql`${messages.pinnedAt} IS NOT NULL`);
   if (threadRootId) conditions.push(eq(messages.threadRootId, threadRootId)); else conditions.push(isNull(messages.threadRootId));
   const rows = await access.database.select({ id: messages.id, content: messages.content, attachments: messages.attachments, replyToId: messages.replyToId, threadRootId: messages.threadRootId, editedAt: messages.editedAt, pinnedAt: messages.pinnedAt, createdAt: messages.createdAt, authorId: users.id, displayName: users.displayName, username: users.username, avatarUrl: users.avatarUrl }).from(messages).innerJoin(users, eq(users.id, messages.authorId)).where(and(...conditions)).orderBy(threadRootId ? asc(messages.createdAt) : desc(messages.createdAt)).limit(100);
+  const clanTags=await clanTagsForUsers(rows.map(row=>row.authorId));
   const ids = rows.map((row) => row.id); const reactionRows = ids.length ? await access.database.select().from(reactions).where(inArray(reactions.messageId, ids)) : [];
   return NextResponse.json({
-    messages: (threadRootId ? rows : rows.reverse()).map((row) => ({ ...row, reactions: reactionRows.filter((item) => item.messageId === row.id) })),
+    messages: (threadRootId ? rows : rows.reverse()).map((row) => ({ ...row, clan:clanTags.get(row.authorId)??null, reactions: reactionRows.filter((item) => item.messageId === row.id) })),
     permissions: {
       canSend: (access.channel.kind !== "announcement" || access.channel.ownerId === access.user.id) && (access.owner || hasPermission(access.permissions, SpacePermission.SendMessages)),
       canReact: access.owner || hasPermission(access.permissions, SpacePermission.AddReactions),

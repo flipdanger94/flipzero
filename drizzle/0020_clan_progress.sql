@@ -1,0 +1,5 @@
+ALTER TABLE clans ADD COLUMN IF NOT EXISTS tag_color text NOT NULL DEFAULT '#8B77FF';
+ALTER TABLE clans ADD COLUMN IF NOT EXISTS tag_icon text NOT NULL DEFAULT 'shield';
+ALTER TABLE clans ADD COLUMN IF NOT EXISTS xp bigint NOT NULL DEFAULT 0;
+ALTER TABLE clan_members ADD COLUMN IF NOT EXISTS contribution_xp bigint NOT NULL DEFAULT 0;
+CREATE INDEX IF NOT EXISTS clans_xp_rank_idx ON clans (xp DESC, created_at ASC, id ASC);

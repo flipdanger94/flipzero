@@ -1,3 +1,4 @@
+import { clanTagsForUsers } from "@/lib/clan-tags";
 import { createHash, randomUUID } from "node:crypto";
 import { and, desc, eq, isNull, lt, ne, or, sql } from "drizzle-orm";
 import { NextResponse } from "next/server";
@@ -44,8 +45,9 @@ export async function GET(request: Request) {
     const hasMore = rows.length > limit;
     const page = rows.slice(0, limit).reverse();
     await database.update(directMessages).set({ readAt: new Date() }).where(and(eq(directMessages.conversationId, conversationId), eq(directMessages.receiverId, user.id), isNull(directMessages.readAt)));
+    const messageTags=await clanTagsForUsers(page.map(message=>message.senderId));
     return NextResponse.json({
-      messages: page.map((message) => ({ ...message, ...decodeDirectMessage(message.text) })),
+      messages: page.map((message) => ({ ...message, clan:messageTags.get(message.senderId)??null, ...decodeDirectMessage(message.text) })),
       nextCursor: hasMore && page[0] ? page[0].createdAt.toISOString() : null,
       hasMore,
     });
@@ -62,7 +64,8 @@ export async function GET(request: Request) {
     const [counter] = await database.select({ count: sql<number>`count(*)::int` }).from(directMessages).where(and(eq(directMessages.conversationId, id), eq(directMessages.receiverId, user.id), isNull(directMessages.readAt), isNull(directMessages.deletedAt)));
     return { id, other, lastMessage: lastMessage ?? null, unread: counter?.count ?? 0 };
   }));
-  return NextResponse.json({ conversations: conversations.filter(Boolean), unread: conversations.reduce((sum, item) => sum + (item?.unread ?? 0), 0) });
+  const clanTags=await clanTagsForUsers(conversations.map(item=>item?.other?.id).filter((id):id is string=>Boolean(id)));
+  return NextResponse.json({ conversations: conversations.filter(Boolean).map(item=>({...item!,other:{...item!.other,clan:clanTags.get(item!.other.id)??null}})), unread: conversations.reduce((sum, item) => sum + (item?.unread ?? 0), 0) });
 }
 
 export async function POST(request: Request) {

@@ -1,6 +1,20 @@
-import { and, eq } from "drizzle-orm";
+import { and, count, eq, gt, lt, or } from "drizzle-orm";
 import { getDatabase } from "@/db/client";
 import { clanMembers, clans } from "@/db/schema";
+import { clanLevel } from "@/lib/clan-progress";
+
+export async function getUserClan(userId:string) {
+  const db=getDatabase();
+  const [clan]=await db.select({id:clans.id,name:clans.name,tag:clans.tag,tagColor:clans.tagColor,tagIcon:clans.tagIcon,xp:clans.xp,createdAt:clans.createdAt})
+    .from(clanMembers).innerJoin(clans,eq(clans.id,clanMembers.clanId)).where(eq(clanMembers.userId,userId)).limit(1);
+  if(!clan)return null;
+  const [{higher}]=await db.select({higher:count()}).from(clans).where(or(
+    gt(clans.xp,clan.xp),
+    and(eq(clans.xp,clan.xp),lt(clans.createdAt,clan.createdAt)),
+    and(eq(clans.xp,clan.xp),eq(clans.createdAt,clan.createdAt),lt(clans.id,clan.id)),
+  ));
+  return {id:clan.id,name:clan.name,tag:clan.tag,tagColor:clan.tagColor,tagIcon:clan.tagIcon,xp:clan.xp,level:clanLevel(clan.xp),rank:higher+1};
+}
 
 export const CLAN_MEMBER_LIMIT = 50;
 export const CLAN_NAME_MIN = 3;

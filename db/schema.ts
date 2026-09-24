@@ -504,6 +504,9 @@ export const clans = pgTable("clans", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
   tag: text("tag").notNull(),
+  tagColor: text("tag_color").default("#8B77FF").notNull(),
+  tagIcon: text("tag_icon").default("shield").notNull(),
+  xp: bigint("xp", { mode: "number" }).default(0).notNull(),
   description: text("description"),
   avatarUrl: text("avatar_url"),
   bannerUrl: text("banner_url"),
@@ -521,6 +524,7 @@ export const clans = pgTable("clans", {
 export const clanMembers = pgTable("clan_members", {
   clanId: text("clan_id").notNull().references(() => clans.id, { onDelete: "cascade" }),
   userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  contributionXp: bigint("contribution_xp", { mode: "number" }).default(0).notNull(),
   role: clanRole("role").default("member").notNull(),
   joinedAt: timestamp("joined_at", { withTimezone: true }).defaultNow().notNull(),
 }, (table) => [

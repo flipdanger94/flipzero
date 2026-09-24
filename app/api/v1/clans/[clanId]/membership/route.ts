@@ -119,8 +119,9 @@ export async function PATCH(request:Request,{params}:{params:Promise<{clanId:str
   if(action==="kick"){
     if(actorRole==="officer"&&target.role!=="member") return NextResponse.json({message:"Офицер может исключать только обычных участников."},{status:403});
     await db.transaction(async(tx)=>{
-      await tx.delete(clanMembers).where(and(eq(clanMembers.clanId,clanId),eq(clanMembers.userId,targetUserId)));
-      await tx.update(clans).set({memberCount:sql`greatest(${clans.memberCount}-1,0)`,updatedAt:new Date()}).where(eq(clans.id,clanId));
+      const [removed]=await tx.delete(clanMembers).where(and(eq(clanMembers.clanId,clanId),eq(clanMembers.userId,targetUserId))).returning({xp:clanMembers.contributionXp});
+      if(!removed) throw new Error("MEMBER_NOT_FOUND");
+      await tx.update(clans).set({memberCount:sql`greatest(${clans.memberCount}-1,0)`,xp:sql`${clans.xp}-${removed.xp}`,updatedAt:new Date()}).where(eq(clans.id,clanId));
       await tx.insert(notifications).values({id:randomUUID(),userId:targetUserId,actorId:user.id,type:"clan_kicked",title:"Вы исключены из клана",body:"Вы больше не состоите в клане.",entityType:"clan",entityId:clanId});
     });
     return NextResponse.json({ok:true});
@@ -154,8 +155,9 @@ export async function DELETE(request:Request,{params}:{params:Promise<{clanId:st
   if(role==="leader") return NextResponse.json({message:"Лидер должен передать лидерство или удалить клан."},{status:409});
   const db=getDatabase();
   await db.transaction(async(tx)=>{
-    await tx.delete(clanMembers).where(and(eq(clanMembers.clanId,clanId),eq(clanMembers.userId,user.id)));
-    await tx.update(clans).set({memberCount:sql`greatest(${clans.memberCount}-1,0)`,updatedAt:new Date()}).where(eq(clans.id,clanId));
+    const [removed]=await tx.delete(clanMembers).where(and(eq(clanMembers.clanId,clanId),eq(clanMembers.userId,user.id))).returning({xp:clanMembers.contributionXp});
+    if(!removed) throw new Error("MEMBER_NOT_FOUND");
+    await tx.update(clans).set({memberCount:sql`greatest(${clans.memberCount}-1,0)`,xp:sql`${clans.xp}-${removed.xp}`,updatedAt:new Date()}).where(eq(clans.id,clanId));
   });
   return NextResponse.json({ok:true});
 }
