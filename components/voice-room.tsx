@@ -191,7 +191,7 @@ export function VoiceRoom({
     let room: Room | null = null;
     let connectTimeout: number | undefined;
     try {
-      const presenceResponse = await fetch(`/api/v1/channels/${channelId}/voice`, { method: "POST" });
+      const presenceResponse = await fetch(`/api/v1/channels/${channelId}/voice`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ breakout }) });
       const presenceData = await presenceResponse.json().catch(() => null);
       if (!presenceResponse.ok) { setError(presenceData?.message ?? "Нет доступа к голосовому каналу."); setStatus("idle"); return; }
       const response = await fetch(`/api/v1/channels/${channelId}/voice-token`, {
@@ -203,7 +203,12 @@ export function VoiceRoom({
       const data = await response.json();
       if (attempt !== joinAttemptRef.current) return;
       if (!response.ok) { setError(data.message ?? "Не удалось подключиться."); setStatus("idle"); return; }
-      room = new Room({ adaptiveStream: true, dynacast: true });
+      room = new Room({
+        adaptiveStream: true,
+        dynacast: true,
+        autoSubscribe: false,
+        publishDefaults: { simulcast: true },
+      });
       const connectedRoom = room;
       roomRef.current = room;
       const refresh = () => {
@@ -213,28 +218,43 @@ export function VoiceRoom({
           id: participant.identity,
           name: participant.name || participant.identity,
           muted: !participant.isMicrophoneEnabled,
-          deafened: false,
+          deafened: participant.attributes?.deafened === "true",
           camera: participant.isCameraEnabled,
           sharing: participant.isScreenShareEnabled,
           streaming: participant.isScreenShareEnabled,
           speaking: participant.isSpeaking,
         }))));
       };
-      room.on(RoomEvent.ParticipantConnected, refresh);
       room.on(RoomEvent.ParticipantDisconnected, refresh);
       room.on(RoomEvent.ActiveSpeakersChanged, (speakers) => {
         setActiveSpeaker(speakers[0]?.name || speakers[0]?.identity || "");
-        const localSpeaking = speakers.some((participant) => participant.isLocal);
-        if (localSpeaking !== speakingRef.current) {
-          speakingRef.current = localSpeaking;
-          void fetch(`/api/v1/channels/${channelId}/voice`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ speaking: localSpeaking }) });
+        speakingRef.current = speakers.some((participant) => participant.isLocal);
+        refresh();
+      });
+      const subscribeDefaultTrack = (publication: { source: Track.Source; setSubscribed: (subscribed: boolean) => void }) => {
+        if (publication.source === Track.Source.ScreenShare || publication.source === Track.Source.ScreenShareAudio) return;
+        publication.setSubscribed(true);
+      };
+      const subscribeParticipantDefaults = (participant: { trackPublications: Map<string, { source: Track.Source; setSubscribed: (subscribed: boolean) => void }> }) => {
+        participant.trackPublications.forEach((publication) => subscribeDefaultTrack(publication));
+      };
+      room.on(RoomEvent.TrackMuted, refresh);
+      room.on(RoomEvent.TrackUnmuted, refresh);
+      room.on(RoomEvent.ParticipantMetadataChanged, refresh);
+      room.on(RoomEvent.ParticipantAttributesChanged, refresh);
+      room.on(RoomEvent.TrackPublished, (publication) => { subscribeDefaultTrack(publication); refresh(); });
+      room.on(RoomEvent.TrackUnpublished, (publication, participant) => {
+        if (publication.source === Track.Source.ScreenShare || publication.source === Track.Source.ScreenShareAudio) {
+          clearStreamPreview(participant.identity);
+          remoteVideoRef.current?.querySelectorAll(`[data-participant-id="${participant.identity}"]`).forEach((element) => element.remove());
+          if (selectedStreamId === participant.identity) {
+            setSelectedStreamId("");
+            setFocusMode(false);
+          }
         }
         refresh();
       });
-      room.on(RoomEvent.TrackMuted, refresh);
-      room.on(RoomEvent.TrackUnmuted, refresh);
-      room.on(RoomEvent.TrackPublished, refresh);
-      room.on(RoomEvent.TrackUnpublished, refresh);
+      room.on(RoomEvent.ParticipantConnected, (participant) => { subscribeParticipantDefaults(participant); refresh(); });
       room.on(RoomEvent.ConnectionQualityChanged, (next, participant) => {
         if (participant.isLocal) { setQuality(next); emitVoiceSession(true, next); }
       });
@@ -278,7 +298,7 @@ export function VoiceRoom({
           element.dataset.source = track.source;
           element.dataset.participantId = participant.identity;
           remoteVideoRef.current?.appendChild(element);
-          if (track.source === Track.Source.ScreenShare) attachStreamPreview(participant.identity, track);
+          if (track.source === Track.Source.ScreenShare && selectedStreamId === participant.identity) attachStreamPreview(participant.identity, track);
           setRemoteVideo(true);
         }
       });
@@ -323,6 +343,9 @@ export function VoiceRoom({
         void fetch(`/api/v1/channels/${channelId}/voice`, { method: "DELETE" });
       });
       room.on(RoomEvent.AudioPlaybackStatusChanged, () => setAudioBlocked(!connectedRoom.canPlaybackAudio));
+      room.on(RoomEvent.MediaDevicesError, (mediaError) => {
+        setError(mediaError?.message ? `Ошибка устройства: ${mediaError.message}` : "Не удалось получить доступ к микрофону или камере.");
+      });
       await Promise.race([
         room.connect(data.url, data.token, { websocketTimeout: 10000, peerConnectionTimeout: 10000, maxRetries: 1 }),
         new Promise<never>((_, reject) => {
@@ -331,6 +354,7 @@ export function VoiceRoom({
       ]);
       window.clearTimeout(connectTimeout);
       if (attempt !== joinAttemptRef.current) { void room.disconnect(); return; }
+      connectedRoom.remoteParticipants.forEach((participant) => subscribeParticipantDefaults(participant));
       let audioPrefs: { inputId?: string; outputId?: string; inputVolume?: number; outputVolume?: number; inputProfile?: "standard"|"noise"|"raw" } = {};
       try { audioPrefs = JSON.parse(localStorage.getItem("flipzero:audio-devices:v1") ?? "{}"); } catch { audioPrefs = {}; }
       outputVolumeRef.current = Math.max(0, Math.min(1, Number(audioPrefs.outputVolume ?? 100) / 100));
@@ -439,6 +463,46 @@ export function VoiceRoom({
   }, []);
 
 
+  useEffect(() => {
+    if (status !== "connected" && status !== "reconnecting") return;
+    const heartbeat = () => {
+      void fetch(`/api/v1/channels/${channelId}/voice`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ heartbeat: true }),
+        keepalive: true,
+      });
+    };
+    heartbeat();
+    const interval = window.setInterval(heartbeat, 45_000);
+    const pagehide = () => {
+      navigator.sendBeacon?.(`/api/v1/channels/${channelId}/voice?leave=1`, new Blob([], { type: "text/plain" }));
+    };
+    window.addEventListener("pagehide", pagehide);
+    return () => {
+      window.clearInterval(interval);
+      window.removeEventListener("pagehide", pagehide);
+    };
+  }, [channelId, status]);
+
+  useEffect(() => {
+    if (status !== "connected" && status !== "reconnecting") return;
+    const refreshToken = async () => {
+      const response = await fetch(`/api/v1/channels/${channelId}/voice-token`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ breakout }),
+      }).catch(() => null);
+      if (!response?.ok) return;
+      const data = await response.json();
+      const currentRoom = roomRef.current as (Room & { updateToken?: (token: string) => Promise<void> }) | null;
+      if (currentRoom?.updateToken) await currentRoom.updateToken(data.token).catch(() => undefined);
+    };
+    const timer = window.setInterval(() => void refreshToken(), 90 * 60_000);
+    return () => window.clearInterval(timer);
+  }, [channelId, status]);
+
+
   async function chooseDevice(next: string) {
     if (!roomRef.current) return;
     try { await roomRef.current.switchActiveDevice("audioinput", next); setDeviceId(next); saveDevicePreference("inputId", next); setError(""); }
@@ -457,6 +521,7 @@ export function VoiceRoom({
     deafenedRef.current = next;
     audioRef.current?.querySelectorAll("audio").forEach((audio) => { audio.muted = next; });
     setDeafened(next);
+    await roomRef.current?.localParticipant.setAttributes({ deafened: String(next) }).catch(() => undefined);
     void fetch(`/api/v1/channels/${channelId}/voice`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ selfDeafened: next }) });
   }
   async function enableAudio() {
@@ -645,6 +710,11 @@ export function VoiceRoom({
   const selectedStream = streamingParticipants.find((participant) => participant.id === selectedStreamId) ?? streamingParticipants[0] ?? null;
 
   function focusStream(participantId: string) {
+    const room = roomRef.current;
+    const participant = room?.remoteParticipants.get(participantId);
+    participant?.trackPublications.forEach((publication) => {
+      if (publication.source === Track.Source.ScreenShare || publication.source === Track.Source.ScreenShareAudio) publication.setSubscribed(true);
+    });
     setSelectedStreamId(participantId);
     setFocusMode(true);
     remoteVideoRef.current?.querySelectorAll<HTMLElement>("[data-participant-id]").forEach((element) => {
@@ -656,9 +726,17 @@ export function VoiceRoom({
     setFocusMode(false);
   }
   function clearFocus() {
+    const previous = selectedStreamId;
+    const participant = roomRef.current?.remoteParticipants.get(previous);
+    participant?.trackPublications.forEach((publication) => {
+      if (publication.source === Track.Source.ScreenShare || publication.source === Track.Source.ScreenShareAudio) publication.setSubscribed(false);
+    });
+    remoteVideoRef.current?.querySelectorAll<HTMLElement>(`[data-participant-id="${previous}"]`).forEach((element) => element.remove());
+    clearStreamPreview(previous);
     setFocusMode(false);
     setSelectedStreamId("");
     remoteVideoRef.current?.querySelectorAll<HTMLElement>("[data-participant-id]").forEach((element) => { element.hidden = false; });
+    setRemoteVideo(Boolean(remoteVideoRef.current?.childElementCount));
   }
   function applyStreamVolume() {
     if (!selectedStreamId) return;
