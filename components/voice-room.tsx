@@ -651,8 +651,9 @@ export function VoiceRoom({
   async function openPictureInPicture() {
     const selector = selectedStreamId ? `video[data-participant-id="${selectedStreamId}"]` : "video";
     const video = remoteVideoRef.current?.querySelector<HTMLVideoElement>(selector);
-    if (!video || typeof video.requestPictureInPicture !== "function") { setError("Картинка в картинке недоступна для этого стрима."); return; }
-    try { await video.requestPictureInPicture(); } catch { setError("Не удалось открыть картинку в картинке."); }
+    const pipVideo = video as (HTMLVideoElement & { requestPictureInPicture?: () => Promise<unknown> }) | null | undefined;
+    if (!pipVideo || typeof pipVideo.requestPictureInPicture !== "function") { setError("Картинка в картинке недоступна для этого стрима."); return; }
+    try { await pipVideo.requestPictureInPicture(); } catch { setError("Не удалось открыть картинку в картинке."); }
   }
 
   if (!connected) return (
