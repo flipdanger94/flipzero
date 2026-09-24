@@ -205,7 +205,7 @@ export function VoiceRoom({
       room.on(RoomEvent.TrackPublished, refresh);
       room.on(RoomEvent.TrackUnpublished, refresh);
       room.on(RoomEvent.ConnectionQualityChanged, (next, participant) => {
-        if (participant.isLocal) setQuality(next);
+        if (participant.isLocal) { setQuality(next); emitVoiceSession(true, next); }
       });
       room.on(RoomEvent.DataReceived, (payload, participant, _kind, topic) => {
         if (topic !== "recording-consent") return;
@@ -238,6 +238,7 @@ export function VoiceRoom({
       room.on(RoomEvent.TrackSubscribed, (track, _publication, participant) => {
         if (track.kind === Track.Kind.Audio) {
           const element = track.attach();
+          element.dataset.participantId = participant.identity;
           if (element instanceof HTMLAudioElement) { element.muted = deafenedRef.current; element.volume = outputVolumeRef.current; }
           audioRef.current?.appendChild(element);
         }
@@ -283,6 +284,8 @@ export function VoiceRoom({
         setRemoteVideo(false);
         setActiveSpeaker("");
         onPresenceChange?.([]);
+        emitVoiceSession(false);
+        playVoiceCue("leave");
         void fetch(`/api/v1/channels/${channelId}/voice`, { method: "DELETE" });
       });
       room.on(RoomEvent.AudioPlaybackStatusChanged, () => setAudioBlocked(!connectedRoom.canPlaybackAudio));
@@ -335,6 +338,8 @@ export function VoiceRoom({
       setOutputDeviceId(room.getActiveDevice("audiooutput") ?? preferredOutput ?? speakers[0]?.deviceId ?? "");
       refresh();
       setStatus("connected");
+      emitVoiceSession(true);
+      playVoiceCue("join");
     } catch (cause) {
       if (room) void room.disconnect();
       void fetch(`/api/v1/channels/${channelId}/voice`, { method: "DELETE" });
@@ -374,6 +379,13 @@ export function VoiceRoom({
         const volume = Math.max(0, Math.min(1, Number(detail.value ?? 100) / 100));
         outputVolumeRef.current = volume;
         audioRef.current?.querySelectorAll("audio").forEach((audio) => { audio.volume = volume; });
+      }
+      if (detail.type === "participant-volume" && typeof detail.participantId === "string") {
+        const volume = Math.max(0, Math.min(1, Number(detail.value ?? 100) / 100));
+        audioRef.current?.querySelectorAll<HTMLAudioElement>(`audio[data-participant-id="${detail.participantId}"]`).forEach((audio) => { audio.volume = volume; });
+      }
+      if (detail.type === "leave") {
+        leave();
       }
       if (detail.type === "input-profile") {
         const profile = detail.profile;
