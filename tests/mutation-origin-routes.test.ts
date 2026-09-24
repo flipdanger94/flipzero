@@ -76,3 +76,14 @@ describe("Codespaces auth explicit bypass", () => {
     expect(registerSource).toContain(guard);
   });
 });
+
+
+describe("proxy mutation origin handling", () => {
+  it("proxy accepts browser-confirmed same-origin mutations behind a rewritten host", async () => {
+    const { readFile } = await import("node:fs/promises");
+    const source = await readFile("proxy.ts", "utf8");
+    expect(source).toContain('let trusted = fetchSite === "same-origin"');
+    expect(source).toContain('fetchSite !== "cross-site"');
+    expect(source).toContain('request.headers.get("x-forwarded-host")');
+  });
+});
