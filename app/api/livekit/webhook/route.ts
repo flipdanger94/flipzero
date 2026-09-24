@@ -4,6 +4,7 @@ import { TrackSource, WebhookReceiver } from "livekit-server-sdk";
 import { NextResponse } from "next/server";
 import { getDatabase } from "@/db/client";
 import { livekitWebhookEvents, voiceStates } from "@/db/schema";
+import { finalizeVoiceXp } from "@/lib/voice-xp";
 
 const BREAKOUTS = new Set(["main", "focus", "social"]);
 
@@ -57,10 +58,11 @@ export async function POST(request: Request) {
       set: { channelId: room.channelId, breakout: room.breakout, updatedAt: now },
     });
   } else if (event.event === "participant_left" && participantId) {
-    await database.delete(voiceStates).where(and(
-      eq(voiceStates.userId, participantId),
-      eq(voiceStates.channelId, room.channelId),
-    ));
+    await database.transaction((tx) => finalizeVoiceXp(tx, {
+      userId: participantId,
+      channelId: room.channelId,
+      spaceId: room.spaceId,
+    }));
   } else if ((event.event === "track_published" || event.event === "track_unpublished") && participantId) {
     const source = event.track?.source;
     if (source === TrackSource.SCREEN_SHARE || source === TrackSource.SCREEN_SHARE_AUDIO) {
@@ -75,10 +77,17 @@ export async function POST(request: Request) {
       ));
     }
   } else if (event.event === "room_finished") {
-    await database.delete(voiceStates).where(and(
+    const sessions = await database.select({ userId: voiceStates.userId }).from(voiceStates).where(and(
       eq(voiceStates.channelId, room.channelId),
       eq(voiceStates.breakout, room.breakout),
     ));
+    for (const session of sessions) {
+      await database.transaction((tx) => finalizeVoiceXp(tx, {
+        userId: session.userId,
+        channelId: room.channelId,
+        spaceId: room.spaceId,
+      }));
+    }
   }
 
   return NextResponse.json({ ok: true });
