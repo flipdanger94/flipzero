@@ -138,6 +138,23 @@ export const notifications = pgTable("notifications", {
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 }, (table) => [index("notifications_user_created_idx").on(table.userId, table.createdAt), index("notifications_user_read_idx").on(table.userId, table.readAt)]);
 
+export const directCallSessions = pgTable("direct_call_sessions", {
+  id: text("id").primaryKey(),
+  roomName: text("room_name").notNull(),
+  callerId: text("caller_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  receiverId: text("receiver_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  video: boolean("video").default(false).notNull(),
+  status: text("status").default("ringing").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  answeredAt: timestamp("answered_at", { withTimezone: true }),
+  endedAt: timestamp("ended_at", { withTimezone: true }),
+}, (table) => [
+  index("direct_call_sessions_receiver_status_idx").on(table.receiverId, table.status, table.createdAt),
+  index("direct_call_sessions_caller_status_idx").on(table.callerId, table.status, table.createdAt),
+  index("direct_call_sessions_expires_idx").on(table.expiresAt),
+]);
+
 export const adminAuditLogs = pgTable("admin_audit_logs", {
   id: text("id").primaryKey(),
   adminId: text("admin_id").notNull().references(() => users.id, { onDelete: "restrict" }),
