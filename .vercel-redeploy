@@ -1,16 +1,1 @@
-Redeploy production after build fixes.
-Batch includes permissions, privacy, moderation, channel overrides and voice changes.
-
-Reconnect trigger 2026-09-21T23:45:01Z
-
-Trigger after syntax fixes.
-
-Production deployment trigger after Git integration check.
-
-Trigger latest voice commits for production.
-
-Production deploy trigger for setup migration dashboard and releases 0000-0014.
-
-Retry after Vercel resource provisioning failure.
-
-Production publish trigger after social/profile and clans merge (2026-09-24).
+retry production deployment for voice rework
