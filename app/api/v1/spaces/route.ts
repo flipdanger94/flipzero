@@ -38,6 +38,7 @@ export async function GET() {
     kind: channels.kind,
     position: channels.position,
     parentId: channels.parentId,
+    userLimit: channels.userLimit,
   }).from(channels).where(inArray(channels.spaceId, spaceIds)).orderBy(asc(channels.position)) : [];
   const categories = spaceIds.length ? await database.select().from(channelCategories).where(inArray(channelCategories.spaceId, spaceIds)).orderBy(asc(channelCategories.position)) : [];
 
@@ -64,7 +65,7 @@ export async function POST(request: Request) {
   const defaultChannels = template?.success ? template.data.channels.map((channel, position) => ({ id: randomUUID(), spaceId, parentId: defaultCategories.find((category) => category.name === channel.category)?.id ?? null, name: channel.name, topic: channel.topic ?? null, kind: channel.kind, position })) : [
     { id: randomUUID(), spaceId, parentId: textCategoryId, name: "добро-пожаловать", topic: "Начните знакомство с пространством", kind: "text" as const, position: 0 },
     { id: randomUUID(), spaceId, parentId: textCategoryId, name: "общий-чат", topic: "Главный канал сообщества", kind: "text" as const, position: 1 },
-    { id: randomUUID(), spaceId, parentId: voiceCategoryId, name: "Лаунж", topic: "Голосовая комната", kind: "voice" as const, position: 2 },
+    { id: randomUUID(), spaceId, parentId: voiceCategoryId, name: "Лаунж", topic: "Голосовая комната", kind: "voice" as const, position: 2, userLimit: null },
   ];
 
   await database.transaction(async (tx) => {
