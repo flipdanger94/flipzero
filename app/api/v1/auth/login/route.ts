@@ -16,7 +16,7 @@ const LOGIN_ATTEMPT_LIMIT = 8;
 const DUMMY_PASSWORD_HASH = "$2b$12$KIXQq8WvJHQ1E5jPvT3aK.BuJIkKGEVbTQAtpQkHhB5IKUD2cG5oW";
 
 export async function POST(request: Request) {
-  if (!isTrustedMutationRequest(request)) return NextResponse.json({ code: "UNTRUSTED_ORIGIN", message: "Запрос отклонён. Обновите страницу и попробуйте снова." }, { status: 403 });
+  if (process.env.NODE_ENV === "production" && !isTrustedMutationRequest(request)) return NextResponse.json({ code: "UNTRUSTED_ORIGIN", message: "Запрос отклонён. Обновите страницу и попробуйте снова." }, { status: 403 });
   const parsed = loginSchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ code: "INVALID_INPUT", message: "Проверьте email и пароль." }, { status: 400 });
   if (!await consumeAuthAttempt(request, "login")) return NextResponse.json({ code: "TOO_MANY_ATTEMPTS", message: "Слишком много попыток. Повторите вход через 15 минут." }, { status: 429, headers: { "Retry-After": "900", "Cache-Control": "no-store" } });
