@@ -25,7 +25,7 @@ jobs:
         working-directory: desktop-electron
         run: npm install --no-audit --no-fund
       - name: Verify signing configuration
-                shell: pwsh
+        shell: pwsh
         env:
           CERTIFICATE: ${{ secrets.CSC_LINK }}
           PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
@@ -41,7 +41,7 @@ jobs:
           CSC_LINK: ${{ secrets.CSC_LINK }}
           CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
       - name: Verify Authenticode signature
-                shell: pwsh
+        shell: pwsh
         run: |
           $installer = Get-ChildItem desktop-electron/dist/*Setup.exe | Select-Object -First 1
           if (-not $installer) { throw 'Installer missing.' }
