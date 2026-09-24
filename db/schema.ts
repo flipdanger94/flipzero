@@ -632,12 +632,6 @@ export const chatGames=pgTable("chat_games",{
 export const chatGamePlays=pgTable("chat_game_plays",{
  gameId:text("game_id").notNull().references(()=>chatGames.id,{onDelete:"cascade"}),userId:text("user_id").notNull().references(()=>users.id,{onDelete:"cascade"}),answer:text("answer").notNull(),correct:boolean("correct").notNull(),createdAt:timestamp("created_at",{withTimezone:true}).defaultNow().notNull(),
 },table=>[primaryKey({columns:[table.gameId,table.userId]})]);
-export const temporaryVoiceRooms=pgTable("temporary_voice_rooms",{
- id:text("id").primaryKey(),creatorId:text("creator_id").notNull().references(()=>users.id,{onDelete:"cascade"}),contextType:text("context_type").notNull(),contextId:text("context_id").notNull(),expiresAt:timestamp("expires_at",{withTimezone:true}).notNull(),createdAt:timestamp("created_at",{withTimezone:true}).defaultNow().notNull(),
-},table=>[index("temporary_voice_room_expiry_idx").on(table.expiresAt)]);
-export const temporaryVoiceInvites=pgTable("temporary_voice_invites",{
- roomId:text("room_id").notNull().references(()=>temporaryVoiceRooms.id,{onDelete:"cascade"}),userId:text("user_id").notNull().references(()=>users.id,{onDelete:"cascade"}),
-},table=>[primaryKey({columns:[table.roomId,table.userId]})]);
 export const userStories=pgTable("user_stories",{
  id:text("id").primaryKey(),userId:text("user_id").notNull().references(()=>users.id,{onDelete:"cascade"}),content:text("content").default("").notNull(),imageUrl:text("image_url"),emoji:text("emoji"),audience:text("audience").notNull(),hiddenUserIds:jsonb("hidden_user_ids").$type<string[]>().default([]).notNull(),createdAt:timestamp("created_at",{withTimezone:true}).defaultNow().notNull(),expiresAt:timestamp("expires_at",{withTimezone:true}).notNull(),
 },table=>[index("user_stories_active_idx").on(table.expiresAt,table.userId)]);
