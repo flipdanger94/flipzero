@@ -50,3 +50,37 @@
 
 
 .role-managed-note{display:flex;align-items:flex-start;gap:10px;margin:2px 0 16px;padding:12px 13px;border:1px solid rgba(124,109,242,.18);border-radius:10px;background:rgba(124,109,242,.07);color:#b9a8ff}.role-managed-note>span{display:grid;gap:3px}.role-managed-note strong{font-size:.68rem;color:#e9e4f2}.role-managed-note small{font-size:.56rem;color:#817b89;line-height:1.45}
+
+
+/* Unified chat layout + composer */
+.chat-layout{min-width:0;min-height:0;height:100%;display:flex;flex-direction:column;overflow:hidden;background:inherit}
+.chat-layout-header{flex:0 0 auto;min-width:0}
+.chat-layout-feed{position:relative;flex:1 1 auto;min-width:0;min-height:0;overflow:hidden;display:flex;flex-direction:column}
+.chat-layout-composer{position:relative;z-index:4;flex:0 0 auto;min-width:0}
+.chat-layout-feed>.message-list,.chat-layout-feed>.direct-messages,.chat-layout-feed>.clan-message-list{flex:1 1 auto;min-height:0;height:100%;overflow-y:auto;overscroll-behavior:contain}
+.chat-composer-shell{position:relative;min-width:0;padding:8px 12px 12px;background:#171722;border-top:1px solid rgba(255,255,255,.06)}
+.chat-composer-row{min-width:0;min-height:48px;display:flex;align-items:flex-end;gap:4px;border:1px solid #4b5272;border-radius:14px;background:#151d33;padding:3px 5px;transition:border-color .16s ease,box-shadow .16s ease}
+.chat-composer-row:focus-within{border-color:#846cf2;box-shadow:0 0 0 2px rgba(132,108,242,.13)}
+.chat-composer-row textarea{flex:1 1 auto;min-width:0;min-height:42px;max-height:144px;resize:none;border:0;outline:0;background:transparent;color:#f6f7ff;padding:10px 5px;font:inherit;font-size:16px;line-height:1.35;overflow-y:hidden}
+.chat-composer-row textarea::placeholder{color:#7e849d;white-space:nowrap;text-overflow:ellipsis}
+.chat-composer-icon,.chat-composer-send{position:relative;flex:0 0 44px;width:44px;height:44px;min-height:44px;border:0;border-radius:11px;display:grid;place-items:center;background:transparent;color:#9aa2bd;cursor:pointer}
+.chat-composer-icon:hover{background:#242d46;color:#fff}.chat-composer-send{background:linear-gradient(135deg,#735cff,#d747da);color:#fff}
+.chat-composer-send:disabled{opacity:.36;cursor:not-allowed}
+.chat-composer-icon.is-recording{color:#ff6479;background:#3a1f2a}.chat-composer-icon small{position:absolute;right:2px;bottom:0;font-size:9px}
+.chat-composer-counter{padding:5px 8px 0;text-align:right;color:#858ca5;font-size:12px}.chat-composer-counter.over-limit{color:#ff7186}
+.chat-composer-locked{min-height:48px;display:flex;align-items:center;justify-content:center;padding:10px 14px;border:1px solid #3d435c;border-radius:12px;background:#101726;color:#aeb4c8;font-size:13px;text-align:center}
+.chat-attach-wrap{position:relative;flex:0 0 auto}.chat-attach-menu{position:absolute;left:0;bottom:52px;z-index:30;width:210px;padding:7px;border:1px solid #4e5776;border-radius:13px;background:#171f33;box-shadow:0 16px 44px #0008;display:grid;gap:3px}
+.chat-attach-menu>button{min-height:42px;border:0;border-radius:9px;background:transparent;color:#e9ecfa;display:flex;align-items:center;gap:9px;padding:0 10px;text-align:left;cursor:pointer}.chat-attach-menu>button:hover{background:#242d46}
+.chat-attach-menu .chat-attach-close{display:none}
+.chat-new-messages{position:absolute;right:16px;bottom:14px;z-index:8;min-height:38px;border:1px solid #6f5ad4;border-radius:999px;background:#2d2457;color:#fff;padding:0 13px;box-shadow:0 8px 24px #0007;cursor:pointer}
+.channel-title{min-width:0}.channel-title strong{min-width:0;max-width:min(52vw,420px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.message-list.has-messages{display:flex;flex-direction:column}.message-list.has-messages>.channel-intro+ .day-divider{margin-top:auto}
+
+.channel-chat-layout .composer-wrap,.direct-chat-layout .direct-composer,.clan-chat .clan-composer{padding:0;background:transparent}
+.chat-attachment-preview{display:flex;gap:8px;overflow-x:auto;padding:0 0 8px}
+.chat-attachment-preview article{flex:0 0 min(240px,78vw);min-width:0;display:grid;grid-template-columns:42px minmax(0,1fr) 36px;align-items:center;gap:8px;padding:8px;border:1px solid #414966;border-radius:11px;background:#11192b}
+.chat-attachment-preview strong,.chat-attachment-preview small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.chat-attachment-preview small{color:#8992ab;font-size:11px}
+.chat-attachment-preview button{width:36px;height:36px;min-height:36px;border:0;border-radius:9px;background:#202940;color:#b8bfd2}.chat-attachment-thumb{width:42px;height:42px;border-radius:8px;background-size:cover;background-position:center}
+.chat-image-attachment{display:block;width:min(100%,420px);margin-top:8px}.chat-image-attachment img{display:block;max-width:100%;max-height:360px;object-fit:contain;border-radius:12px}
+.chat-file-attachment{display:flex;align-items:center;gap:8px;width:min(100%,420px);margin-top:8px;padding:10px;border:1px solid #424a65;border-radius:10px;background:#11192a;color:#d8dcef;text-decoration:none}
+.clan-announcement-chat{height:min(68dvh,620px);min-height:360px}.clan-announcement-chat .clan-announcement-list{min-height:0;overflow-y:auto}

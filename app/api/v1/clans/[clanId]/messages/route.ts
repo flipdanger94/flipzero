@@ -44,7 +44,7 @@ export async function POST(request:Request,{params}:{params:Promise<{clanId:stri
   const raw=typeof body?.content==="string"?body.content.trim():"";
   if(raw.length>access.capabilities.directMessageLimit) return NextResponse.json({
     code:"MESSAGE_TOO_LONG",
-    message:`Максимальная длина сообщения — ${access.capabilities.directMessageLimit} символов${access.active?" с SuperFlip.":". SuperFlip увеличивает лимит до 4000."}`,
+    message:`Максимальная длина сообщения — ${access.capabilities.directMessageLimit} символов.`,
     limit:access.capabilities.directMessageLimit,
   },{status:400});
   const attachments=normalizeClanAttachments(body?.attachments);
