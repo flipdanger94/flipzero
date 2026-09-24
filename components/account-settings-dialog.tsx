@@ -32,6 +32,7 @@ export function AccountSettingsDialog({ user, initialSection = "profile", onClos
   const router = useRouter();
   const dialogRef = useModalA11y(onClose);
   const [section, setSection] = useState<AccountSettingsSection>(initialSection);
+  const [mobileSectionOpen, setMobileSectionOpen] = useState(initialSection !== "profile");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -43,13 +44,19 @@ export function AccountSettingsDialog({ user, initialSection = "profile", onClos
   const [superflipBioLimit, setSuperflipBioLimit] = useState(190);
   useEffect(() => { void fetch("/api/superflip/status").then((response) => response.json()).then((status: { capabilities?: { profileBioLimit?: number } }) => setSuperflipBioLimit(status.capabilities?.profileBioLimit ?? 190)).catch(() => {}); }, []);
   useEffect(() => {
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    if (window.matchMedia("(max-width: 700px)").matches && initialSection === "profile") setMobileSectionOpen(false);
+    return () => { document.body.style.overflow = previousOverflow; };
+  }, [initialSection]);
+  useEffect(() => {
     const onEscape = (event: KeyboardEvent) => { if (event.key === "Escape") onClose(); };
     window.addEventListener("keydown", onEscape);
     return () => window.removeEventListener("keydown", onEscape);
   }, [onClose]);
 
   function resetProfileDraft() { setDisplayName(user.displayName); setUsername(user.username); setBio(user.bio ?? ""); setError(""); setSuccess(""); }
-  function openSection(next: AccountSettingsSection) { setSection(next); setError(""); setSuccess(""); }
+  function openSection(next: AccountSettingsSection) { setSection(next); setMobileSectionOpen(true); setError(""); setSuccess(""); }
 
   async function saveProfile(event: FormEvent<HTMLFormElement>) {
     event.preventDefault(); setBusy(true); setError(""); setSuccess("");
@@ -96,7 +103,7 @@ export function AccountSettingsDialog({ user, initialSection = "profile", onClos
   const initials = user.displayName.split(/\s+/).map((part) => part[0]).join("").slice(0, 2).toLocaleUpperCase("ru");
 
   return <div className="dialog-backdrop account-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
-    <section ref={dialogRef} tabIndex={-1} className="account-settings" role="dialog" aria-modal="true" aria-labelledby="account-settings-title">
+    <section ref={dialogRef} tabIndex={-1} className={`account-settings ${mobileSectionOpen ? "mobile-section-open" : "mobile-section-list"}`} role="dialog" aria-modal="true" aria-labelledby="account-settings-title">
       <aside className="account-settings-nav">
         <div className="account-settings-brand"><span className="brand-symbol-wrap"><BrandMark /></span><strong>FlipZero</strong></div>
         <small className="account-nav-label">НАСТРОЙКИ ПОЛЬЗОВАТЕЛЯ</small>
@@ -118,6 +125,7 @@ export function AccountSettingsDialog({ user, initialSection = "profile", onClos
       </aside>
 
       <div className="account-settings-main"><div className="account-settings-content">
+        <button className="account-settings-mobile-back" type="button" onClick={()=>setMobileSectionOpen(false)} aria-label="Назад к разделам">← <span>Настройки</span></button>
         <button className="account-settings-close" onClick={onClose} aria-label="Закрыть настройки"><X size={20} /></button>
         {section === "profile" ? <>
           <div className="account-settings-heading"><span>ПРОФИЛЬ</span><h2 id="account-settings-title">Мой профиль</h2><p>Так вас видят другие участники FlipZero.</p></div>
