@@ -24,6 +24,7 @@ import {
 import { ConnectionQuality, Room, RoomEvent, Track } from "livekit-client";
 import { MediaImage } from "./media-image";
 import { normalizeVoicePresence, type VoicePresence } from "@/lib/voice-presence";
+import { voiceGridLayout } from "@/lib/voice-layout";
 
 type VoiceStatus = "idle" | "connecting" | "connected" | "reconnecting";
 export type { VoicePresence } from "@/lib/voice-presence";
@@ -158,6 +159,30 @@ export function VoiceRoom({
   function clearStreamPreview(participantId: string) {
     const targets = voiceRootRef.current?.querySelectorAll<HTMLDivElement>("[data-stream-preview-id]");
     const target = targets ? [...targets].find((element) => element.dataset.streamPreviewId === participantId) : null;
+    clearMedia(target ?? null);
+  }
+  function attachCameraPreview(participantId: string, track: Track, local = false) {
+    const attach = () => {
+      const targets = voiceRootRef.current?.querySelectorAll<HTMLDivElement>("[data-camera-preview-id]");
+      const target = targets ? [...targets].find((element) => element.dataset.cameraPreviewId === participantId) : null;
+      if (!target) return false;
+      clearMedia(target);
+      const video = track.attach();
+      video.dataset.participantId = participantId;
+      video.dataset.cameraPreview = "true";
+      if (local) video.dataset.localCamera = "true";
+      if (video instanceof HTMLVideoElement) {
+        video.muted = local;
+        video.playsInline = true;
+      }
+      target.appendChild(video);
+      return true;
+    };
+    if (!attach()) window.setTimeout(attach, 120);
+  }
+  function clearCameraPreview(participantId: string) {
+    const targets = voiceRootRef.current?.querySelectorAll<HTMLDivElement>("[data-camera-preview-id]");
+    const target = targets ? [...targets].find((element) => element.dataset.cameraPreviewId === participantId) : null;
     clearMedia(target ?? null);
   }
   function emitVoiceSession(connected: boolean, nextQuality = quality) {
@@ -295,22 +320,28 @@ export function VoiceRoom({
           audioRef.current?.appendChild(element);
         }
         if (track.kind === Track.Kind.Video) {
-          const element = track.attach();
-          element.dataset.source = track.source;
-          element.dataset.participantId = participant.identity;
-          remoteVideoRef.current?.appendChild(element);
-          if (track.source === Track.Source.ScreenShare) attachStreamPreview(participant.identity, track);
-          setRemoteVideo(true);
+          if (track.source === Track.Source.Camera) {
+            attachCameraPreview(participant.identity, track);
+          } else if (track.source === Track.Source.ScreenShare) {
+            const element = track.attach();
+            element.dataset.source = track.source;
+            element.dataset.participantId = participant.identity;
+            remoteVideoRef.current?.appendChild(element);
+            attachStreamPreview(participant.identity, track);
+            setRemoteVideo(true);
+          }
         }
       });
-      room.on(RoomEvent.TrackUnsubscribed, (track) => {
+      room.on(RoomEvent.TrackUnsubscribed, (track, _publication, participant) => {
         track.detach().forEach((element) => element.remove());
+        if (track.source === Track.Source.Camera) clearCameraPreview(participant.identity);
+        if (track.source === Track.Source.ScreenShare) clearStreamPreview(participant.identity);
         setRemoteVideo(Boolean(remoteVideoRef.current?.childElementCount));
       });
       room.on(RoomEvent.LocalTrackPublished, (publication) => {
         if (publication.source === Track.Source.Camera) {
           setCamera(true);
-          attachLocal(Track.Source.Camera, localCameraRef.current);
+          if (publication.track) attachCameraPreview(connectedRoom.localParticipant.identity, publication.track, true);
         }
         if (publication.source === Track.Source.ScreenShare) {
           setSharing(true);
@@ -321,12 +352,14 @@ export function VoiceRoom({
       room.on(RoomEvent.LocalTrackUnpublished, (publication) => {
         if (publication.source === Track.Source.Camera) {
           setCamera(false);
+          clearCameraPreview(connectedRoom.localParticipant.identity);
           clearMedia(localCameraRef.current);
         }
         if (publication.source === Track.Source.ScreenShare) {
           setSharing(false);
           clearMedia(localScreenRef.current);
           clearStreamPreview(connectedRoom.localParticipant.identity);
+          void fetch(`/api/v1/channels/${channelId}/voice`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ streaming: false }) });
         }
       });
       room.on(RoomEvent.Disconnected, () => {
@@ -463,6 +496,36 @@ export function VoiceRoom({
     window.addEventListener("flipzero:voice-control", handleVoiceControl);
     return () => window.removeEventListener("flipzero:voice-control", handleVoiceControl);
   }, []);
+
+
+  useEffect(() => {
+    const onShortcut = (event: KeyboardEvent) => {
+      if (event.ctrlKey || event.metaKey || event.altKey || event.repeat) return;
+      const target = event.target as HTMLElement | null;
+      if (target?.matches("input, textarea, select, [contenteditable=true]")) return;
+      const room = roomRef.current;
+      if (!room) return;
+      if (event.key.toLowerCase() === "m") {
+        event.preventDefault();
+        const nextMuted = room.localParticipant.isMicrophoneEnabled;
+        void room.localParticipant.setMicrophoneEnabled(!nextMuted).then(() => {
+          setMuted(nextMuted);
+          void fetch(`/api/v1/channels/${channelId}/voice`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ selfMuted: nextMuted }) });
+        }).catch(() => setError("Не удалось переключить микрофон."));
+      }
+      if (event.key.toLowerCase() === "d") {
+        event.preventDefault();
+        const next = !deafenedRef.current;
+        deafenedRef.current = next;
+        audioRef.current?.querySelectorAll("audio").forEach((audio) => { audio.muted = next; });
+        setDeafened(next);
+        void room.localParticipant.setAttributes({ deafened: String(next) }).catch(() => undefined);
+        void fetch(`/api/v1/channels/${channelId}/voice`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ selfDeafened: next }) });
+      }
+    };
+    window.addEventListener("keydown", onShortcut);
+    return () => window.removeEventListener("keydown", onShortcut);
+  }, [channelId]);
 
 
   useEffect(() => {
@@ -649,8 +712,13 @@ export function VoiceRoom({
     try {
       await room.localParticipant.setCameraEnabled(next);
       setCamera(next);
-      if (next) attachLocal(Track.Source.Camera, localCameraRef.current);
-      else clearMedia(localCameraRef.current);
+      if (next) {
+        const track = room.localParticipant.getTrackPublication(Track.Source.Camera)?.track;
+        if (track) attachCameraPreview(room.localParticipant.identity, track, true);
+      } else {
+        clearCameraPreview(room.localParticipant.identity);
+        clearMedia(localCameraRef.current);
+      }
       setError("");
     } catch {
       setError("Не удалось включить камеру. Проверьте разрешение браузера и доступ к устройству.");
@@ -707,7 +775,8 @@ export function VoiceRoom({
   const streamingParticipants = normalizedPresence.filter((participant) => participant.streaming || participant.sharing);
   const visibleParticipants = normalizedPresence.slice(0, 50);
   const hiddenParticipantCount = Math.max(0, normalizedPresence.length - visibleParticipants.length);
-  const showingVideo = camera || sharing || remoteVideo;
+  const showingVideo = sharing || remoteVideo;
+  const gridLayout = voiceGridLayout(visibleParticipants.length);
   const connected = status === "connected" || status === "reconnecting";
   const selectedStream = streamingParticipants.find((participant) => participant.id === selectedStreamId) ?? streamingParticipants[0] ?? null;
 
@@ -795,16 +864,18 @@ export function VoiceRoom({
         <div className="voice-room-health">
           <span className={`quality quality-${quality}`}><Signal size={14}/>{status === "reconnecting" ? "Переподключение…" : qualityLabels[quality]}</span>
           <span><Users size={14}/>{normalizedPresence.length}</span>
+          {sharing ? <button className="voice-live-self" type="button" onClick={()=>void toggleScreen()} aria-label="Остановить демонстрацию экрана"><MonitorUp size={14}/><span>Вы в эфире · Остановить</span></button> : null}
+          <button className={consentPanel?"voice-consent-trigger active":"voice-consent-trigger"} type="button" onClick={requestRecordingConsent} aria-label="Запросить согласие на запись" title="Согласие на запись"><ShieldCheck size={15}/></button>
         </div>
       </header>
 
       <main className="voice-stage-layout">
         <section className="voice-stage-main" aria-label="Сцена голосового канала" onTouchStart={(event)=>{swipeStartRef.current=event.touches[0]?.clientY??null}} onTouchEnd={(event)=>{const start=swipeStartRef.current;const end=event.changedTouches[0]?.clientY;if(focusMode&&start!==null&&typeof end==="number"&&end-start>80)minimizeStream();swipeStartRef.current=null}}>
-          {showingVideo ? <div className={`video-grid ${focusMode ? "focus-stream" : ""} ${camera && !sharing && !remoteVideo ? "camera-only" : ""}`}>
+          {showingVideo ? <div className={`video-grid ${focusMode ? "focus-stream" : ""}`}>
             <div ref={remoteVideoRef} className="remote-video"/>
             <div ref={localScreenRef} className={`local-screen ${sharing ? "visible" : ""}`}/>
-            <div ref={localCameraRef} className={`local-camera ${camera ? "visible" : ""}`}/>
-          </div> : <div className="voice-stage-empty" aria-hidden="true" />}
+            <div ref={localCameraRef} className="local-camera" hidden/>
+          </div> : null}
 
           {focusMode && selectedStream ? <div className="voice-stream-toolbar">
             <strong><span className="voice-live-badge">LIVE</span>{selectedStream.name}</strong>
@@ -817,22 +888,18 @@ export function VoiceRoom({
           </div> : null}
 
           {selectedStreamId && !focusMode ? <div className="voice-mini-stream-controls" aria-label="Мини-плеер стрима"><button type="button" onClick={()=>setFocusMode(true)} aria-label="Развернуть стрим"><Maximize2 size={16}/></button><button type="button" onClick={clearFocus} aria-label="Закрыть стрим">×</button></div>:null}
-          <div className="voice-tile-grid" role="list" aria-label="Участники">
+          <div className={`voice-tile-grid voice-grid-${gridLayout.key}`} role="list" aria-label="Участники">
             {visibleParticipants.map((participant)=><article key={participant.id} role="listitem" className={`voice-tile ${participant.speaking ? "speaking" : ""} ${participant.streaming || participant.sharing ? "is-streaming" : ""}`}>
               {participant.streaming || participant.sharing ? <div className="voice-tile-stream-preview" data-stream-preview-id={participant.id} aria-hidden="true" /> : null}
+              {participant.camera ? <div className="voice-tile-camera" data-camera-preview-id={participant.id} aria-hidden="true" /> : null}
               <div className="voice-tile-avatar">{participant.avatarUrl?<MediaImage src={participant.avatarUrl}/>:participant.name.slice(0,2).toLocaleUpperCase("ru")}</div>
-              <footer className="voice-tile-footer"><strong title={participant.name}>{participant.name}</strong><span>{participant.streaming || participant.sharing ? <b className="voice-live-badge">LIVE</b> : null}{participant.muted?<MicOff size={14}/>:null}{participant.deafened?<Headphones size={14}/>:null}{participant.camera?<Video size={14}/>:null}</span></footer>
+              <footer className="voice-tile-footer"><div><strong title={participant.name}>{participant.name}</strong>{participant.clanTag?<small style={participant.clanColor?{color:participant.clanColor}:undefined}>[{participant.clanTag}]</small>:null}</div><span>{participant.streaming || participant.sharing ? <b className="voice-live-badge">LIVE</b> : null}{participant.muted?<MicOff size={14}/>:null}{participant.deafened?<Headphones size={14}/>:null}{participant.camera?<Video size={14}/>:null}</span></footer>
               {participant.streaming || participant.sharing ? <button type="button" className="voice-tile-watch" onClick={()=>focusStream(participant.id)} aria-label={`Смотреть стрим ${participant.name}`}>Смотреть стрим</button>:null}
             </article>)}
             {hiddenParticipantCount ? <article className="voice-tile voice-tile-more" role="listitem"><strong>+{hiddenParticipantCount}</strong><span>ещё участников</span></article>:null}
           </div>
           {streamingParticipants.length > 1 ? <div className="voice-stream-switcher" aria-label="Активные стримы">{streamingParticipants.map((participant)=><button type="button" className={selectedStreamId===participant.id?"active":""} key={participant.id} onClick={()=>focusStream(participant.id)}><span className="voice-live-badge">LIVE</span>{participant.name}</button>)}</div>:null}
           {activeSpeaker || audioBlocked || error ? <div className="voice-stage-notices">{activeSpeaker ? <div className="active-speaker"><i/>Говорит: <b>{activeSpeaker}</b></div>:null}{audioBlocked ? <button className="voice-enable-audio" onClick={enableAudio}><Headphones size={18}/>Включить звук</button>:null}{error ? <div className="voice-error">{error}</div>:null}</div>:null}
-          <div className="voice-secondary-toolbar" aria-label="Дополнительные инструменты">
-            <button type="button" className={settings?"active":""} onClick={()=>setSettings((value)=>!value)} aria-label="Устройства"><Settings2 size={18}/><span>Устройства</span></button>
-            <button type="button" className={soundboard?"active":""} onClick={()=>setSoundboard((value)=>!value)} aria-label="Soundboard"><Music2 size={18}/><span>Soundboard</span></button>
-            <button type="button" onClick={requestRecordingConsent} aria-label="Согласие на запись"><ShieldCheck size={18}/><span>Согласие</span></button>
-          </div>
           {settings ? <div className="voice-device-settings voice-inline-panel">
             <label className="device-picker"><span>Микрофон</span><select value={deviceId} onChange={(event)=>void chooseDevice(event.target.value)} disabled={!devices.length}>{!devices.length?<option value="">Микрофон недоступен</option>:devices.map((device,index)=><option key={device.deviceId} value={device.deviceId}>{device.label||`Микрофон ${index+1}`}</option>)}</select></label>
             <label className="device-picker"><span>Динамики / наушники</span><select value={outputDeviceId} onChange={(event)=>void chooseOutput(event.target.value)} disabled={!outputDevices.length}>{!outputDevices.length?<option value="">Системное устройство</option>:outputDevices.map((device,index)=><option key={device.deviceId} value={device.deviceId}>{device.label||`Устройство ${index+1}`}</option>)}</select></label>
@@ -843,8 +910,10 @@ export function VoiceRoom({
       </main>
 
       <nav className="voice-bottom-controls" aria-label="Управление голосовым каналом">
-        <button className={muted?"is-muted":""} onClick={toggleMute} aria-label={muted?"Включить микрофон":"Выключить микрофон"}>{muted?<MicOff size={20}/>:<Mic size={20}/>}<span>Микрофон</span></button>
-        <button className={deafened?"is-muted":""} onClick={toggleDeafen} aria-label={deafened?"Включить звук":"Выключить звук"}><Headphones size={20}/><span>Звук</span></button>
+        <button className={muted?"is-muted":""} onClick={toggleMute} aria-label={muted?"Включить микрофон":"Выключить микрофон"} title="Микрофон · M">{muted?<MicOff size={20}/>:<Mic size={20}/>}<span>Микрофон</span></button>
+        <button className={deafened?"is-muted":""} onClick={toggleDeafen} aria-label={deafened?"Включить звук":"Выключить звук"} title="Звук · D"><Headphones size={20}/><span>Звук</span></button>
+        <button className={settings?"voice-control-secondary is-active":"voice-control-secondary"} onClick={()=>setSettings((value)=>!value)} aria-label="Устройства" title="Устройства"><Settings2 size={18}/><span>Устройства</span></button>
+        <button className={soundboard?"voice-control-secondary is-active":"voice-control-secondary"} onClick={()=>setSoundboard((value)=>!value)} aria-label="Soundboard" title="Soundboard"><Music2 size={18}/><span>Звуки</span></button>
         <button className={camera?"is-active":""} onClick={toggleCamera} aria-label={camera?"Выключить камеру":"Включить камеру"}>{camera?<VideoOff size={20}/>:<Video size={20}/>}<span>Камера</span></button>
         <button className={sharing?"is-active":""} onClick={toggleScreen} disabled={!screenSupported} aria-label={sharing?"Остановить демонстрацию экрана":"Демонстрация экрана"}><MonitorUp size={20}/><span>Экран</span></button>
         <button className="voice-leave" onClick={leave} aria-label="Отключиться"><PhoneOff size={20}/><span>Выйти</span></button>
