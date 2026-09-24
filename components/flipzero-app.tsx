@@ -282,7 +282,7 @@ export default function Home({ initialSpaceId, initialChannelId }: { initialSpac
       }
     };
     void refresh();
-    const interval = window.setInterval(refresh, 2000);
+    const interval = window.setInterval(refresh, 1000);
     return () => { cancelled = true; window.clearInterval(interval); };
   }, [activeSpaceId]);
   const activeRouteChannel = activeSpace?.channels.find((channel) => channel.name === activeChannel) ?? null;
