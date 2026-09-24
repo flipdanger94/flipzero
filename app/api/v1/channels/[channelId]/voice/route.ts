@@ -1,13 +1,13 @@
-import { randomUUID } from "node:crypto";
 import { and, count, eq, sql } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { getDatabase } from "@/db/client";
-import { channels, users, voiceStates, xpEvents } from "@/db/schema";
+import { channels, users, voiceStates } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
 import { getChannelPermissions } from "@/lib/space-permissions";
 import { hasPermission, Permission } from "@/lib/permissions";
 import { isTrustedMutationRequest } from "@/lib/security-controls";
 import { canJoinVoiceChannel } from "@/lib/voice-channel-limit";
+import { finalizeVoiceXp } from "@/lib/voice-xp";
 
 const BREAKOUTS = new Set(["main", "focus", "social"]);
 
@@ -22,26 +22,19 @@ async function accessVoice(channelId: string) {
   return { db, user, state };
 }
 
-async function disconnectVoice(access: Exclude<Awaited<ReturnType<typeof accessVoice>>, { error: NextResponse }>, channelId: string) {
-  await access.db.transaction(async (tx) => {
-    const [session] = await tx.delete(voiceStates).where(and(
-      eq(voiceStates.userId, access.user.id),
-      eq(voiceStates.channelId, channelId),
-    )).returning({ joinedAt: voiceStates.joinedAt });
-    if (session) {
-      const minutes = Math.min(120, Math.floor((Date.now() - session.joinedAt.getTime()) / 60_000));
-      if (minutes > 0) {
-        await tx.insert(xpEvents).values({
-          id: randomUUID(),
-          userId: access.user.id,
-          spaceId: access.state.spaceId,
-          source: "voice_minute",
-          amount: minutes,
-          idempotencyKey: `voice:${access.user.id}:${channelId}:${session.joinedAt.toISOString()}`,
-        }).onConflictDoNothing();
-      }
-    }
-  });
+type VoiceAccess = {
+  db: ReturnType<typeof getDatabase>;
+  user: NonNullable<Awaited<ReturnType<typeof getCurrentUser>>>;
+  state: Awaited<ReturnType<typeof getChannelPermissions>>;
+};
+
+async function disconnectVoice(access: VoiceAccess, channelId: string) {
+  if (!access.state.spaceId) return;
+  await access.db.transaction((tx) => finalizeVoiceXp(tx, {
+    userId: access.user.id,
+    channelId,
+    spaceId: access.state.spaceId!,
+  }));
 }
 
 export async function GET(_: Request, { params }: { params: Promise<{ channelId: string }> }) {
