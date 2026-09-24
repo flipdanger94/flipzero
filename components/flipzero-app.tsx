@@ -272,31 +272,42 @@ export default function Home({ initialSpaceId, initialChannelId }: { initialSpac
   useEffect(() => {
     if (!activeSpaceId) return;
     let cancelled = false;
+    let etag = "";
     const refresh = async () => {
-      const response = await fetch(`/api/v1/spaces/${encodeURIComponent(activeSpaceId)}/voice-presence`, { cache: "no-store" }).catch(() => null);
-      if (!response?.ok || cancelled) return;
+      if (document.visibilityState === "hidden") return;
+      const response = await fetch(`/api/v1/spaces/${encodeURIComponent(activeSpaceId)}/voice-presence`, {
+        cache: "no-store",
+        headers: etag ? { "if-none-match": etag } : undefined,
+      }).catch(() => null);
+      if (!response || response.status === 304 || !response.ok || cancelled) return;
+      etag = response.headers.get("etag") ?? etag;
       const data = await response.json();
-      if (!cancelled) {
-        const next: Record<string, VoicePresence[]> = {};
-        for (const [channelId, participants] of Object.entries(data.channels ?? {}) as [string, VoicePresence[]][]) next[channelId] = normalizeVoicePresence(participants);
-        setVoicePresence(next);
-        const limits = (data.limits ?? {}) as Record<string, number | null>;
-        setVoiceManage((data.manage ?? {}) as Record<string, boolean>);
-        setUserSpaces((current) => current.map((space) => {
-          if (space.id !== activeSpaceId) return space;
-          let changed = false;
-          const channels = space.channels.map((channel) => {
-            if (!Object.prototype.hasOwnProperty.call(limits, channel.id) || channel.userLimit === limits[channel.id]) return channel;
-            changed = true;
-            return { ...channel, userLimit: limits[channel.id] };
-          });
-          return changed ? { ...space, channels } : space;
-        }));
-      }
+      if (cancelled) return;
+      const nextPresence: Record<string, VoicePresence[]> = {};
+      for (const [channelId, participants] of Object.entries(data.channels ?? {}) as [string, VoicePresence[]][]) nextPresence[channelId] = normalizeVoicePresence(participants);
+      setVoicePresence(nextPresence);
+      const limits = (data.limits ?? {}) as Record<string, number | null>;
+      setVoiceManage((data.manage ?? {}) as Record<string, boolean>);
+      setUserSpaces((current) => current.map((space) => {
+        if (space.id !== activeSpaceId) return space;
+        let changed = false;
+        const channels = space.channels.map((channel) => {
+          if (!Object.prototype.hasOwnProperty.call(limits, channel.id) || channel.userLimit === limits[channel.id]) return channel;
+          changed = true;
+          return { ...channel, userLimit: limits[channel.id] };
+        });
+        return changed ? { ...space, channels } : space;
+      }));
     };
+    const onVisibility = () => { if (document.visibilityState === "visible") void refresh(); };
     void refresh();
-    const interval = window.setInterval(refresh, 1000);
-    return () => { cancelled = true; window.clearInterval(interval); };
+    const interval = window.setInterval(() => void refresh(), 4000);
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
   }, [activeSpaceId]);
   const activeRouteChannel = activeSpace?.channels.find((channel) => channel.name === activeChannel) ?? null;
   const activeApiChannel = activeSpace?.channels.find((channel) => channel.name === activeChannel && ["text", "forum", "announcement"].includes(channel.kind)) ?? null;
@@ -485,7 +496,7 @@ export default function Home({ initialSpaceId, initialChannelId }: { initialSpac
 
       <aside className="member-panel">
         <div className="real-member-list">
-          {membersLoading ? <div className="members-loading">Загрузка участников…</div> : memberGroups.length ? <>{memberGroups.map((group) => <section className="member-section member-role-group" key={group.key}><h2><span style={group.color ? { color: group.color } : undefined}>{group.label.toLocaleUpperCase("ru")} — {group.members.length}</span></h2>{group.members.map((member) => <button className={`member ${member.online ? "is-online" : "is-offline"}`} key={member.userId} type="button" aria-label={`Открыть профиль ${member.nickname || member.displayName} — ${member.online ? "в сети" : "не в сети"}`} title={`Открыть профиль ${member.nickname || member.displayName}`} onClick={() => openExclusiveOverlay(() => setSelectedMember(member))}><span className="mini-avatar avatar-coral">{member.avatarUrl ? <MediaImage src={member.avatarUrl} /> : (member.displayName || member.username || "?").slice(0, 2).toLocaleUpperCase("ru")}<i /></span><span><strong>{member.nickname || member.displayName}</strong><ClanTag clan={member.clan}/><small>@{member.username || "участник"} · {member.online ? "в сети" : "не в сети"}</small></span></button>)}</section>)}{membersCursor ? <button className="members-load-more" onClick={() => void loadMoreMembers()} disabled={membersLoadingMore}>{membersLoadingMore ? <><LoaderCircle className="spin" size={14} /> Загружаем…</> : "Показать ещё"}</button> : null}</> : <div className="members-loading">В этом пространстве пока нет участников.</div>}
+          {membersLoading ? <div className="members-loading">Загрузка участников…</div> : memberGroups.length ? <>{memberGroups.map((group) => <section className="member-section member-role-group" key={group.key}><h2><span style={group.color ? { color: group.color } : undefined}>{group.label.toLocaleUpperCase("ru")} — {group.members.length}</span></h2>{group.members.map((member) => <button className={`member ${member.online ? "is-online" : "is-offline"}`} key={member.userId} type="button" aria-label={`Открыть профиль ${member.nickname || member.displayName} — ${member.online ? "в сети" : "не в сети"}`} title={`Открыть профиль ${member.nickname || member.displayName}`} onClick={() => openExclusiveOverlay(() => setSelectedMember(member))}><span className="mini-avatar avatar-coral">{member.avatarUrl ? <MediaImage src={member.avatarUrl} /> : (member.displayName || member.username || "?").slice(0, 2).toLocaleUpperCase("ru")}<i /></span><span><strong>{member.nickname || member.displayName}</strong><ClanTag clan={member.clan}/><small>@{member.username || "участник"} · {member.online ? "в сети" : "не в сети"}</small></span>{Object.values(voicePresence).some((participants)=>participants.some((participant)=>participant.id===member.userId))?<span className="member-voice-indicator" title="В голосовом канале"><Mic size={13}/></span>:null}</button>)}</section>)}{membersCursor ? <button className="members-load-more" onClick={() => void loadMoreMembers()} disabled={membersLoadingMore}>{membersLoadingMore ? <><LoaderCircle className="spin" size={14} /> Загружаем…</> : "Показать ещё"}</button> : null}</> : <div className="members-loading">В этом пространстве пока нет участников.</div>}
         </div>
       </aside>
       <button className="mobile-drawer-backdrop" aria-label="Закрыть меню каналов" onClick={() => setMobileChannelsOpen(false)} />
@@ -559,7 +570,7 @@ function Channel({
         onPointerDown={(event) => beginLongPress(participant, event)} onPointerUp={cancelLongPress} onPointerCancel={cancelLongPress} onPointerMove={cancelLongPress}>
         <button type="button" className="voice-participant-main" onClick={() => openParticipant(participant)} aria-label={participant.streaming || participant.sharing ? `Смотреть стрим ${participant.name}` : `Открыть профиль ${participant.name}`}>
           <span className="voice-sidebar-avatar">{participant.avatarUrl ? <MediaImage src={participant.avatarUrl} /> : participant.name.slice(0,2).toLocaleUpperCase("ru")}</span>
-          <strong title={participant.name}>{participant.name}</strong>
+          <span className="voice-participant-copy"><strong title={participant.name}>{participant.name}</strong>{participant.clanTag ? <small style={participant.clanColor ? { color: participant.clanColor } : undefined}>[{participant.clanTag}]</small> : null}</span>
         </button>
         <span className="voice-sidebar-status" aria-label="Состояние участника">
           {participant.camera ? <Video size={12} aria-label="Камера включена" /> : null}
