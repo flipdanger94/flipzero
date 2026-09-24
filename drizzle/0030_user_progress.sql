@@ -1,5 +1,7 @@
 BEGIN;
 
+ALTER TABLE users ALTER COLUMN global_xp TYPE bigint USING global_xp::bigint;
+
 CREATE TABLE IF NOT EXISTS user_progress (
   user_id text PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
   total_xp bigint NOT NULL DEFAULT 0 CHECK (total_xp >= 0),
