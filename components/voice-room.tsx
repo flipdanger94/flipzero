@@ -97,6 +97,7 @@ export function VoiceRoom({
   const deafenedRef = useRef(false);
   const joinAttemptRef = useRef(0);
   const soundPlayingRef = useRef(false);
+  const speakingRef = useRef(false);
   const joinRef = useRef<() => Promise<void>>(async () => {});
   const outputVolumeRef = useRef(1);
   const voiceRootRef = useRef<HTMLDivElement | null>(null);
@@ -199,6 +200,11 @@ export function VoiceRoom({
       room.on(RoomEvent.ParticipantDisconnected, refresh);
       room.on(RoomEvent.ActiveSpeakersChanged, (speakers) => {
         setActiveSpeaker(speakers[0]?.name || speakers[0]?.identity || "");
+        const localSpeaking = speakers.some((participant) => participant.isLocal);
+        if (localSpeaking !== speakingRef.current) {
+          speakingRef.current = localSpeaking;
+          void fetch(`/api/v1/channels/${channelId}/voice`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ speaking: localSpeaking }) });
+        }
         refresh();
       });
       room.on(RoomEvent.TrackMuted, refresh);
@@ -589,6 +595,7 @@ export function VoiceRoom({
     setDeafened(false);
     deafenedRef.current = false;
     setActiveSpeaker("");
+    speakingRef.current = false;
     setQuality(ConnectionQuality.Unknown);
     setSettings(false);
     setSoundboard(false);
