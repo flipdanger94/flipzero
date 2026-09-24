@@ -2225,3 +2225,62 @@ html[data-motion="off"] *::after {
     padding:28px 14px calc(var(--mobile-bottom-nav,66px) + env(safe-area-inset-bottom) + 24px)!important;
   }
 }
+
+
+/* Mobile Social Hub polish: align top actions and keep DM composer fully above bottom navigation. */
+@media(max-width:767px){
+  .social-hub-v2>.social-nav-rail{
+    align-items:center!important;
+  }
+  .social-hub-v2>.social-nav-rail>.social-messages-shortcut,
+  .social-hub-v2>.social-nav-rail>.social-friends-tab,
+  .social-hub-v2>.social-nav-rail>.social-economy-tab,
+  .social-hub-v2>.social-nav-rail>.social-superflip-tab{
+    display:grid!important;
+    place-items:center!important;
+    align-self:center!important;
+    justify-self:center!important;
+    width:44px!important;
+    min-width:44px!important;
+    max-width:44px!important;
+    height:44px!important;
+    min-height:44px!important;
+    max-height:44px!important;
+    margin:0!important;
+    padding:0!important;
+    border-radius:11px!important;
+    line-height:0!important;
+    box-sizing:border-box!important;
+  }
+  .social-hub-v2>.social-nav-rail>.social-messages-shortcut svg,
+  .social-hub-v2>.social-nav-rail>.social-friends-tab svg,
+  .social-hub-v2>.social-nav-rail>.social-economy-tab svg,
+  .social-hub-v2>.social-nav-rail>.social-superflip-tab svg{
+    display:block!important;
+    width:18px!important;
+    height:18px!important;
+    margin:0!important;
+    transform:none!important;
+    flex:none!important;
+  }
+
+  .platform-workspace .social-hub-v2 .social-main-messages .chat-layout-composer{
+    box-sizing:border-box!important;
+    padding:0 8px max(10px,env(safe-area-inset-bottom))!important;
+    background:#080f1f!important;
+  }
+  .platform-workspace .social-hub-v2 .social-main-messages .direct-composer{
+    box-sizing:border-box!important;
+    width:100%!important;
+  }
+  .platform-workspace .social-hub-v2 .social-main-messages .chat-composer-shell{
+    box-sizing:border-box!important;
+    padding:6px 0 0!important;
+    background:transparent!important;
+    border-top:1px solid rgba(126,112,198,.18)!important;
+  }
+  .platform-workspace .social-hub-v2 .social-main-messages .chat-composer-row{
+    margin:0!important;
+    width:100%!important;
+  }
+}
