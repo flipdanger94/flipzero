@@ -13,6 +13,8 @@ export async function GET(_request: Request, { params }: { params: Promise<{ use
   const { userId } = await params;
   const db = getDatabase();
   await db.execute(sql`ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "profile_location" text; ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "profile_status" text; ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "profile_links" jsonb DEFAULT '[]'::jsonb NOT NULL;`);
+  const [exists] = await db.select({ id: users.id }).from(users).where(eq(users.id, userId)).limit(1);
+  if (!exists) return NextResponse.json({ code: "NOT_FOUND", message: "Пользователь не найден." }, { status: 404 });
   await db.insert(userProgress).values({ userId, totalXp: 0, level: 1 }).onConflictDoNothing({ target: userProgress.userId });
   const [user] = await db.select({
     id: users.id, username: users.username, displayName: users.displayName, avatarUrl: users.avatarUrl,
@@ -21,7 +23,6 @@ export async function GET(_request: Request, { params }: { params: Promise<{ use
     profileLocation: users.profileLocation, profileStatus: users.profileStatus, profileLinks: users.profileLinks,
     profileGames:users.profileGames,profileMusic:users.profileMusic,profileWidgets:users.profileWidgets,customStatusEmoji:users.customStatusEmoji,customStatusExpiresAt:users.customStatusExpiresAt,
   }).from(users).innerJoin(userProgress, eq(userProgress.userId, users.id)).where(eq(users.id, userId)).limit(1);
-  if (!user) return NextResponse.json({ code: "NOT_FOUND", message: "Пользователь не найден." }, { status: 404 });
   if (viewer.id !== userId) {
     const [blocked] = await db.select().from(userBlocks).where(or(and(eq(userBlocks.blockerId, viewer.id), eq(userBlocks.blockedId, userId)), and(eq(userBlocks.blockerId, userId), eq(userBlocks.blockedId, viewer.id)))).limit(1);
     if (blocked) return NextResponse.json({ code: "PROFILE_UNAVAILABLE", message: "Профиль недоступен." }, { status: 403 });
