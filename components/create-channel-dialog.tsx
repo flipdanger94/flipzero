@@ -5,7 +5,7 @@ import { Bell, Columns3, Hash, LoaderCircle, MessagesSquare, Volume2, X } from "
 import { useModalA11y } from "@/hooks/use-modal-a11y";
 
 type ChannelKind = "text" | "forum" | "voice" | "announcement" | "board";
-export type CreatedChannel = { id: string; spaceId: string; parentId: string | null; name: string; topic: string | null; kind: ChannelKind; position: number };
+export type CreatedChannel = { id: string; spaceId: string; parentId: string | null; name: string; topic: string | null; kind: ChannelKind; position: number; userLimit?: number | null };
 type CategoryOption = { id: string; name: string };
 
 export function CreateChannelDialog({spaceId, categories, initialKind, initialParentId, onClose, onCreated }: { spaceId: string; categories: CategoryOption[]; initialKind: "text" | "voice"; initialParentId?: string | null; onClose: () => void; onCreated: (channel: CreatedChannel) => void }) {
