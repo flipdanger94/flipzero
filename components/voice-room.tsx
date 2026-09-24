@@ -155,6 +155,11 @@ export function VoiceRoom({
     };
     if (!attach()) window.setTimeout(attach, 120);
   }
+  function clearStreamPreview(participantId: string) {
+    const targets = voiceRootRef.current?.querySelectorAll<HTMLDivElement>("[data-stream-preview-id]");
+    const target = targets ? [...targets].find((element) => element.dataset.streamPreviewId === participantId) : null;
+    clearMedia(target ?? null);
+  }
   function emitVoiceSession(connected: boolean, nextQuality = quality) {
     window.dispatchEvent(new CustomEvent("flipzero:voice-session", { detail: {
       connected, channelId, channelName, spaceName, quality: qualityLabels[nextQuality] ?? "Проверка",
@@ -289,6 +294,7 @@ export function VoiceRoom({
         if (publication.source === Track.Source.ScreenShare) {
           setSharing(true);
           attachLocal(Track.Source.ScreenShare, localScreenRef.current);
+          if (publication.track) attachStreamPreview(connectedRoom.localParticipant.identity, publication.track);
         }
       });
       room.on(RoomEvent.LocalTrackUnpublished, (publication) => {
@@ -299,6 +305,7 @@ export function VoiceRoom({
         if (publication.source === Track.Source.ScreenShare) {
           setSharing(false);
           clearMedia(localScreenRef.current);
+          clearStreamPreview(connectedRoom.localParticipant.identity);
         }
       });
       room.on(RoomEvent.Disconnected, () => {
