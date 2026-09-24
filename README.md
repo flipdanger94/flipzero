@@ -25,6 +25,24 @@ pnpm dev
 
 Подробности: [архитектура](docs/ARCHITECTURE.md) и [дорожная карта](docs/ROADMAP.md).
 
+## Тестовый пользователь для Codespaces
+
+Для изолированной тестовой PostgreSQL-базы можно создать пользователя напрямую, не используя форму регистрации:
+
+```bash
+npm run db:seed-test
+```
+
+По умолчанию создаётся тестовый аккаунт:
+
+- email: `test@flipzero.local`
+- username: `flipzero_test`
+- password: `Test123456!`
+
+Команда разрешена автоматически только в GitHub Codespaces. В другом локальном тестовом окружении требуется `ALLOW_TEST_USER_SEED=1`. Не используйте её с production `DATABASE_URL`.
+
+Данные можно переопределить переменными `TEST_USER_EMAIL`, `TEST_USER_USERNAME`, `TEST_USER_DISPLAY_NAME` и `TEST_USER_PASSWORD`.
+
 ## Проверка API
 
 ```bash
