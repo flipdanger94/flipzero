@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { and, count, eq, max } from "drizzle-orm";
+import { and, count, eq, max, sql } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { getDatabase } from "@/db/client";
 import { channelCategories, channels, spaces } from "@/db/schema";
@@ -61,9 +61,13 @@ export async function PUT(request: Request, { params }: { params: Promise<{ spac
     return NextResponse.json({ code: "FORBIDDEN", message: "Недостаточно прав для изменения канала." }, { status: 403 });
   }
 
-  const [updated] = await database.update(channels).set({ userLimit }).where(and(eq(channels.id, channelId), eq(channels.spaceId, spaceId))).returning({
-    id: channels.id,
-    userLimit: channels.userLimit,
+  const updated = await database.transaction(async (tx) => {
+    await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${channelId}))`);
+    const [row] = await tx.update(channels).set({ userLimit }).where(and(eq(channels.id, channelId), eq(channels.spaceId, spaceId))).returning({
+      id: channels.id,
+      userLimit: channels.userLimit,
+    });
+    return row;
   });
   return NextResponse.json({ channel: updated });
 }
