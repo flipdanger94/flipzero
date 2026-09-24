@@ -2,14 +2,14 @@ import { randomUUID } from "node:crypto";
 import { and, eq, gte, lt, sql } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { getDatabase } from "@/db/client";
-import { clanMembers, clans, questClaims, users, xpEvents } from "@/db/schema";
+import { questClaims, xpEvents } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
 import { creditCoins } from "@/lib/economy";
 import { awardClanContribution } from "@/lib/clan-season";
 import { ECONOMY, QUEST_CATALOG } from "@/lib/economy-config";
-import { levelFromXp } from "@/lib/gamification";
 import { getSuperFlipCapabilities } from "@/lib/superflip";
 import { isTrustedMutationRequest } from "@/lib/security-controls";
+import { awardXp } from "@/lib/xp";
 
 type Quest=(typeof QUEST_CATALOG)[number];
 function period(quest:Quest,now=new Date()){
@@ -48,9 +48,14 @@ export async function POST(request:Request){
       if(!claim)return "claimed" as const;
       const xp=Math.round(quest.xp*(superflip.active?ECONOMY.superFlipRewardMultiplier:1));
       const coins=Math.round(quest.coins*(superflip.active?ECONOMY.superFlipRewardMultiplier:1));
-      await tx.insert(xpEvents).values({id:randomUUID(),userId:user.id,source:"quest",amount:xp,idempotencyKey:`quest:${user.id}:${quest.key}:${key}`});
-      const [updated]=await tx.update(users).set({globalXp:sql`${users.globalXp}+${xp}`}).where(eq(users.id,user.id)).returning({globalXp:users.globalXp});
-      await tx.update(users).set({globalLevel:levelFromXp(updated.globalXp)}).where(eq(users.id,user.id));
+      const personal=await awardXp({
+        userId:user.id,
+        source:"quest",
+        amount:xp,
+        dedupeKey:`quest:${quest.key}:${key}`,
+        meta:{questKey:quest.key,periodKey:key},
+      },tx);
+      if(!personal.awarded)return "claimed" as const;
       await awardClanContribution(tx,user.id,xp);
       await creditCoins(tx,user.id,coins,`Квест: ${quest.title}`,`quest:${quest.key}:${key}`);
       let streakCoins=0;
