@@ -17,7 +17,11 @@ describe("voice token permissions", () => {
   it("does not mint a token for a member denied ConnectVoice", async () => {
     const response = await POST(new Request("https://flipzero.app/api/v1/channels/channel-1/voice-token", {
       method: "POST", headers: { origin: "https://flipzero.app" },
-    }), { params: Promise.resolve({ channelId: "channel-1" }) });
+    }), { params: Promise.resolve({ channelId: "channel-1" })   it("documents that camera follows SpeakVoice until a dedicated camera permission exists", () => {
+    expect(publishSourcesForPermissions(Permission.ConnectVoice)).not.toContain(TrackSource.CAMERA);
+    expect(publishSourcesForPermissions(Permission.SpeakVoice)).toContain(TrackSource.CAMERA);
+  });
+});
     expect(response.status).toBe(403);
   });
 
@@ -25,5 +29,11 @@ describe("voice token permissions", () => {
     expect(publishSourcesForPermissions(Permission.ViewChannels | Permission.ConnectVoice)).toEqual([]);
     expect(publishSourcesForPermissions(Permission.SpeakVoice)).toEqual([TrackSource.MICROPHONE, TrackSource.CAMERA]);
     expect(publishSourcesForPermissions(Permission.Stream)).toEqual([TrackSource.SCREEN_SHARE, TrackSource.SCREEN_SHARE_AUDIO]);
+    expect(publishSourcesForPermissions(Permission.SpeakVoice | Permission.Stream)).toEqual([
+      TrackSource.MICROPHONE,
+      TrackSource.CAMERA,
+      TrackSource.SCREEN_SHARE,
+      TrackSource.SCREEN_SHARE_AUDIO,
+    ]);
   });
 });
