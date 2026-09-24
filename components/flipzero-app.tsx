@@ -2,7 +2,7 @@
 import { ClanTag } from "./clan-tag";
 
 import { type PointerEvent as ReactPointerEvent, useEffect, useRef, useState } from "react";
-import { Bell, BookOpen, Check, ChevronDown, Columns3, Compass, Copy, Hash, Headphones, HelpCircle, Home as HomeIcon, LoaderCircle, Menu, MessageCircle, MessagesSquare, Mic, MicOff, MonitorUp, PhoneOff, Plus, Radio, Search, Settings2, Share2, ShieldCheck, Signal, Swords, Trash2, UserRound, Users, Video, Volume2, X } from "lucide-react";
+import { Bell, BookOpen, Check, ChevronDown, Columns3, Compass, Copy, Hash, Headphones, HelpCircle, Home as HomeIcon, LoaderCircle, Lock, Menu, MessageCircle, MessagesSquare, Mic, MicOff, MonitorUp, PhoneOff, Plus, Radio, Search, Settings2, Share2, ShieldCheck, Signal, Swords, Trash2, UserRound, Users, Video, Volume2, X } from "lucide-react";
 import { CreateSpaceDialog } from "@/components/create-space-dialog";
 import { MediaImage } from "@/components/media-image";
 import { CreateChannelDialog, type CreatedChannel } from "@/components/create-channel-dialog";
@@ -37,7 +37,7 @@ import { ClanHub } from "@/components/clan-hub";
 import { GlobalSearch } from "@/components/global-search";
 import { PreferencesProvider } from "@/components/preferences-provider";
 
-type ApiChannel = { id: string; parentId: string | null; name: string; topic: string | null; kind: string; position?: number };
+type ApiChannel = { id: string; parentId: string | null; name: string; topic: string | null; kind: string; position?: number; userLimit?: number | null };
 const channelKindLabels: Record<string, string> = { text: "Текстовый канал", voice: "Голосовой канал", stage: "Сцена", forum: "Форум", announcement: "Объявления", board: "Доска" };
 function channelIcon(channel: ApiChannel) {
   if (channel.kind === "voice") return <Volume2 size={17} />;
@@ -279,6 +279,11 @@ export default function Home({ initialSpaceId, initialChannelId }: { initialSpac
         const next: Record<string, VoicePresence[]> = {};
         for (const [channelId, participants] of Object.entries(data.channels ?? {}) as [string, VoicePresence[]][]) next[channelId] = normalizeVoicePresence(participants);
         setVoicePresence(next);
+        const limits = (data.limits ?? {}) as Record<string, number | null>;
+        setUserSpaces((current) => current.map((space) => space.id !== activeSpaceId ? space : {
+          ...space,
+          channels: space.channels.map((channel) => Object.prototype.hasOwnProperty.call(limits, channel.id) ? { ...channel, userLimit: limits[channel.id] } : channel),
+        }));
       }
     };
     void refresh();
@@ -355,6 +360,13 @@ export default function Home({ initialSpaceId, initialChannelId }: { initialSpac
   }
   function openVoiceChannel(channel: ApiChannel, participantId?: string) {
     if (!activeSpace) return;
+    const participantCount = normalizeVoicePresence(voicePresence[channel.id] ?? []).length;
+    const full = typeof channel.userLimit === "number" && participantCount >= channel.userLimit;
+    const canBypassLimit = activeSpace.ownerId === user?.id || user?.platformRole === "admin";
+    if (full && !canBypassLimit && voiceSession?.channelId !== channel.id) {
+      setAppNotice({ message: "Канал заполнен", tone: "error" });
+      return;
+    }
     if (voiceSession?.connected && voiceSession.channelId !== channel.id) {
       setPendingVoiceSwitch({ channel, participantId });
       return;
