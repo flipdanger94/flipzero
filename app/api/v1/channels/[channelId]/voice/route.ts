@@ -21,7 +21,7 @@ async function accessVoice(channelId: string) {
 
 export async function GET(_: Request, { params }: { params: Promise<{ channelId: string }> }) {
   const { channelId } = await params; const access = await accessVoice(channelId); if ("error" in access) return access.error;
-  const participants = await access.db.select({ userId: voiceStates.userId, displayName: users.displayName, username: users.username, avatarUrl: users.avatarUrl, selfMuted: voiceStates.selfMuted, selfDeafened: voiceStates.selfDeafened, streaming: voiceStates.streaming, joinedAt: voiceStates.joinedAt }).from(voiceStates).innerJoin(users, eq(users.id, voiceStates.userId)).where(eq(voiceStates.channelId, channelId));
+  const participants = await access.db.select({ userId: voiceStates.userId, displayName: users.displayName, username: users.username, avatarUrl: users.avatarUrl, selfMuted: voiceStates.selfMuted, selfDeafened: voiceStates.selfDeafened, streaming: voiceStates.streaming, speaking: voiceStates.speaking, joinedAt: voiceStates.joinedAt }).from(voiceStates).innerJoin(users, eq(users.id, voiceStates.userId)).where(eq(voiceStates.channelId, channelId));
   return NextResponse.json({ participants });
 }
 
@@ -29,7 +29,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ cha
   if (!isTrustedMutationRequest(request)) return NextResponse.json({ code: "UNTRUSTED_ORIGIN", message: "Запрос отклонён." }, { status: 403 });
   const { channelId } = await params; const access = await accessVoice(channelId); if ("error" in access) return access.error;
   if (!hasPermission(access.state.permissions, Permission.ConnectVoice)) return NextResponse.json({ code: "FORBIDDEN", message: "Нет права подключаться к голосовому каналу." }, { status: 403 });
-  await access.db.insert(voiceStates).values({ userId: access.user.id, channelId }).onConflictDoUpdate({ target: voiceStates.userId, set: { channelId, selfMuted: false, selfDeafened: false, streaming: false, joinedAt: new Date(), updatedAt: new Date() } });
+  await access.db.insert(voiceStates).values({ userId: access.user.id, channelId }).onConflictDoUpdate({ target: voiceStates.userId, set: { channelId, selfMuted: false, selfDeafened: false, streaming: false, speaking: false, joinedAt: new Date(), updatedAt: new Date() } });
   return NextResponse.json({ connected: true, channelId });
 }
 
@@ -40,10 +40,11 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ ch
   const [current] = await access.db.select().from(voiceStates).where(and(eq(voiceStates.userId, access.user.id), eq(voiceStates.channelId, channelId))).limit(1);
   if (!current) return NextResponse.json({ code: "NOT_CONNECTED", message: "Сначала подключитесь к голосовому каналу." }, { status: 409 });
   const streaming = typeof body?.streaming === "boolean" ? body.streaming : current.streaming;
+  const speakingState = typeof body?.speaking === "boolean" ? body.speaking : current.speaking;
   if (streaming && !hasPermission(access.state.permissions, Permission.Stream)) return NextResponse.json({ code: "FORBIDDEN", message: "Нет права запускать трансляцию." }, { status: 403 });
   const speaking = body?.selfMuted === false;
   if (speaking && !hasPermission(access.state.permissions, Permission.SpeakVoice)) return NextResponse.json({ code: "FORBIDDEN", message: "Нет права говорить в этом канале." }, { status: 403 });
-  await access.db.update(voiceStates).set({ selfMuted: typeof body?.selfMuted === "boolean" ? body.selfMuted : current.selfMuted, selfDeafened: typeof body?.selfDeafened === "boolean" ? body.selfDeafened : current.selfDeafened, streaming, updatedAt: new Date() }).where(eq(voiceStates.userId, access.user.id));
+  await access.db.update(voiceStates).set({ selfMuted: typeof body?.selfMuted === "boolean" ? body.selfMuted : current.selfMuted, selfDeafened: typeof body?.selfDeafened === "boolean" ? body.selfDeafened : current.selfDeafened, streaming, speaking: speakingState, updatedAt: new Date() }).where(eq(voiceStates.userId, access.user.id));
   return NextResponse.json({ ok: true });
 }
 

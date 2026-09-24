@@ -32,6 +32,7 @@ export function AccountSettingsDialog({ user, initialSection = "profile", onClos
   const router = useRouter();
   const dialogRef = useModalA11y(onClose);
   const [section, setSection] = useState<AccountSettingsSection>(initialSection);
+  const [mobileSectionOpen, setMobileSectionOpen] = useState(initialSection !== "profile");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -43,13 +44,19 @@ export function AccountSettingsDialog({ user, initialSection = "profile", onClos
   const [superflipBioLimit, setSuperflipBioLimit] = useState(190);
   useEffect(() => { void fetch("/api/superflip/status").then((response) => response.json()).then((status: { capabilities?: { profileBioLimit?: number } }) => setSuperflipBioLimit(status.capabilities?.profileBioLimit ?? 190)).catch(() => {}); }, []);
   useEffect(() => {
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    if (window.matchMedia("(max-width: 700px)").matches && initialSection === "profile") setMobileSectionOpen(false);
+    return () => { document.body.style.overflow = previousOverflow; };
+  }, [initialSection]);
+  useEffect(() => {
     const onEscape = (event: KeyboardEvent) => { if (event.key === "Escape") onClose(); };
     window.addEventListener("keydown", onEscape);
     return () => window.removeEventListener("keydown", onEscape);
   }, [onClose]);
 
   function resetProfileDraft() { setDisplayName(user.displayName); setUsername(user.username); setBio(user.bio ?? ""); setError(""); setSuccess(""); }
-  function openSection(next: AccountSettingsSection) { setSection(next); setError(""); setSuccess(""); }
+  function openSection(next: AccountSettingsSection) { setSection(next); setMobileSectionOpen(true); setError(""); setSuccess(""); }
 
   async function saveProfile(event: FormEvent<HTMLFormElement>) {
     event.preventDefault(); setBusy(true); setError(""); setSuccess("");
@@ -96,7 +103,7 @@ export function AccountSettingsDialog({ user, initialSection = "profile", onClos
   const initials = user.displayName.split(/\s+/).map((part) => part[0]).join("").slice(0, 2).toLocaleUpperCase("ru");
 
   return <div className="dialog-backdrop account-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
-    <section ref={dialogRef} tabIndex={-1} className="account-settings" role="dialog" aria-modal="true" aria-labelledby="account-settings-title">
+    <section ref={dialogRef} tabIndex={-1} className={`account-settings ${mobileSectionOpen ? "mobile-section-open" : "mobile-section-list"}`} role="dialog" aria-modal="true" aria-labelledby="account-settings-title">
       <aside className="account-settings-nav">
         <div className="account-settings-brand"><span className="brand-symbol-wrap"><BrandMark /></span><strong>FlipZero</strong></div>
         <small className="account-nav-label">НАСТРОЙКИ ПОЛЬЗОВАТЕЛЯ</small>
@@ -118,6 +125,7 @@ export function AccountSettingsDialog({ user, initialSection = "profile", onClos
       </aside>
 
       <div className="account-settings-main"><div className="account-settings-content">
+        <button className="account-settings-mobile-back" type="button" onClick={()=>setMobileSectionOpen(false)} aria-label="Назад к разделам">← <span>Настройки</span></button>
         <button className="account-settings-close" onClick={onClose} aria-label="Закрыть настройки"><X size={20} /></button>
         {section === "profile" ? <>
           <div className="account-settings-heading"><span>ПРОФИЛЬ</span><h2 id="account-settings-title">Мой профиль</h2><p>Так вас видят другие участники FlipZero.</p></div>
@@ -152,7 +160,7 @@ export function AccountSettingsDialog({ user, initialSection = "profile", onClos
           : section === "superflip" ? <SuperFlipSettings />
           : <SuperUpSettings />}
       </div>
-      {section === "profile" ? <footer className="account-settings-savebar" aria-live="polite"><span>{profileDirty ? "У вас есть несохранённые изменения" : "Все изменения сохранены"}</span><div><button type="button" className="account-secondary" onClick={resetProfileDraft} disabled={!profileDirty || busy}>Отмена</button><button type="submit" form="account-profile-form" className="account-primary" disabled={!profileDirty || busy}>{busy ? <><LoaderCircle size={17} className="spin" /> Сохраняем…</> : "Сохранить"}</button></div></footer> : null}
+      {section === "profile" ? <footer className="account-settings-savebar" aria-live="polite"><span>{profileDirty ? "У вас есть несохранённые изменения" : "Все изменения сохранены"}</span><div><button type="button" className="account-secondary" onClick={resetProfileDraft} disabled={!profileDirty || busy}>Сбросить</button><button type="submit" form="account-profile-form" className="account-primary" disabled={!profileDirty || busy}>{busy ? <><LoaderCircle size={17} className="spin" /> Сохраняем…</> : "Сохранить"}</button></div></footer> : null}
       </div>
     </section>
   </div>;
@@ -207,6 +215,7 @@ function VoiceDeviceSettings() {
   const [inputId, setInputId] = useState("");
   const [outputId, setOutputId] = useState("");
   const [notice, setNotice] = useState("");
+  const [voiceSounds, setVoiceSounds] = useState(() => typeof window === "undefined" || localStorage.getItem("flipzero:voice-sounds") !== "off");
   async function refresh(askPermission = false) {
     try {
       if (askPermission) { const stream = await navigator.mediaDevices.getUserMedia({ audio: true }); stream.getTracks().forEach((track) => track.stop()); }
@@ -225,7 +234,7 @@ function VoiceDeviceSettings() {
     return () => window.clearTimeout(timer);
   }, []);
   function save(nextInput = inputId, nextOutput = outputId) { localStorage.setItem("flipzero:audio-devices:v1", JSON.stringify({ inputId: nextInput, outputId: nextOutput })); setNotice("Выбор сохранён и будет применён в голосовой комнате."); }
-  return <><SettingsHeading kicker="ГОЛОС И ВИДЕО" title="Аудиоустройства" description="Выберите микрофон и устройство вывода. Настройка сохраняется для следующих подключений." /><div className="audio-device-card"><label><span><Mic size={17} /> Устройство ввода</span><select value={inputId} onChange={(event) => { setInputId(event.target.value); save(event.target.value, outputId); }}>{devices.inputs.length ? devices.inputs.map((item, index) => <option key={item.deviceId} value={item.deviceId}>{item.label || `Микрофон ${index + 1}`}</option>) : <option>Микрофон не найден</option>}</select></label><label><span><Headphones size={17} /> Устройство вывода</span><select value={outputId} onChange={(event) => { setOutputId(event.target.value); save(inputId, event.target.value); }}>{devices.outputs.length ? devices.outputs.map((item, index) => <option key={item.deviceId} value={item.deviceId}>{item.label || `Наушники / динамики ${index + 1}`}</option>) : <option>Системное устройство</option>}</select></label><button type="button" className="security-action" onClick={() => void refresh(true)}><RefreshCw size={16} /> Обновить устройства</button>{notice ? <p>{notice}</p> : null}</div><div className="settings-callout"><Volume2 size={20} /><span><strong>Проверка звука</strong><small>Откройте голосовую комнату — сохранённые устройства подключатся автоматически.</small></span></div></>;
+  return <><SettingsHeading kicker="ГОЛОС И ВИДЕО" title="Аудиоустройства" description="Выберите микрофон и устройство вывода. Настройка сохраняется для следующих подключений." /><div className="audio-device-card"><label><span><Mic size={17} /> Устройство ввода</span><select value={inputId} onChange={(event) => { setInputId(event.target.value); save(event.target.value, outputId); }}>{devices.inputs.length ? devices.inputs.map((item, index) => <option key={item.deviceId} value={item.deviceId}>{item.label || `Микрофон ${index + 1}`}</option>) : <option>Микрофон не найден</option>}</select></label><label><span><Headphones size={17} /> Устройство вывода</span><select value={outputId} onChange={(event) => { setOutputId(event.target.value); save(inputId, event.target.value); }}>{devices.outputs.length ? devices.outputs.map((item, index) => <option key={item.deviceId} value={item.deviceId}>{item.label || `Наушники / динамики ${index + 1}`}</option>) : <option>Системное устройство</option>}</select></label><button type="button" className="security-action" onClick={() => void refresh(true)}><RefreshCw size={16} /> Обновить устройства</button>{notice ? <p>{notice}</p> : null}</div><div className="settings-list voice-settings-list"><label className="settings-row"><span><strong>Звуки входа и выхода</strong><small>Воспроизводить короткий сигнал при подключении и выходе из голосового канала.</small></span><input type="checkbox" checked={voiceSounds} onChange={(event)=>{setVoiceSounds(event.target.checked);localStorage.setItem("flipzero:voice-sounds",event.target.checked?"on":"off")}}/><i/></label></div><div className="settings-callout"><Volume2 size={20} /><span><strong>Проверка звука</strong><small>Откройте голосовую комнату — сохранённые устройства подключатся автоматически.</small></span></div></>;
 }
 
 function AppearanceSettings() {

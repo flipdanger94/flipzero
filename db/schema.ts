@@ -295,6 +295,7 @@ export const voiceStates = pgTable("voice_states", {
   selfMuted: boolean("self_muted").default(false).notNull(),
   selfDeafened: boolean("self_deafened").default(false).notNull(),
   streaming: boolean("streaming").default(false).notNull(),
+  speaking: boolean("speaking").default(false).notNull(),
   joinedAt: timestamp("joined_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 }, (table) => [index("voice_states_channel_idx").on(table.channelId)]);
