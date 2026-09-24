@@ -13,7 +13,7 @@ export async function GET(){
     db.select().from(cosmeticInventory).where(eq(cosmeticInventory.userId,user.id)),
     db.select().from(cosmeticEquipped).where(eq(cosmeticEquipped.userId,user.id)),
     db.select({balance:userWallets.balance}).from(userWallets).where(eq(userWallets.userId,user.id)).limit(1),
-  ]);return NextResponse.json({items,inventory,equipped,balance:wallet?.balance??0});
+  ]);return NextResponse.json({items,inventory,equipped,balance:wallet?.balance??0,superflipActive:(await getSuperFlipCapabilities(user.id)).active});
 }
 export async function POST(request:Request){
   if(!isTrustedMutationRequest(request))return NextResponse.json({message:"Запрос отклонён."},{status:403});
@@ -23,6 +23,7 @@ export async function POST(request:Request){
   const db=getDatabase();const [item]=await db.select().from(cosmeticItems).where(eq(cosmeticItems.id,itemId)).limit(1);
   if(!item||item.availableUntil&&item.availableUntil<=new Date())return NextResponse.json({message:"Предмет недоступен."},{status:404});
   if(body.action==="purchase"){
+    if(!Number.isSafeInteger(item.price)||item.price<70)return NextResponse.json({message:"Некорректная цена предмета."},{status:409});
     if(item.superflipOnly&&!(await getSuperFlipCapabilities(user.id)).active)return NextResponse.json({message:"Предмет доступен только с SuperFlip."},{status:403});
     try{
       const status=await db.transaction(async tx=>{
