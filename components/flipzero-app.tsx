@@ -478,8 +478,79 @@ export default function Home({ initialSpaceId, initialChannelId }: { initialSpac
 function ChannelGroup({ title, onAdd, onDelete, children }: { title: string; onAdd?: () => void; onDelete?: () => void; children: React.ReactNode }) {
   return <section className="channel-group"><h2><span>{title}</span><span className="category-actions">{onAdd ? <button aria-label={`Добавить в ${title}`} onClick={onAdd}><Plus size={15} /></button> : null}{onDelete ? <button aria-label={`Удалить категорию ${title}`} onClick={onDelete}><Trash2 size={13} /></button> : null}</span></h2>{children}</section>;
 }
-function Channel({ icon, kind, label, active = false, badge, voice = false, participants = [], onSelect, onViewStream, onManage, onDelete }: { icon: React.ReactNode; kind: string; label: string; active?: boolean; badge?: string; voice?: boolean; participants?: VoicePresence[]; onSelect?: () => void; onViewStream?: (participantId: string) => void; onManage?: () => void; onDelete?: () => void }) {
-  const visible = participants.slice(0, 8);
-  const hiddenCount = Math.max(0, participants.length - visible.length);
-  return <div className={`channel-row ${active ? "active" : ""}`}><button className="channel" type="button" aria-label={`${channelKindLabels[kind] ?? "Канал"} ${label}`} title={`${channelKindLabels[kind] ?? "Канал"} · ${label}`} aria-current={active ? "page" : undefined} onClick={() => { if (onSelect) onSelect(); else if (!voice) window.dispatchEvent(new CustomEvent("flipzero:select-channel", { detail: label })); }}><span aria-hidden="true">{icon}</span><strong>{label}</strong>{voice && participants.length ? <span className="live-pill">{participants.length}</span> : null}{badge ? <b>{badge}</b> : null}</button>{onManage ? <button className="channel-manage" aria-label={`Настроить права канала ${label}`} title={`Настроить права канала ${label}`} onClick={onManage}><Settings2 size={14} /></button> : null}{onDelete ? <button className="channel-delete" aria-label={`Удалить канал ${label}`} title={`Удалить канал ${label}`} onClick={onDelete}><Trash2 size={14} /></button> : null}{voice && participants.length ? <div className="voice-channel-participants" aria-label={`Участники канала ${label}`}>{visible.map((participant) => <button key={participant.id} type="button" onClick={(event) => { event.stopPropagation(); if (participant.streaming || participant.sharing) onViewStream?.(participant.id); else onSelect?.(); }} className={`${participant.speaking ? "speaking" : ""} ${participant.streaming || participant.sharing ? "streaming" : ""}`} title={`${participant.name}${participant.streaming || participant.sharing ? " · в эфире" : participant.camera ? " · камера" : participant.muted ? " · микрофон выключен" : " · в голосовом канале"}`} aria-label={participant.streaming || participant.sharing ? `Открыть стрим ${participant.name}` : `Открыть голосовой канал с ${participant.name}`}><span className="voice-sidebar-avatar">{participant.avatarUrl ? <MediaImage src={participant.avatarUrl} /> : participant.name.slice(0, 2).toLocaleUpperCase("ru")}</span><strong>{participant.name}</strong><span className="voice-sidebar-status">{participant.streaming || participant.sharing ? <b className="voice-live-badge">LIVE</b> : null}{participant.deafened ? <Headphones size={12} aria-label="Звук выключен" /> : participant.muted ? <MicOff size={12} aria-label="Микрофон выключен" /> : null}</span></button>)}{hiddenCount ? <span className="voice-more" title={`Ещё ${hiddenCount} участников`}>+{hiddenCount}</span> : null}</div> : null}</div>;
+function Channel({
+  icon, kind, label, active = false, badge, voice = false, participants = [],
+  onSelect, onViewStream, onOpenProfile, onManage, onDelete,
+}: {
+  icon: React.ReactNode; kind: string; label: string; active?: boolean; badge?: string; voice?: boolean;
+  participants?: VoicePresence[]; onSelect?: () => void; onViewStream?: (participantId: string) => void;
+  onOpenProfile?: (participant: VoicePresence) => void; onManage?: () => void; onDelete?: () => void;
+}) {
+  const normalized = normalizeVoicePresence(participants);
+  const visible = normalized.slice(0, 12);
+  const hiddenCount = Math.max(0, normalized.length - visible.length);
+  const [context, setContext] = useState<{ participant: VoicePresence; x: number; y: number } | null>(null);
+  const longPressRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (!context) return;
+    const close = (event: PointerEvent) => {
+      if ((event.target as HTMLElement | null)?.closest?.(".voice-user-context-menu")) return;
+      setContext(null);
+    };
+    const escape = (event: KeyboardEvent) => { if (event.key === "Escape") setContext(null); };
+    document.addEventListener("pointerdown", close);
+    document.addEventListener("keydown", escape);
+    return () => { document.removeEventListener("pointerdown", close); document.removeEventListener("keydown", escape); };
+  }, [context]);
+
+  function openParticipant(participant: VoicePresence) {
+    if (participant.streaming || participant.sharing) onViewStream?.(participant.id);
+    else onOpenProfile?.(participant);
+  }
+  function openContext(participant: VoicePresence, x: number, y: number) {
+    setContext({ participant, x: Math.min(x, window.innerWidth - 250), y: Math.min(y, window.innerHeight - 250) });
+  }
+  function beginLongPress(participant: VoicePresence, event: React.PointerEvent) {
+    if (longPressRef.current) window.clearTimeout(longPressRef.current);
+    const { clientX, clientY } = event;
+    longPressRef.current = window.setTimeout(() => openContext(participant, clientX, clientY), 480);
+  }
+  function cancelLongPress() {
+    if (longPressRef.current) window.clearTimeout(longPressRef.current);
+    longPressRef.current = null;
+  }
+
+  return <div className={`channel-row ${active ? "active" : ""}`}>
+    <button className="channel" type="button" aria-label={`${channelKindLabels[kind] ?? "Канал"} ${label}`} title={`${channelKindLabels[kind] ?? "Канал"} · ${label}`} aria-current={active ? "page" : undefined} onClick={() => { if (onSelect) onSelect(); else if (!voice) window.dispatchEvent(new CustomEvent("flipzero:select-channel", { detail: label })); }}>
+      <span aria-hidden="true">{icon}</span><strong>{label}</strong>
+      {voice && normalized.length ? <span className="voice-channel-count" aria-label={`${normalized.length} участников`}>{normalized.length}</span> : null}
+      {badge ? <b>{badge}</b> : null}
+    </button>
+    {onManage ? <button className="channel-manage" aria-label={`Настроить права канала ${label}`} title={`Настроить права канала ${label}`} onClick={onManage}><Settings2 size={14} /></button> : null}
+    {onDelete ? <button className="channel-delete" aria-label={`Удалить канал ${label}`} title={`Удалить канал ${label}`} onClick={onDelete}><Trash2 size={14} /></button> : null}
+    {voice ? <div className="voice-channel-participants" role="list" aria-label={`Участники канала ${label}`}>
+      {!normalized.length ? <span className="voice-empty">Никого нет</span> : visible.map((participant) => <div key={participant.id} role="listitem" className={`voice-sidebar-person ${participant.speaking ? "speaking" : ""} ${participant.streaming || participant.sharing ? "streaming" : ""}`}
+        onContextMenu={(event) => { event.preventDefault(); openContext(participant, event.clientX, event.clientY); }}
+        onPointerDown={(event) => beginLongPress(participant, event)} onPointerUp={cancelLongPress} onPointerCancel={cancelLongPress} onPointerMove={cancelLongPress}>
+        <button type="button" className="voice-participant-main" onClick={() => openParticipant(participant)} aria-label={participant.streaming || participant.sharing ? `Смотреть стрим ${participant.name}` : `Открыть профиль ${participant.name}`}>
+          <span className="voice-sidebar-avatar">{participant.avatarUrl ? <MediaImage src={participant.avatarUrl} /> : participant.name.slice(0,2).toLocaleUpperCase("ru")}</span>
+          <strong title={participant.name}>{participant.name}</strong>
+        </button>
+        <span className="voice-sidebar-status" aria-label="Состояние участника">
+          {participant.camera ? <Video size={12} aria-label="Камера включена" /> : null}
+          {participant.deafened ? <Headphones size={12} aria-label="Звук выключен" /> : participant.muted ? <MicOff size={12} aria-label="Микрофон выключен" /> : null}
+          {participant.streaming || participant.sharing ? <button type="button" className="voice-live-badge" onClick={(event) => { event.stopPropagation(); onViewStream?.(participant.id); }} aria-label={`Смотреть стрим ${participant.name}`}>LIVE</button> : null}
+        </span>
+      </div>)}
+      {hiddenCount ? <button type="button" className="voice-more" onClick={onSelect} aria-label={`Показать ещё ${hiddenCount} участников`}>+{hiddenCount}</button> : null}
+    </div> : null}
+    {context ? <div className="voice-user-context-menu" style={{ left: context.x, top: context.y }} role="menu" aria-label={`Действия для ${context.participant.name}`}>
+      <strong>{context.participant.name}</strong>
+      <label><span>Громкость</span><input type="range" min="0" max="100" defaultValue="100" onChange={(event)=>window.dispatchEvent(new CustomEvent("flipzero:voice-control",{detail:{type:"participant-volume",participantId:context.participant.id,value:Number(event.target.value)}}))}/></label>
+      <button type="button" role="menuitem" onClick={()=>window.dispatchEvent(new CustomEvent("flipzero:voice-control",{detail:{type:"participant-volume",participantId:context.participant.id,value:0}}))}><Volume2 size={15}/>Заглушить у себя</button>
+      <button type="button" role="menuitem" onClick={()=>{onOpenProfile?.(context.participant);setContext(null)}}><UserRound size={15}/>Профиль</button>
+      {context.participant.streaming || context.participant.sharing ? <button type="button" role="menuitem" onClick={()=>{onViewStream?.(context.participant.id);setContext(null)}}><MonitorUp size={15}/>Смотреть стрим</button>:null}
+    </div>:null}
+  </div>;
 }
