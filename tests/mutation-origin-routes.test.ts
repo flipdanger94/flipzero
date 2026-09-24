@@ -19,6 +19,24 @@ describe("mutation origin boundaries", () => {
     });
     expect(isTrustedMutationRequest(request)).toBe(true);
   });
+  it("accepts a Codespaces HTTPS origin when the proxy rewrites the internal host", () => {
+    const previous = process.env.CODESPACES;
+    process.env.CODESPACES = "true";
+    try {
+      const request = new Request("http://127.0.0.1:3000/api/v1/auth/register", {
+        method: "POST",
+        headers: {
+          origin: "https://didactic-waffle-example-3000.app.github.dev",
+          host: "127.0.0.1:3000",
+        },
+      });
+      expect(isTrustedMutationRequest(request)).toBe(true);
+    } finally {
+      if (previous === undefined) delete process.env.CODESPACES;
+      else process.env.CODESPACES = previous;
+    }
+  });
+
   it("rejects cross-site direct messages, voice joins and media uploads before authentication", async () => {
     const request = (path: string) => new Request(`https://flipzero.app${path}`, {
       method: "POST", headers: { origin: "https://untrusted.example", "sec-fetch-site": "cross-site" },
