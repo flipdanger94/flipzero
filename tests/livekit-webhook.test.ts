@@ -4,7 +4,7 @@ const events: Array<Record<string, unknown>> = [];
 const delivered = new Set<string>();
 const inserts: Array<Record<string, unknown>> = [];
 const updates: Array<Record<string, unknown>> = [];
-const deletes: string[] = [];
+const finalized: Array<Record<string, unknown>> = [];
 
 vi.mock("livekit-server-sdk", () => ({
   TrackSource: { MICROPHONE: 2, CAMERA: 1, SCREEN_SHARE: 3, SCREEN_SHARE_AUDIO: 4 },
@@ -15,6 +15,13 @@ vi.mock("livekit-server-sdk", () => ({
       if (!event) throw new Error("no event");
       return event;
     }
+  },
+}));
+
+vi.mock("../lib/voice-xp", () => ({
+  finalizeVoiceXp: async (_tx: unknown, input: Record<string, unknown>) => {
+    finalized.push(input);
+    return { minutes: 0, xp: 0 };
   },
 }));
 
@@ -42,7 +49,9 @@ vi.mock("../db/client", () => ({
         return { where: async () => undefined };
       },
     }),
-    delete: () => ({ where: async () => { deletes.push("delete"); } }),
+    delete: () => ({ where: async () => undefined }),
+    transaction: async (callback: (tx: unknown) => Promise<unknown>) => callback({}),
+    select: () => ({ from: () => ({ where: async () => [] }) }),
   }),
 }));
 
@@ -62,7 +71,7 @@ describe("LiveKit webhook", () => {
     delivered.clear();
     inserts.length = 0;
     updates.length = 0;
-    deletes.length = 0;
+    finalized.length = 0;
     process.env.LIVEKIT_API_KEY = "key";
     process.env.LIVEKIT_API_SECRET = "secret";
   });
@@ -98,6 +107,6 @@ describe("LiveKit webhook", () => {
     await POST(request("left"));
     expect(inserts.some((value) => value.userId === "user-1" && value.channelId === "channel")).toBe(true);
     expect(updates.some((value) => value.streaming === true)).toBe(true);
-    expect(deletes).toHaveLength(1);
+    expect(finalized).toEqual([{ userId: "user-1", channelId: "channel", spaceId: "space" }]);
   });
 });
