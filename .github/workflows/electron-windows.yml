@@ -33,7 +33,7 @@ jobs:
           if ([string]::IsNullOrWhiteSpace($env:CERTIFICATE) -or [string]::IsNullOrWhiteSpace($env:PASSWORD)) {
             throw 'Set CSC_LINK to the base64 contents of a Code Signing .pfx file and CSC_KEY_PASSWORD to its password.'
           }
-          try { $bytes = [Convert]::FromBase64String(($env:CERTIFICATE -replace '\\s', '')) }
+          try { $bytes = [Convert]::FromBase64String(($env:CERTIFICATE -replace '\s', '')) }
           catch { throw 'CSC_LINK is not valid base64. Encode the complete .pfx file; a local file path or placeholder cannot work on GitHub Actions.' }
           try {
             $cert = [System.Security.Cryptography.X509Certificates.X509Certificate2]::new(
