@@ -78,6 +78,6 @@ export async function GET(_request: Request, { params }: { params: Promise<{ spa
       manage,
     }, { headers: { "cache-control": "no-store" } });
   } catch {
-    return NextResponse.json({ channels: {}, limits: {}, manage: {}, message: "Не удалось получить состояние голосовых комнат." }, { status: 503, headers: { "cache-control": "no-store" } });
+    return NextResponse.json({ channels: {}, limits, manage, message: "Не удалось получить состояние голосовых комнат." }, { status: 503, headers: { "cache-control": "no-store" } });
   }
 }
