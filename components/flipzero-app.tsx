@@ -280,9 +280,15 @@ export default function Home({ initialSpaceId, initialChannelId }: { initialSpac
         for (const [channelId, participants] of Object.entries(data.channels ?? {}) as [string, VoicePresence[]][]) next[channelId] = normalizeVoicePresence(participants);
         setVoicePresence(next);
         const limits = (data.limits ?? {}) as Record<string, number | null>;
-        setUserSpaces((current) => current.map((space) => space.id !== activeSpaceId ? space : {
-          ...space,
-          channels: space.channels.map((channel) => Object.prototype.hasOwnProperty.call(limits, channel.id) ? { ...channel, userLimit: limits[channel.id] } : channel),
+        setUserSpaces((current) => current.map((space) => {
+          if (space.id !== activeSpaceId) return space;
+          let changed = false;
+          const channels = space.channels.map((channel) => {
+            if (!Object.prototype.hasOwnProperty.call(limits, channel.id) || channel.userLimit === limits[channel.id]) return channel;
+            changed = true;
+            return { ...channel, userLimit: limits[channel.id] };
+          });
+          return changed ? { ...space, channels } : space;
         }));
       }
     };
