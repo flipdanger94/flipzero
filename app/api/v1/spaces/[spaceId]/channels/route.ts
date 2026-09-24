@@ -5,6 +5,7 @@ import { getDatabase } from "@/db/client";
 import { channelCategories, channels, spaces } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
 import { createChannelSchema } from "@/lib/space-validation";
+import { normalizeVoiceUserLimit } from "@/lib/voice-channel-limit";
 import { getChannelPermissions } from "@/lib/space-permissions";
 import { hasPermission, Permission } from "@/lib/permissions";
 
@@ -31,9 +32,40 @@ export async function POST(request: Request, { params }: { params: Promise<{ spa
   const [duplicate] = await database.select({ id: channels.id }).from(channels).where(and(eq(channels.spaceId, spaceId), eq(channels.name, parsed.data.name))).limit(1);
   if (duplicate) return NextResponse.json({ code: "CHANNEL_EXISTS", message: "Канал с таким названием уже существует." }, { status: 409 });
   const [positionResult] = await database.select({ value: max(channels.position) }).from(channels).where(eq(channels.spaceId, spaceId));
-  const channel = { id: randomUUID(), spaceId, parentId: parsed.data.parentId, name: parsed.data.name, topic: parsed.data.topic || null, kind: parsed.data.kind, position: (positionResult?.value ?? -1) + 1 };
+  const channel = { id: randomUUID(), spaceId, parentId: parsed.data.parentId, name: parsed.data.name, topic: parsed.data.topic || null, kind: parsed.data.kind, position: (positionResult?.value ?? -1) + 1, userLimit: null as number | null };
   await database.insert(channels).values(channel);
   return NextResponse.json({ channel }, { status: 201 });
+}
+
+export async function PUT(request: Request, { params }: { params: Promise<{ spaceId: string }> }) {
+  const [user, { spaceId }] = await Promise.all([getCurrentUser(), params]);
+  if (!user) return NextResponse.json({ code: "UNAUTHENTICATED", message: "Требуется вход." }, { status: 401 });
+  const body = await request.json().catch(() => null);
+  const channelId = typeof body?.channelId === "string" ? body.channelId : "";
+  if (!channelId) return NextResponse.json({ code: "INVALID_INPUT", message: "Не указан канал." }, { status: 400 });
+
+  let userLimit: number | null;
+  try {
+    userLimit = normalizeVoiceUserLimit(body?.userLimit);
+  } catch {
+    return NextResponse.json({ code: "INVALID_USER_LIMIT", message: "Лимит пользователей должен быть от 1 до 99 или без ограничений." }, { status: 400 });
+  }
+
+  const database = getDatabase();
+  const [channel] = await database.select({ id: channels.id, kind: channels.kind, spaceId: channels.spaceId }).from(channels).where(and(eq(channels.id, channelId), eq(channels.spaceId, spaceId))).limit(1);
+  if (!channel) return NextResponse.json({ code: "NOT_FOUND", message: "Канал не найден." }, { status: 404 });
+  if (!["voice", "stage"].includes(channel.kind)) return NextResponse.json({ code: "INVALID_CHANNEL_KIND", message: "Лимит пользователей доступен только для голосовых каналов." }, { status: 400 });
+
+  const permissionState = await getChannelPermissions(channelId, user.id);
+  if (!hasPermission(permissionState.permissions, Permission.ManageChannels)) {
+    return NextResponse.json({ code: "FORBIDDEN", message: "Недостаточно прав для изменения канала." }, { status: 403 });
+  }
+
+  const [updated] = await database.update(channels).set({ userLimit }).where(and(eq(channels.id, channelId), eq(channels.spaceId, spaceId))).returning({
+    id: channels.id,
+    userLimit: channels.userLimit,
+  });
+  return NextResponse.json({ channel: updated });
 }
 
 export async function DELETE(request: Request, { params }: { params: Promise<{ spaceId: string }> }) {
