@@ -137,6 +137,24 @@ export function VoiceRoom({
       roomRef.current?.localParticipant.getTrackPublication(source)?.track;
     if (track && container) container.appendChild(track.attach());
   }
+  function attachStreamPreview(participantId: string, track: Track) {
+    const attach = () => {
+      const targets = voiceRootRef.current?.querySelectorAll<HTMLDivElement>("[data-stream-preview-id]");
+      const target = targets ? [...targets].find((element) => element.dataset.streamPreviewId === participantId) : null;
+      if (!target) return false;
+      clearMedia(target);
+      const preview = track.attach();
+      preview.dataset.participantId = participantId;
+      preview.dataset.preview = "voice-tile";
+      if (preview instanceof HTMLVideoElement) {
+        preview.muted = true;
+        preview.playsInline = true;
+      }
+      target.appendChild(preview);
+      return true;
+    };
+    if (!attach()) window.setTimeout(attach, 120);
+  }
   function emitVoiceSession(connected: boolean, nextQuality = quality) {
     window.dispatchEvent(new CustomEvent("flipzero:voice-session", { detail: {
       connected, channelId, channelName, spaceName, quality: qualityLabels[nextQuality] ?? "Проверка",
@@ -255,6 +273,7 @@ export function VoiceRoom({
           element.dataset.source = track.source;
           element.dataset.participantId = participant.identity;
           remoteVideoRef.current?.appendChild(element);
+          if (track.source === Track.Source.ScreenShare) attachStreamPreview(participant.identity, track);
           setRemoteVideo(true);
         }
       });
@@ -695,7 +714,7 @@ export function VoiceRoom({
             <div ref={remoteVideoRef} className="remote-video"/>
             <div ref={localScreenRef} className={`local-screen ${sharing ? "visible" : ""}`}/>
             <div ref={localCameraRef} className={`local-camera ${camera ? "visible" : ""}`}/>
-          </div> : <div className="voice-stage-empty"><Radio size={34}/><strong>{normalizedPresence.length ? "Голосовая комната" : "Никого нет"}</strong><span>{normalizedPresence.length ? "Выберите участника или дождитесь стрима." : "Станьте первым участником канала."}</span></div>}
+          </div> : <div className="voice-stage-empty" aria-hidden="true" />}
 
           {focusMode && selectedStream ? <div className="voice-stream-toolbar">
             <strong><span className="voice-live-badge">LIVE</span>{selectedStream.name}</strong>
@@ -710,9 +729,10 @@ export function VoiceRoom({
           {selectedStreamId && !focusMode ? <div className="voice-mini-stream-controls" aria-label="Мини-плеер стрима"><button type="button" onClick={()=>setFocusMode(true)} aria-label="Развернуть стрим"><Maximize2 size={16}/></button><button type="button" onClick={clearFocus} aria-label="Закрыть стрим">×</button></div>:null}
           <div className="voice-tile-grid" role="list" aria-label="Участники">
             {visibleParticipants.map((participant)=><article key={participant.id} role="listitem" className={`voice-tile ${participant.speaking ? "speaking" : ""} ${participant.streaming || participant.sharing ? "is-streaming" : ""}`}>
+              {participant.streaming || participant.sharing ? <div className="voice-tile-stream-preview" data-stream-preview-id={participant.id} aria-hidden="true" /> : null}
               <div className="voice-tile-avatar">{participant.avatarUrl?<MediaImage src={participant.avatarUrl}/>:participant.name.slice(0,2).toLocaleUpperCase("ru")}</div>
-              <footer><strong title={participant.name}>{participant.name}</strong><span>{participant.muted?<MicOff size={14}/>:null}{participant.deafened?<Headphones size={14}/>:null}{participant.camera?<Video size={14}/>:null}</span></footer>
-              {participant.streaming || participant.sharing ? <button type="button" className="voice-tile-watch" onClick={()=>focusStream(participant.id)}><span className="voice-live-badge">LIVE</span> Смотреть стрим</button>:null}
+              <footer className="voice-tile-footer"><strong title={participant.name}>{participant.name}</strong><span>{participant.streaming || participant.sharing ? <b className="voice-live-badge">LIVE</b> : null}{participant.muted?<MicOff size={14}/>:null}{participant.deafened?<Headphones size={14}/>:null}{participant.camera?<Video size={14}/>:null}</span></footer>
+              {participant.streaming || participant.sharing ? <button type="button" className="voice-tile-watch" onClick={()=>focusStream(participant.id)} aria-label={`Смотреть стрим ${participant.name}`}>Смотреть стрим</button>:null}
             </article>)}
             {hiddenParticipantCount ? <article className="voice-tile voice-tile-more" role="listitem"><strong>+{hiddenParticipantCount}</strong><span>ещё участников</span></article>:null}
           </div>
