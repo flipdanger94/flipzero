@@ -2061,8 +2061,8 @@ html[data-motion="off"] *::after {
 .platform-workspace .social-hub-v2 .social-main-v2:has(>.story-widget){grid-template-rows:auto auto minmax(0,1fr)!important}
 @media(max-width:767px){.platform-workspace .social-hub-v2 .social-main-v2:has(>.story-widget){grid-template-rows:auto auto minmax(0,1fr)!important}}
 @media(max-width:767px){
- .platform-workspace .social-hub.social-hub-embedded .direct-layout.has-profile>section>.direct-messages{grid-row:3!important}
- .platform-workspace .social-hub.social-hub-embedded .direct-layout.has-profile>section>.direct-composer{grid-row:4!important}
+ .platform-workspace .social-hub.social-hub-embedded .direct-layout.has-profile>section>.direct-messages{grid-row:2!important}
+ .platform-workspace .social-hub.social-hub-embedded .direct-layout.has-profile>section>.direct-composer{grid-row:3!important}
 }
 
 /* Mobile social hub: use the available viewport and keep the premium CTA reachable. */
