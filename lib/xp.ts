@@ -87,3 +87,34 @@ export async function awardXpInTransaction(tx: XpTransaction, input: AwardXpInpu
 export async function awardXp(input: AwardXpInput) {
   return getDatabase().transaction((tx) => awardXpInTransaction(tx, input));
 }
+
+
+export async function awardVoiceSessionXp(input: {
+  userId: string;
+  channelId: string;
+  spaceId?: string | null;
+  joinedAt: Date;
+  confirmedUntil: Date;
+}) {
+  const durationMs = Math.max(0, input.confirmedUntil.getTime() - input.joinedAt.getTime());
+  const minutes = Math.min(120, Math.floor(durationMs / 60_000));
+  if (minutes <= 0) return { awardedMinutes: 0, xp: 0 };
+
+  return getDatabase().transaction(async (tx) => {
+    let awardedMinutes = 0;
+    for (let minute = 1; minute <= minutes; minute += 1) {
+      const timestamp = input.joinedAt.getTime() + minute * 60_000;
+      const minuteBucket = Math.floor(timestamp / 60_000);
+      const result = await awardXpInTransaction(tx, {
+        userId: input.userId,
+        source: "voice_minute",
+        amount: 3,
+        dedupeKey: `voice:${input.userId}:${input.channelId}:${minuteBucket}`,
+        spaceId: input.spaceId ?? null,
+        meta: { channelId: input.channelId, minuteBucket },
+      });
+      if (result.awarded) awardedMinutes += 1;
+    }
+    return { awardedMinutes, xp: awardedMinutes * 3 };
+  });
+}
