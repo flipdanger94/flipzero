@@ -30,6 +30,8 @@ try {
   await client.unsafe(removeTemporaryVoiceSql);
   const voiceSpeakingSql = await readFile(new URL("../drizzle/0027_voice_speaking.sql", import.meta.url), "utf8");
   await client.unsafe(voiceSpeakingSql);
+  const voiceLimitSql = await readFile(new URL("../drizzle/0028_voice_channel_user_limit.sql", import.meta.url), "utf8");
+  await client.unsafe(voiceLimitSql);
   const cosmetics = JSON.parse(await readFile(new URL("../config/cosmetics.json", import.meta.url), "utf8"));
   for (const item of cosmetics) await client`INSERT INTO cosmetic_items(id,title,description,category,rarity,price,preview,superflip_only) VALUES(${item.id},${item.title},${item.description},${item.category},${item.rarity},${item.price},${item.preview},${item.superflipOnly}) ON CONFLICT (id) DO UPDATE SET title=EXCLUDED.title,description=EXCLUDED.description,category=EXCLUDED.category,rarity=EXCLUDED.rarity,price=EXCLUDED.price,preview=EXCLUDED.preview,superflip_only=EXCLUDED.superflip_only`;
   const achievements = JSON.parse(await readFile(new URL("../config/achievements.json", import.meta.url), "utf8"));

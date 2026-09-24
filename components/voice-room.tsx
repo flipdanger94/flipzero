@@ -137,6 +137,29 @@ export function VoiceRoom({
       roomRef.current?.localParticipant.getTrackPublication(source)?.track;
     if (track && container) container.appendChild(track.attach());
   }
+  function attachStreamPreview(participantId: string, track: Track) {
+    const attach = () => {
+      const targets = voiceRootRef.current?.querySelectorAll<HTMLDivElement>("[data-stream-preview-id]");
+      const target = targets ? [...targets].find((element) => element.dataset.streamPreviewId === participantId) : null;
+      if (!target) return false;
+      clearMedia(target);
+      const preview = track.attach();
+      preview.dataset.participantId = participantId;
+      preview.dataset.preview = "voice-tile";
+      if (preview instanceof HTMLVideoElement) {
+        preview.muted = true;
+        preview.playsInline = true;
+      }
+      target.appendChild(preview);
+      return true;
+    };
+    if (!attach()) window.setTimeout(attach, 120);
+  }
+  function clearStreamPreview(participantId: string) {
+    const targets = voiceRootRef.current?.querySelectorAll<HTMLDivElement>("[data-stream-preview-id]");
+    const target = targets ? [...targets].find((element) => element.dataset.streamPreviewId === participantId) : null;
+    clearMedia(target ?? null);
+  }
   function emitVoiceSession(connected: boolean, nextQuality = quality) {
     window.dispatchEvent(new CustomEvent("flipzero:voice-session", { detail: {
       connected, channelId, channelName, spaceName, quality: qualityLabels[nextQuality] ?? "Проверка",
@@ -255,6 +278,7 @@ export function VoiceRoom({
           element.dataset.source = track.source;
           element.dataset.participantId = participant.identity;
           remoteVideoRef.current?.appendChild(element);
+          if (track.source === Track.Source.ScreenShare) attachStreamPreview(participant.identity, track);
           setRemoteVideo(true);
         }
       });
@@ -270,6 +294,7 @@ export function VoiceRoom({
         if (publication.source === Track.Source.ScreenShare) {
           setSharing(true);
           attachLocal(Track.Source.ScreenShare, localScreenRef.current);
+          if (publication.track) attachStreamPreview(connectedRoom.localParticipant.identity, publication.track);
         }
       });
       room.on(RoomEvent.LocalTrackUnpublished, (publication) => {
@@ -280,6 +305,7 @@ export function VoiceRoom({
         if (publication.source === Track.Source.ScreenShare) {
           setSharing(false);
           clearMedia(localScreenRef.current);
+          clearStreamPreview(connectedRoom.localParticipant.identity);
         }
       });
       room.on(RoomEvent.Disconnected, () => {
@@ -644,7 +670,10 @@ export function VoiceRoom({
   useEffect(() => { applyStreamVolume(); }, [selectedStreamId, streamMuted, streamVolume]);
   useEffect(() => {
     if (!initialStreamId || !remoteVideo) return;
-    focusStream(initialStreamId);
+    remoteVideoRef.current?.querySelectorAll<HTMLElement>("[data-participant-id]").forEach((element) => {
+      element.hidden = element.dataset.participantId !== initialStreamId;
+    });
+    remoteVideoRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
   }, [initialStreamId, remoteVideo]);
   async function toggleFullscreen() {
     const root = voiceRootRef.current;
@@ -695,7 +724,7 @@ export function VoiceRoom({
             <div ref={remoteVideoRef} className="remote-video"/>
             <div ref={localScreenRef} className={`local-screen ${sharing ? "visible" : ""}`}/>
             <div ref={localCameraRef} className={`local-camera ${camera ? "visible" : ""}`}/>
-          </div> : <div className="voice-stage-empty"><Radio size={34}/><strong>{normalizedPresence.length ? "Голосовая комната" : "Никого нет"}</strong><span>{normalizedPresence.length ? "Выберите участника или дождитесь стрима." : "Станьте первым участником канала."}</span></div>}
+          </div> : <div className="voice-stage-empty" aria-hidden="true" />}
 
           {focusMode && selectedStream ? <div className="voice-stream-toolbar">
             <strong><span className="voice-live-badge">LIVE</span>{selectedStream.name}</strong>
@@ -710,34 +739,27 @@ export function VoiceRoom({
           {selectedStreamId && !focusMode ? <div className="voice-mini-stream-controls" aria-label="Мини-плеер стрима"><button type="button" onClick={()=>setFocusMode(true)} aria-label="Развернуть стрим"><Maximize2 size={16}/></button><button type="button" onClick={clearFocus} aria-label="Закрыть стрим">×</button></div>:null}
           <div className="voice-tile-grid" role="list" aria-label="Участники">
             {visibleParticipants.map((participant)=><article key={participant.id} role="listitem" className={`voice-tile ${participant.speaking ? "speaking" : ""} ${participant.streaming || participant.sharing ? "is-streaming" : ""}`}>
+              {participant.streaming || participant.sharing ? <div className="voice-tile-stream-preview" data-stream-preview-id={participant.id} aria-hidden="true" /> : null}
               <div className="voice-tile-avatar">{participant.avatarUrl?<MediaImage src={participant.avatarUrl}/>:participant.name.slice(0,2).toLocaleUpperCase("ru")}</div>
-              <footer><strong title={participant.name}>{participant.name}</strong><span>{participant.muted?<MicOff size={14}/>:null}{participant.deafened?<Headphones size={14}/>:null}{participant.camera?<Video size={14}/>:null}</span></footer>
-              {participant.streaming || participant.sharing ? <button type="button" className="voice-tile-watch" onClick={()=>focusStream(participant.id)}><span className="voice-live-badge">LIVE</span> Смотреть стрим</button>:null}
+              <footer className="voice-tile-footer"><strong title={participant.name}>{participant.name}</strong><span>{participant.streaming || participant.sharing ? <b className="voice-live-badge">LIVE</b> : null}{participant.muted?<MicOff size={14}/>:null}{participant.deafened?<Headphones size={14}/>:null}{participant.camera?<Video size={14}/>:null}</span></footer>
+              {participant.streaming || participant.sharing ? <button type="button" className="voice-tile-watch" onClick={()=>focusStream(participant.id)} aria-label={`Смотреть стрим ${participant.name}`}>Смотреть стрим</button>:null}
             </article>)}
             {hiddenParticipantCount ? <article className="voice-tile voice-tile-more" role="listitem"><strong>+{hiddenParticipantCount}</strong><span>ещё участников</span></article>:null}
           </div>
           {streamingParticipants.length > 1 ? <div className="voice-stream-switcher" aria-label="Активные стримы">{streamingParticipants.map((participant)=><button type="button" className={selectedStreamId===participant.id?"active":""} key={participant.id} onClick={()=>focusStream(participant.id)}><span className="voice-live-badge">LIVE</span>{participant.name}</button>)}</div>:null}
-        </section>
-
-        <aside className="voice-room-side">
-          <div className={`voice-orb ${status === "connected" ? "is-live" : ""}`}><Radio size={30}/></div>
-          <small>ГОЛОСОВАЯ КОМНАТА</small><h2>{channelName}</h2>
-          <p>{status === "reconnecting" ? "Переподключение…" : "Вы подключены. Камера и демонстрация экрана доступны из панели управления."}</p>
-          {activeSpeaker ? <div className="active-speaker"><i/>Говорит: <b>{activeSpeaker}</b></div>:null}
-          {audioBlocked ? <button className="voice-enable-audio" onClick={enableAudio}><Headphones size={18}/>Включить звук</button>:null}
-          {error ? <div className="voice-error">{error}</div>:null}
-          <div className="voice-secondary-actions">
-            <button type="button" onClick={()=>setSettings((value)=>!value)} aria-label="Устройства"><Settings2 size={18}/><span>Устройства</span></button>
-            <button type="button" onClick={()=>setSoundboard((value)=>!value)} aria-label="Soundboard"><Music2 size={18}/><span>Soundboard</span></button>
+          {activeSpeaker || audioBlocked || error ? <div className="voice-stage-notices">{activeSpeaker ? <div className="active-speaker"><i/>Говорит: <b>{activeSpeaker}</b></div>:null}{audioBlocked ? <button className="voice-enable-audio" onClick={enableAudio}><Headphones size={18}/>Включить звук</button>:null}{error ? <div className="voice-error">{error}</div>:null}</div>:null}
+          <div className="voice-secondary-toolbar" aria-label="Дополнительные инструменты">
+            <button type="button" className={settings?"active":""} onClick={()=>setSettings((value)=>!value)} aria-label="Устройства"><Settings2 size={18}/><span>Устройства</span></button>
+            <button type="button" className={soundboard?"active":""} onClick={()=>setSoundboard((value)=>!value)} aria-label="Soundboard"><Music2 size={18}/><span>Soundboard</span></button>
             <button type="button" onClick={requestRecordingConsent} aria-label="Согласие на запись"><ShieldCheck size={18}/><span>Согласие</span></button>
           </div>
-          {settings ? <div className="voice-device-settings">
+          {settings ? <div className="voice-device-settings voice-inline-panel">
             <label className="device-picker"><span>Микрофон</span><select value={deviceId} onChange={(event)=>void chooseDevice(event.target.value)} disabled={!devices.length}>{!devices.length?<option value="">Микрофон недоступен</option>:devices.map((device,index)=><option key={device.deviceId} value={device.deviceId}>{device.label||`Микрофон ${index+1}`}</option>)}</select></label>
             <label className="device-picker"><span>Динамики / наушники</span><select value={outputDeviceId} onChange={(event)=>void chooseOutput(event.target.value)} disabled={!outputDevices.length}>{!outputDevices.length?<option value="">Системное устройство</option>:outputDevices.map((device,index)=><option key={device.deviceId} value={device.deviceId}>{device.label||`Устройство ${index+1}`}</option>)}</select></label>
           </div>:null}
-          {soundboard ? <div className="soundboard"><button disabled={soundPlaying} onClick={()=>playSound(330)}>✨ Магия</button><button disabled={soundPlaying} onClick={()=>playSound(520)}>🎉 Победа</button><button disabled={soundPlaying} onClick={()=>playSound(180)}>🥁 Удар</button><button disabled={soundPlaying} onClick={()=>playSound(760)}>🔔 Сигнал</button></div>:null}
-          {consentPanel ? <div className="consent-panel"><strong>Согласие на запись</strong><span>{Object.values(consents).filter((value)=>value==="accepted").length} из {Object.keys(consents).length} подтвердили</span><div>{Object.entries(consents).map(([identity,value])=><small key={identity} className={`consent-${value}`}>{identity.slice(0,8)} · {value==="accepted"?"согласен":value==="declined"?"отказался":"ожидаем"}</small>)}</div></div>:null}
-        </aside>
+          {soundboard ? <div className="soundboard voice-inline-panel"><button disabled={soundPlaying} onClick={()=>playSound(330)}>✨ Магия</button><button disabled={soundPlaying} onClick={()=>playSound(520)}>🎉 Победа</button><button disabled={soundPlaying} onClick={()=>playSound(180)}>🥁 Удар</button><button disabled={soundPlaying} onClick={()=>playSound(760)}>🔔 Сигнал</button></div>:null}
+          {consentPanel ? <div className="consent-panel voice-inline-panel"><strong>Согласие на запись</strong><span>{Object.values(consents).filter((value)=>value==="accepted").length} из {Object.keys(consents).length} подтвердили</span><div>{Object.entries(consents).map(([identity,value])=><small key={identity} className={`consent-${value}`}>{identity.slice(0,8)} · {value==="accepted"?"согласен":value==="declined"?"отказался":"ожидаем"}</small>)}</div></div>:null}
+        </section>
       </main>
 
       <nav className="voice-bottom-controls" aria-label="Управление голосовым каналом">

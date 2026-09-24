@@ -57,4 +57,4 @@ jobs:
           lib/superflip.ts
 
       - name: Build
-        run: pnpm build
+        run: pnpm exec next build

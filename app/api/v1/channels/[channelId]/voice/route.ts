@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { and, eq } from "drizzle-orm";
+import { and, count, eq, sql } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { getDatabase } from "@/db/client";
 import { channels, users, voiceStates, xpEvents } from "@/db/schema";
@@ -7,6 +7,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { getChannelPermissions } from "@/lib/space-permissions";
 import { hasPermission, Permission } from "@/lib/permissions";
 import { isTrustedMutationRequest } from "@/lib/security-controls";
+import { canJoinVoiceChannel } from "@/lib/voice-channel-limit";
 
 async function accessVoice(channelId: string) {
   const user = await getCurrentUser();
@@ -29,8 +30,21 @@ export async function POST(request: Request, { params }: { params: Promise<{ cha
   if (!isTrustedMutationRequest(request)) return NextResponse.json({ code: "UNTRUSTED_ORIGIN", message: "Запрос отклонён." }, { status: 403 });
   const { channelId } = await params; const access = await accessVoice(channelId); if ("error" in access) return access.error;
   if (!hasPermission(access.state.permissions, Permission.ConnectVoice)) return NextResponse.json({ code: "FORBIDDEN", message: "Нет права подключаться к голосовому каналу." }, { status: 403 });
-  await access.db.insert(voiceStates).values({ userId: access.user.id, channelId }).onConflictDoUpdate({ target: voiceStates.userId, set: { channelId, selfMuted: false, selfDeafened: false, streaming: false, speaking: false, joinedAt: new Date(), updatedAt: new Date() } });
-  return NextResponse.json({ connected: true, channelId });
+  const joinResult = await access.db.transaction(async (tx) => {
+    await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${channelId}))`);
+    const [channel] = await tx.select({ userLimit: channels.userLimit }).from(channels).where(eq(channels.id, channelId)).limit(1);
+    const [existing] = await tx.select({ channelId: voiceStates.channelId }).from(voiceStates).where(eq(voiceStates.userId, access.user.id)).limit(1);
+    const [occupancy] = await tx.select({ value: count() }).from(voiceStates).where(eq(voiceStates.channelId, channelId));
+    const participantCount = Number(occupancy?.value ?? 0);
+    const userLimit = channel?.userLimit ?? null;
+    const canManage = hasPermission(access.state.permissions, Permission.ManageChannels);
+    const allowed = canJoinVoiceChannel({ userLimit, participantCount, alreadyConnected: existing?.channelId === channelId, canManage });
+    if (!allowed) return { full: true as const, userLimit, participantCount };
+    await tx.insert(voiceStates).values({ userId: access.user.id, channelId }).onConflictDoUpdate({ target: voiceStates.userId, set: { channelId, selfMuted: false, selfDeafened: false, streaming: false, speaking: false, joinedAt: new Date(), updatedAt: new Date() } });
+    return { full: false as const, userLimit, participantCount: existing?.channelId === channelId ? participantCount : participantCount + 1 };
+  });
+  if (joinResult.full) return NextResponse.json({ code: "CHANNEL_FULL", message: "Канал заполнен", userLimit: joinResult.userLimit, participantCount: joinResult.participantCount }, { status: 409 });
+  return NextResponse.json({ connected: true, channelId, userLimit: joinResult.userLimit, participantCount: joinResult.participantCount });
 }
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ channelId: string }> }) {

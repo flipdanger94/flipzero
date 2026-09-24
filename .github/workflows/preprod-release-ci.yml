@@ -47,4 +47,4 @@ jobs:
         run: node --check scripts/release-smoke.mjs
 
       - name: Build
-        run: pnpm build
+        run: pnpm exec next build

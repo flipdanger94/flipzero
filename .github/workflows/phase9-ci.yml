@@ -61,4 +61,4 @@ jobs:
           app/api/public/v1/me/route.ts
 
       - name: Build
-        run: pnpm build
+        run: pnpm exec next build

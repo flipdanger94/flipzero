@@ -26,12 +26,36 @@ const voicePermissions: PermissionItem[] = [
   { label: "Запуск трансляций", description: "Демонстрировать экран в голосовом канале.", flag: Permission.Stream, group: "Голос" },
 ];
 
-export function ChannelPermissionsDialog({spaceId, channel, onClose }: { spaceId: string; channel: { id: string; name: string; kind: string }; onClose: () => void }) {
+export function ChannelPermissionsDialog({
+  spaceId,
+  channel,
+  onClose,
+  onUpdated,
+}: {
+  spaceId: string;
+  channel: { id: string; name: string; kind: string; userLimit?: number | null };
+  onClose: () => void;
+  onUpdated?: (channel: { id: string; userLimit: number | null }) => void;
+}) {
   const dialogRef = useModalA11y(onClose);
-  const [roles, setRoles] = useState<Role[]>([]), [members, setMembers] = useState<Member[]>([]), [items, setItems] = useState<Override[]>([]);
+  const isVoice = ["voice", "stage"].includes(channel.kind);
+  const [view, setView] = useState<"overview" | "permissions">(isVoice ? "overview" : "permissions");
+  const [roles, setRoles] = useState<Role[]>([]);
+  const [members, setMembers] = useState<Member[]>([]);
+  const [items, setItems] = useState<Override[]>([]);
   const [selected, setSelected] = useState<{ id: string; type: "role" | "member" } | null>(null);
-  const [targetQuery, setTargetQuery] = useState(""), [permissionQuery, setPermissionQuery] = useState(""), [targetTab, setTargetTab] = useState<"roles" | "members">("roles");
-  const [loading, setLoading] = useState(true), [saving, setSaving] = useState(false), [saved, setSaved] = useState(false), [error, setError] = useState("");
+  const [targetQuery, setTargetQuery] = useState("");
+  const [permissionQuery, setPermissionQuery] = useState("");
+  const [targetTab, setTargetTab] = useState<"roles" | "members">("roles");
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [error, setError] = useState("");
+  const initialLimit = channel.userLimit ?? null;
+  const [userLimit, setUserLimit] = useState<number | null>(initialLimit);
+  const [limitInput, setLimitInput] = useState(initialLimit === null ? "" : String(initialLimit));
+  const limitDirty = userLimit !== initialLimit;
+
   const targets = useMemo(() => {
     const list = targetTab === "roles"
       ? roles.map((role) => ({ id: role.id, type: "role" as const, name: role.name, subtitle: role.isManaged ? "Системная роль" : "Роль", color: role.color }))
@@ -39,43 +63,173 @@ export function ChannelPermissionsDialog({spaceId, channel, onClose }: { spaceId
     const query = targetQuery.trim().toLocaleLowerCase("ru");
     return list.filter((item) => !query || item.name.toLocaleLowerCase("ru").includes(query) || item.subtitle.toLocaleLowerCase("ru").includes(query));
   }, [roles, members, targetQuery, targetTab]);
+
   const selectedTarget = targets.find((item) => selected?.id === item.id && selected.type === item.type)
-    ?? (selected?.type === "role" ? roles.filter((role)=>role.id===selected.id).map((role)=>({id:role.id,type:"role" as const,name:role.name,subtitle:role.isManaged?"Системная роль":"Роль",color:role.color}))[0] : members.filter((member)=>member.id===selected?.id).map((member)=>({id:member.id,type:"member" as const,name:member.displayName,subtitle:`@${member.username}`,color:undefined}))[0]) ?? null;
-  const current = selected ? items.find((item) => item.targetId === selected.id && item.targetType === selected.type) ?? { targetId: selected.id, targetType: selected.type, allow: 0, deny: 0 } : null;
+    ?? (selected?.type === "role"
+      ? roles.filter((role) => role.id === selected.id).map((role) => ({ id: role.id, type: "role" as const, name: role.name, subtitle: role.isManaged ? "Системная роль" : "Роль", color: role.color }))[0]
+      : members.filter((member) => member.id === selected?.id).map((member) => ({ id: member.id, type: "member" as const, name: member.displayName, subtitle: `@${member.username}`, color: undefined }))[0])
+    ?? null;
+
+  const current = selected
+    ? items.find((item) => item.targetId === selected.id && item.targetType === selected.type)
+      ?? { targetId: selected.id, targetType: selected.type, allow: 0, deny: 0 }
+    : null;
+
   const permissionItems = useMemo(() => {
-    const all = [...textPermissions, ...(["voice", "stage"].includes(channel.kind) ? voicePermissions : [])];
+    const all = [...textPermissions, ...(isVoice ? voicePermissions : [])];
     const query = permissionQuery.trim().toLocaleLowerCase("ru");
     return all.filter((item) => !query || item.label.toLocaleLowerCase("ru").includes(query) || item.description.toLocaleLowerCase("ru").includes(query));
-  }, [channel.kind, permissionQuery]);
+  }, [isVoice, permissionQuery]);
   const groups = [...new Set(permissionItems.map((item) => item.group))];
 
   useEffect(() => {
     const controller = new AbortController();
-    fetch(`/api/v1/spaces/${spaceId}/channel-overrides?channelId=${encodeURIComponent(channel.id)}`, { signal: controller.signal }).then(async (response) => ({ response, data: await response.json() })).then(({ response, data }) => {
-      if (!response.ok) throw new Error(data.message);
-      setRoles(data.roles ?? []); setMembers(data.members ?? []); setItems(data.overrides ?? []);
-      if (data.roles?.[0]) setSelected({ id: data.roles[0].id, type: "role" });
-    }).catch((reason) => { if (reason.name !== "AbortError") setError(reason.message ?? "Не удалось загрузить права канала."); }).finally(() => setLoading(false));
+    fetch(`/api/v1/spaces/${spaceId}/channel-overrides?channelId=${encodeURIComponent(channel.id)}`, { signal: controller.signal })
+      .then(async (response) => ({ response, data: await response.json() }))
+      .then(({ response, data }) => {
+        if (!response.ok) throw new Error(data.message);
+        setRoles(data.roles ?? []);
+        setMembers(data.members ?? []);
+        setItems(data.overrides ?? []);
+        if (data.roles?.[0]) setSelected({ id: data.roles[0].id, type: "role" });
+      })
+      .catch((reason) => { if (reason.name !== "AbortError") setError(reason.message ?? "Не удалось загрузить права канала."); })
+      .finally(() => setLoading(false));
     return () => controller.abort();
   }, [spaceId, channel.id]);
 
-  function stateFor(flag: number): State { if (!current) return "inherit"; if ((current.allow & flag) === flag) return "allow"; if ((current.deny & flag) === flag) return "deny"; return "inherit"; }
+  function stateFor(flag: number): State {
+    if (!current) return "inherit";
+    if ((current.allow & flag) === flag) return "allow";
+    if ((current.deny & flag) === flag) return "deny";
+    return "inherit";
+  }
+
   function change(flag: number, state: State) {
-    if (!selected) return; setSaved(false);
+    if (!selected) return;
+    setSaved(false);
     setItems((existing) => {
-      const found = existing.find((item) => item.targetId === selected.id && item.targetType === selected.type) ?? { targetId: selected.id, targetType: selected.type, allow: 0, deny: 0 };
+      const found = existing.find((item) => item.targetId === selected.id && item.targetType === selected.type)
+        ?? { targetId: selected.id, targetType: selected.type, allow: 0, deny: 0 };
       const next = { ...found, allow: found.allow & ~flag, deny: found.deny & ~flag };
-      if (state === "allow") next.allow |= flag; if (state === "deny") next.deny |= flag;
+      if (state === "allow") next.allow |= flag;
+      if (state === "deny") next.deny |= flag;
       return [...existing.filter((item) => !(item.targetId === selected.id && item.targetType === selected.type)), next];
     });
   }
-  async function save() {
-    setSaving(true); setSaved(false); setError("");
-    const response = await fetch(`/api/v1/spaces/${spaceId}/channel-overrides`, { method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify({ channelId: channel.id, overrides: items }) });
-    const data = await response.json(); setSaving(false);
-    if (!response.ok) return setError(data.message ?? "Не удалось сохранить права.");
-    setItems(data.overrides ?? []); setSaved(true);
+
+  function setLimit(next: number | null) {
+    setSaved(false);
+    setError("");
+    setUserLimit(next);
+    setLimitInput(next === null ? "" : String(next));
   }
 
-  return <div className="dialog-backdrop channel-permissions-backdrop" role="presentation" onMouseDown={(event)=>{if(event.target===event.currentTarget)onClose()}}><section ref={dialogRef} tabIndex={-1} className="space-dialog channel-permissions-dialog discord-permissions-dialog" role="dialog" aria-modal="true" aria-labelledby="channel-permissions-title"><button className="dialog-close" onClick={onClose} aria-label="Закрыть"><X size={19}/></button><div className="channel-permissions-title"><span className="dialog-symbol"><Hash size={22}/></span><div><small>НАСТРОЙКИ КАНАЛА</small><h2 id="channel-permissions-title">Права #{channel.name}</h2><p>{["voice","stage"].includes(channel.kind)?"Текстовые и голосовые права для ролей и участников.":"Для текстового канала показаны только релевантные права."}</p></div></div>{error?<div className="auth-error" role="alert">{error}</div>:null}{loading?<div className="role-loading"><LoaderCircle className="spin" size={22}/> Загружаем настройки...</div>:<div className="channel-permissions-layout discord-permissions-layout"><aside className="permission-targets"><div className="permission-target-tabs"><button className={targetTab==="roles"?"active":""} onClick={()=>setTargetTab("roles")}><ShieldCheck size={14}/>Роли</button><button className={targetTab==="members"?"active":""} onClick={()=>setTargetTab("members")}><Users size={14}/>Участники</button></div><label className="permission-search"><Search size={14}/><input value={targetQuery} onChange={(e)=>setTargetQuery(e.target.value)} placeholder={targetTab==="roles"?"Поиск ролей":"Поиск участников"}/></label><div className="permission-target-list">{targets.map((target)=><button key={target.type+target.id} className={selected?.id===target.id&&selected.type===target.type?"active":""} onClick={()=>setSelected({id:target.id,type:target.type})}>{target.type==="role"?<i style={{background:target.color}}/>:<span className="permission-member-icon"><UserRound size={14}/></span>}<span><strong>{target.name}</strong><small>{target.subtitle}</small></span></button>)}{!targets.length?<p>Ничего не найдено.</p>:null}</div></aside><div className="override-editor">{selectedTarget?<><div className="override-heading"><ShieldCheck size={20}/><div><strong>{selectedTarget.name}</strong><span>{selectedTarget.type==="role"?"Переопределения роли действуют только в этом канале.":"Личное переопределение применяется после ролей."}</span></div></div><label className="permission-search permission-search-right"><Search size={14}/><input value={permissionQuery} onChange={(e)=>setPermissionQuery(e.target.value)} placeholder="Поиск по правам"/></label><div className="permission-groups">{groups.map((group)=><section key={group}><h3>{group}</h3>{permissionItems.filter((item)=>item.group===group).map((item)=><article className="permission-row" key={item.flag}><div><strong>{item.label}</strong><span>{item.description}</span></div><div className="permission-tristate" role="group" aria-label={item.label}><button className={stateFor(item.flag)==="deny"?"active deny":""} onClick={()=>change(item.flag,"deny")} title="Запретить"><X size={16}/></button><button className={stateFor(item.flag)==="inherit"?"active inherit":""} onClick={()=>change(item.flag,"inherit")} title="Наследовать"><Minus size={16}/></button><button className={stateFor(item.flag)==="allow"?"active allow":""} onClick={()=>change(item.flag,"allow")} title="Разрешить"><Check size={16}/></button></div></article>)}</section>)}</div><div className="permission-savebar"><span>{saved?"Права сохранены":"Изменения применятся после сохранения."}</span><button className="auth-submit override-save" onClick={save} disabled={saving}>{saving?<LoaderCircle className="spin" size={17}/>:<><Save size={16}/>Сохранить изменения</>}</button></div></>:<div className="role-protected"><ShieldCheck size={30}/><strong>Выберите роль или участника</strong></div>}</div></div>}</section></div>;
+  async function saveOverview() {
+    if (!isVoice || !limitDirty) return;
+    setSaving(true);
+    setSaved(false);
+    setError("");
+    const response = await fetch(`/api/v1/spaces/${spaceId}/channels`, {
+      method: "PUT",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ channelId: channel.id, userLimit }),
+    });
+    const data = await response.json().catch(() => null);
+    setSaving(false);
+    if (!response.ok) return setError(data?.message ?? "Не удалось сохранить настройки канала.");
+    const nextLimit = data.channel?.userLimit ?? null;
+    setUserLimit(nextLimit);
+    setLimitInput(nextLimit === null ? "" : String(nextLimit));
+    setSaved(true);
+    onUpdated?.({ id: channel.id, userLimit: nextLimit });
+  }
+
+  async function savePermissions() {
+    setSaving(true);
+    setSaved(false);
+    setError("");
+    const response = await fetch(`/api/v1/spaces/${spaceId}/channel-overrides`, {
+      method: "PUT",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ channelId: channel.id, overrides: items }),
+    });
+    const data = await response.json();
+    setSaving(false);
+    if (!response.ok) return setError(data.message ?? "Не удалось сохранить права.");
+    setItems(data.overrides ?? []);
+    setSaved(true);
+  }
+
+  return <div className="dialog-backdrop channel-permissions-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
+    <section ref={dialogRef} tabIndex={-1} className="space-dialog channel-permissions-dialog discord-permissions-dialog" role="dialog" aria-modal="true" aria-labelledby="channel-permissions-title">
+      <button className="dialog-close" onClick={onClose} aria-label="Закрыть"><X size={19}/></button>
+      <div className="channel-permissions-title">
+        <span className="dialog-symbol"><Hash size={22}/></span>
+        <div><small>НАСТРОЙКИ КАНАЛА</small><h2 id="channel-permissions-title">#{channel.name}</h2><p>{isVoice ? "Обзор голосового канала и права участников." : "Настройки прав и доступа к каналу."}</p></div>
+      </div>
+
+      <div className="channel-settings-tabs" role="tablist" aria-label="Разделы настроек канала">
+        {isVoice ? <button type="button" role="tab" aria-selected={view === "overview"} className={view === "overview" ? "active" : ""} onClick={() => setView("overview")}>Обзор</button> : null}
+        <button type="button" role="tab" aria-selected={view === "permissions"} className={view === "permissions" ? "active" : ""} onClick={() => setView("permissions")}>Права доступа</button>
+      </div>
+
+      {error ? <div className="auth-error" role="alert">{error}</div> : null}
+
+      {isVoice && view === "overview" ? <div className="channel-overview-editor">
+        <section className="channel-overview-section">
+          <div className="channel-overview-heading"><strong>Лимит пользователей</strong><span>Ограничьте число обычных участников, которые могут одновременно находиться в голосовом канале.</span></div>
+          <label className="channel-limit-unlimited">
+            <input type="checkbox" checked={userLimit === null} onChange={(event) => setLimit(event.target.checked ? null : 10)}/>
+            <span><strong>Без ограничений</strong><small>Количество участников не ограничено.</small></span>
+          </label>
+          <div className={`channel-limit-controls ${userLimit === null ? "is-disabled" : ""}`}>
+            <label className="channel-limit-slider">
+              <span><b>∞</b><b>99</b></span>
+              <input type="range" min="0" max="99" value={userLimit ?? 0} disabled={userLimit === null} onChange={(event) => {
+                const value = Number(event.target.value);
+                setLimit(value === 0 ? null : Math.max(1, Math.min(99, Math.trunc(value))));
+              }}/>
+            </label>
+            <label className="channel-limit-number">
+              <span>Лимит</span>
+              <input type="number" inputMode="numeric" min="1" max="99" step="1" placeholder="∞" value={limitInput} disabled={userLimit === null} onChange={(event) => {
+                const raw = event.target.value;
+                setLimitInput(raw);
+                if (!raw) { setUserLimit(null); setSaved(false); return; }
+                const parsed = Number(raw);
+                if (!Number.isFinite(parsed)) return;
+                const clamped = Math.max(1, Math.min(99, Math.trunc(parsed)));
+                setUserLimit(clamped);
+                if (String(clamped) !== raw) setLimitInput(String(clamped));
+                setSaved(false);
+              }}/>
+            </label>
+          </div>
+          <p className="channel-limit-hint">Максимум 99. Пользователи с правом управлять каналом могут заходить сверх лимита.</p>
+        </section>
+        <div className="permission-savebar channel-overview-savebar">
+          <span>{saved ? "Настройки сохранены" : limitDirty ? "Есть несохранённые изменения." : "Изменений нет."}</span>
+          <div>
+            <button type="button" className="account-secondary" disabled={!limitDirty || saving} onClick={() => setLimit(initialLimit)}>Сбросить</button>
+            <button type="button" className="auth-submit override-save" disabled={!limitDirty || saving} onClick={() => void saveOverview()}>{saving ? <LoaderCircle className="spin" size={17}/> : <><Save size={16}/>Сохранить</>}</button>
+          </div>
+        </div>
+      </div> : null}
+
+      {view === "permissions" ? loading ? <div className="role-loading"><LoaderCircle className="spin" size={22}/> Загружаем настройки...</div> : <div className="channel-permissions-layout discord-permissions-layout">
+        <aside className="permission-targets">
+          <div className="permission-target-tabs"><button className={targetTab === "roles" ? "active" : ""} onClick={() => setTargetTab("roles")}><ShieldCheck size={14}/>Роли</button><button className={targetTab === "members" ? "active" : ""} onClick={() => setTargetTab("members")}><Users size={14}/>Участники</button></div>
+          <label className="permission-search"><Search size={14}/><input value={targetQuery} onChange={(event) => setTargetQuery(event.target.value)} placeholder={targetTab === "roles" ? "Поиск ролей" : "Поиск участников"}/></label>
+          <div className="permission-target-list">{targets.map((target) => <button key={target.type + target.id} className={selected?.id === target.id && selected.type === target.type ? "active" : ""} onClick={() => setSelected({ id: target.id, type: target.type })}>{target.type === "role" ? <i style={{ background: target.color }}/> : <span className="permission-member-icon"><UserRound size={14}/></span>}<span><strong>{target.name}</strong><small>{target.subtitle}</small></span></button>)}{!targets.length ? <p>Ничего не найдено.</p> : null}</div>
+        </aside>
+        <div className="override-editor">{selectedTarget ? <>
+          <div className="override-heading"><ShieldCheck size={20}/><div><strong>{selectedTarget.name}</strong><span>{selectedTarget.type === "role" ? "Переопределения роли действуют только в этом канале." : "Личное переопределение применяется после ролей."}</span></div></div>
+          <label className="permission-search permission-search-right"><Search size={14}/><input value={permissionQuery} onChange={(event) => setPermissionQuery(event.target.value)} placeholder="Поиск по правам"/></label>
+          <div className="permission-groups">{groups.map((group) => <section key={group}><h3>{group}</h3>{permissionItems.filter((item) => item.group === group).map((item) => <article className="permission-row" key={item.flag}><div><strong>{item.label}</strong><span>{item.description}</span></div><div className="permission-tristate" role="group" aria-label={item.label}><button className={stateFor(item.flag) === "deny" ? "active deny" : ""} onClick={() => change(item.flag, "deny")} title="Запретить"><X size={16}/></button><button className={stateFor(item.flag) === "inherit" ? "active inherit" : ""} onClick={() => change(item.flag, "inherit")} title="Наследовать"><Minus size={16}/></button><button className={stateFor(item.flag) === "allow" ? "active allow" : ""} onClick={() => change(item.flag, "allow")} title="Разрешить"><Check size={16}/></button></div></article>)}</section>)}</div>
+          <div className="permission-savebar"><span>{saved ? "Права сохранены" : "Изменения применятся после сохранения."}</span><button className="auth-submit override-save" onClick={() => void savePermissions()} disabled={saving}>{saving ? <LoaderCircle className="spin" size={17}/> : <><Save size={16}/>Сохранить изменения</>}</button></div>
+        </> : <div className="role-protected"><ShieldCheck size={30}/><strong>Выберите роль или участника</strong></div>}</div>
+      </div> : null}
+    </section>
+  </div>;
 }

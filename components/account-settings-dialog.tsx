@@ -46,7 +46,6 @@ export function AccountSettingsDialog({ user, initialSection = "profile", onClos
   useEffect(() => {
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
-    if (window.matchMedia("(max-width: 700px)").matches && initialSection === "profile") setMobileSectionOpen(false);
     return () => { document.body.style.overflow = previousOverflow; };
   }, [initialSection]);
   useEffect(() => {

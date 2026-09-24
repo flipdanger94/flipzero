@@ -16,11 +16,13 @@ export async function GET(_request: Request, { params }: { params: Promise<{ spa
   const [membership] = await database.select({ userId: members.userId }).from(members).where(and(eq(members.spaceId, spaceId), eq(members.userId, user.id))).limit(1);
   if (!membership) return NextResponse.json({ message: "Нет доступа к сообществу." }, { status: 403 });
 
-  const allVoiceChannels = await database.select({ id: channels.id }).from(channels).where(and(eq(channels.spaceId, spaceId), inArray(channels.kind, ["voice", "stage"])));
+  const allVoiceChannels = await database.select({ id: channels.id, userLimit: channels.userLimit }).from(channels).where(and(eq(channels.spaceId, spaceId), inArray(channels.kind, ["voice", "stage"])));
   const permissionRows = await Promise.all(allVoiceChannels.map(async (channel) => ({ channel, state: await getChannelPermissions(channel.id, user.id) })));
   const voiceChannels = permissionRows.filter(({ state }) => state.spaceId === spaceId && hasPermission(state.permissions, Permission.ViewChannels)).map(({ channel }) => channel);
+  const limits = Object.fromEntries(voiceChannels.map((channel) => [channel.id, channel.userLimit ?? null]));
+  const manage = Object.fromEntries(permissionRows.filter(({ state }) => state.spaceId === spaceId).map(({ channel, state }) => [channel.id, hasPermission(state.permissions, Permission.ManageChannels)]));
   const url = process.env.LIVEKIT_URL; const key = process.env.LIVEKIT_API_KEY; const secret = process.env.LIVEKIT_API_SECRET;
-  if (!url || !key || !secret || !voiceChannels.length) return NextResponse.json({ channels: {} }, { headers: { "cache-control": "no-store" } });
+  if (!url || !key || !secret || !voiceChannels.length) return NextResponse.json({ channels: {}, limits, manage }, { headers: { "cache-control": "no-store" } });
 
   const channelIds = voiceChannels.map((channel) => channel.id);
   const states = await database
@@ -70,8 +72,12 @@ export async function GET(_request: Request, { params }: { params: Promise<{ spa
         };
       }))] as const;
     }));
-    return NextResponse.json({ channels: Object.fromEntries(result) }, { headers: { "cache-control": "no-store" } });
+    return NextResponse.json({
+      channels: Object.fromEntries(result),
+      limits,
+      manage,
+    }, { headers: { "cache-control": "no-store" } });
   } catch {
-    return NextResponse.json({ channels: {}, message: "Не удалось получить состояние голосовых комнат." }, { status: 503, headers: { "cache-control": "no-store" } });
+    return NextResponse.json({ channels: {}, limits, manage, message: "Не удалось получить состояние голосовых комнат." }, { status: 503, headers: { "cache-control": "no-store" } });
   }
 }
