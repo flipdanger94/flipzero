@@ -122,8 +122,8 @@ html[data-theme] .platform-workspace {
     var(--theme-app) !important;
 }
 
-html[data-theme] .rail-action,
-html[data-theme] .space-button,
+html[data-theme] .rail-action:not(.home-action):not(.platform-admin-rail),
+html[data-theme] .space-button:not(.space-logo):not(.space-orchid):not(.space-sky):not(.space-amber),
 html[data-theme] .mobile-drawer-close,
 html[data-theme] .mobile-menu-button {
   background: var(--theme-raised) !important;
@@ -131,12 +131,31 @@ html[data-theme] .mobile-menu-button {
   border-color: var(--theme-border) !important;
 }
 
-html[data-theme] .rail-action:hover,
-html[data-theme] .space-button:hover,
+html[data-theme] .rail-action:not(.home-action):not(.platform-admin-rail):hover,
+html[data-theme] .space-button:not(.space-logo):not(.space-orchid):not(.space-sky):not(.space-amber):hover,
 html[data-theme] .mobile-drawer-close:hover,
 html[data-theme] .mobile-menu-button:hover {
   background: var(--theme-hover) !important;
   color: var(--theme-text) !important;
+}
+
+html[data-theme] .home-action,
+html[data-theme] .brand-mark,
+html[data-theme] .intro-icon,
+html[data-theme] .composer .send-button {
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--accent, #8f70ff) 72%, #6fe8ff 28%),
+    var(--accent, #8f70ff)
+  ) !important;
+}
+
+html[data-theme] .space-button.active {
+  background: var(--theme-active) !important;
+}
+
+html[data-theme] .space-button.active::before {
+  background: var(--accent, #8f70ff) !important;
 }
 
 html[data-theme] .channel:hover,
@@ -178,7 +197,6 @@ html[data-theme] .voice-stream-toolbar > button,
 html[data-theme] .voice-bottom-controls button {
   background: var(--theme-raised) !important;
   border-color: var(--theme-border) !important;
-  color: var(--theme-text) !important;
 }
 
 html[data-theme] .reactions button:hover,
@@ -189,6 +207,23 @@ html[data-theme] .voice-secondary-actions button:hover,
 html[data-theme] .voice-stream-toolbar > button:hover,
 html[data-theme] .voice-bottom-controls button:hover {
   background: var(--theme-hover) !important;
+}
+
+html[data-theme] .voice-bottom-controls button.is-muted {
+  background: color-mix(in srgb, #ff5267 18%, var(--theme-raised)) !important;
+  color: #ff8997 !important;
+}
+
+html[data-theme] .voice-bottom-controls button.is-active {
+  background: var(--theme-accent-soft) !important;
+  color: color-mix(in srgb, var(--accent, #8f70ff) 76%, white 24%) !important;
+  border-color: var(--theme-accent-border) !important;
+}
+
+html[data-theme] .voice-bottom-controls .voice-leave {
+  background: color-mix(in srgb, #ff5267 22%, var(--theme-raised)) !important;
+  color: #ff8a99 !important;
+  border-color: color-mix(in srgb, #ff5267 45%, transparent) !important;
 }
 
 /* Embedded full-screen areas. */
