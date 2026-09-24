@@ -482,12 +482,11 @@ export const xpEvents = pgTable("xp_events", {
   spaceId: text("space_id").references(() => spaces.id, { onDelete: "cascade" }),
   source: text("source").notNull(),
   amount: integer("amount").notNull(),
-  idempotencyKey: text("idempotency_key"),
-  dedupeKey: text("dedupe_key").notNull(),
+  idempotencyKey: text("dedupe_key").notNull(),
   meta: jsonb("meta").$type<Record<string, unknown>>().default({}).notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 }, (table) => [
-  uniqueIndex("xp_events_user_source_dedupe_unique").on(table.userId, table.source, table.dedupeKey),
+  uniqueIndex("xp_events_user_source_dedupe_unique").on(table.userId, table.source, table.idempotencyKey),
   index("xp_events_user_source_created_idx").on(table.userId, table.source, table.createdAt),
   index("xp_events_user_created_idx").on(table.userId, table.createdAt),
 ]);
