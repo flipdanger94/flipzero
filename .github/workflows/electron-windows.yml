@@ -1,0 +1,57 @@
+name: Electron Windows
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, feat/electron-windows]
+    paths:
+      - 'desktop-electron/**'
+      - '.github/workflows/electron-windows.yml'
+jobs:
+  installer:
+    runs-on: windows-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Create icon
+        shell: pwsh
+        run: |
+          python -m pip install Pillow
+          python -c "from PIL import Image; from pathlib import Path; Path('desktop-electron/build').mkdir(exist_ok=True); Image.open('public/pwa-icon-512.png').save('desktop-electron/build/icon.ico', format='ICO', sizes=[(16,16),(32,32),(48,48),(64,64),(128,128),(256,256)])"
+      - name: Install
+        working-directory: desktop-electron
+        run: npm install --no-audit --no-fund
+      - name: Verify signing configuration
+        if: github.event_name == 'workflow_dispatch'
+        shell: pwsh
+        env:
+          CERTIFICATE: ${{ secrets.CSC_LINK }}
+          PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:CERTIFICATE) -or [string]::IsNullOrWhiteSpace($env:PASSWORD)) {
+            throw 'Configure CSC_LINK (base64 PFX) and CSC_KEY_PASSWORD in repository Actions secrets before signing.'
+          }
+      - name: Build installer
+        working-directory: desktop-electron
+        run: npm run build:win
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+          CSC_LINK: ${{ github.event_name == 'workflow_dispatch' && secrets.CSC_LINK || '' }}
+          CSC_KEY_PASSWORD: ${{ github.event_name == 'workflow_dispatch' && secrets.CSC_KEY_PASSWORD || '' }}
+      - name: Verify Authenticode signature
+        if: github.event_name == 'workflow_dispatch'
+        shell: pwsh
+        run: |
+          $installer = Get-ChildItem desktop-electron/dist/*Setup.exe | Select-Object -First 1
+          if (-not $installer) { throw 'Installer missing.' }
+          $signature = Get-AuthenticodeSignature $installer.FullName
+          if ($signature.Status -ne 'Valid') { throw "Invalid installer signature: $($signature.Status)" }
+          Write-Host "Signed by $($signature.SignerCertificate.Subject)"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ github.event_name == 'workflow_dispatch' && 'FlipZero-Electron-Windows-Signed' || 'FlipZero-Electron-Windows-Unsigned' }}
+          path: desktop-electron/dist/*Setup.exe
+          if-no-files-found: error
