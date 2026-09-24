@@ -134,7 +134,7 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ c
         userId: access.user.id,
         spaceId: access.state.spaceId,
         source: "voice_minute",
-        amount: minutes * 3,
+        amount: minutes,
         idempotencyKey: `voice:${access.user.id}:${channelId}:${session.joinedAt.toISOString()}`,
       }).onConflictDoNothing();
     }
