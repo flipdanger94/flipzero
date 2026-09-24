@@ -12,7 +12,8 @@
     "desktop:dev": "tauri dev",
     "desktop:build": "tauri build",
     "db:seed-admin": "node scripts/seed-admin.mjs",
-    "db:seed-test": "node scripts/seed-test-user.mjs"
+    "db:seed-test": "node scripts/seed-test-user.mjs",
+    "db:sync": "node scripts/migrate-if-configured.mjs"
   },
   "dependencies": {
     "@vercel/analytics": "^2.0.1",
