@@ -401,7 +401,15 @@ export function VoiceRoom({
       if (!room) return;
       if (detail.type === "toggle-mic") {
         const nextMuted = Boolean(detail.muted);
-        void room.localParticipant.setMicrophoneEnabled(!nextMuted).then(() => setMuted(nextMuted)).catch(() => setError("Не удалось переключить микрофон."));
+        if (nextMuted) {
+          void room.localParticipant.setMicrophoneEnabled(false).then(() => { setMuted(true); setError(""); }).catch(() => setError("Не удалось выключить микрофон."));
+        } else {
+          const prefs = readAudioPrefs();
+          void requestMicrophone(prefs.inputId)
+            .then((selected) => room.localParticipant.setMicrophoneEnabled(true, captureOptions(prefs, selected)))
+            .then(() => { setMuted(false); setError(""); })
+            .catch((cause) => { setMuted(true); setError(microphoneErrorMessage(cause)); });
+        }
       }
       if (detail.type === "toggle-output") {
         const nextDeafened = Boolean(detail.deafened);
@@ -428,13 +436,11 @@ export function VoiceRoom({
       if (detail.type === "input-profile") {
         const profile = detail.profile;
         if (profile === "standard" || profile === "noise" || profile === "raw") {
-          const prefs = (() => { try { return JSON.parse(localStorage.getItem("flipzero:audio-devices:v1") ?? "{}"); } catch { return {}; } })();
-          void room.localParticipant.setMicrophoneEnabled(true, {
-            ...(prefs.inputId ? { deviceId: prefs.inputId } : {}),
-            echoCancellation: profile !== "raw",
-            noiseSuppression: profile === "noise",
-            autoGainControl: profile !== "raw",
-          }).catch(() => setError("Не удалось применить профиль микрофона."));
+          const prefs = { ...readAudioPrefs(), inputProfile: profile };
+          void requestMicrophone(prefs.inputId)
+            .then((selected) => room.localParticipant.setMicrophoneEnabled(true, captureOptions(prefs, selected)))
+            .then(() => { setMuted(false); setError(""); })
+            .catch((cause) => setError(microphoneErrorMessage(cause)));
         }
       }
     }
