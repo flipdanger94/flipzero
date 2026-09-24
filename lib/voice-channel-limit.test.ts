@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { canJoinVoiceChannel, normalizeVoiceUserLimit } from "./voice-channel-limit";
 
@@ -26,5 +27,15 @@ describe("canJoinVoiceChannel", () => {
   it("does not kick anyone when a limit is lowered below occupancy", () => {
     expect(canJoinVoiceChannel({ userLimit: 1, participantCount: 3, alreadyConnected: true, canManage: false })).toBe(true);
     expect(canJoinVoiceChannel({ userLimit: 1, participantCount: 3, alreadyConnected: false, canManage: false })).toBe(false);
+  });
+});
+
+
+describe("join race protection", () => {
+  it("keeps the PostgreSQL channel lock in the production join route", () => {
+    const source = readFileSync(new URL("../app/api/v1/channels/[channelId]/voice/route.ts", import.meta.url), "utf8");
+    expect(source).toContain("pg_advisory_xact_lock");
+    expect(source).toContain("participantCount");
+    expect(source).toContain("canJoinVoiceChannel");
   });
 });
