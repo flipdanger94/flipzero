@@ -4,8 +4,10 @@ import { useEffect, useRef, useState } from "react";
 import {
   Headphones,
   LoaderCircle,
+  Maximize2,
   Mic,
   MicOff,
+  Minimize2,
   MonitorUp,
   Music2,
   PhoneOff,
@@ -16,12 +18,16 @@ import {
   Users,
   Video,
   VideoOff,
+  Volume2,
+  VolumeX,
 } from "lucide-react";
 import { ConnectionQuality, Room, RoomEvent, Track } from "livekit-client";
 import { MediaImage } from "./media-image";
+import { normalizeVoicePresence, type VoicePresence } from "@/lib/voice-presence";
+import { MediaImage } from "./media-image";
 
 type VoiceStatus = "idle" | "connecting" | "connected" | "reconnecting";
-export type VoicePresence = { id: string; name: string; username?: string | null; avatarUrl?: string | null; muted: boolean; deafened?: boolean; camera: boolean; sharing: boolean; streaming?: boolean; speaking: boolean };
+export type { VoicePresence } from "@/lib/voice-presence";
 const qualityLabels = {
   [ConnectionQuality.Excellent]: "Отличная",
   [ConnectionQuality.Good]: "Хорошая",
@@ -36,6 +42,7 @@ export function VoiceRoom({
   autoJoin = false,
   presence = [],
   initialStreamId = "",
+  spaceName = "",
   onPresenceChange,
 }: {
   channelId: string;
@@ -43,6 +50,7 @@ export function VoiceRoom({
   autoJoin?: boolean;
   presence?: VoicePresence[];
   initialStreamId?: string;
+  spaceName?: string;
   onPresenceChange?: (participants: VoicePresence[]) => void;
 }) {
   const [status, setStatus] = useState<VoiceStatus>("idle");
@@ -57,6 +65,9 @@ export function VoiceRoom({
   const [sharing, setSharing] = useState(false);
   const [remoteVideo, setRemoteVideo] = useState(false);
   const [selectedStreamId, setSelectedStreamId] = useState(initialStreamId);
+  const [focusMode, setFocusMode] = useState(Boolean(initialStreamId));
+  const [streamMuted, setStreamMuted] = useState(false);
+  const [streamVolume, setStreamVolume] = useState(100);
   const [participantCount, setParticipantCount] = useState(0);
   const [quality, setQuality] = useState(ConnectionQuality.Unknown);
   const [activeSpeaker, setActiveSpeaker] = useState("");
@@ -89,6 +100,7 @@ export function VoiceRoom({
   const soundPlayingRef = useRef(false);
   const joinRef = useRef<() => Promise<void>>(async () => {});
   const outputVolumeRef = useRef(1);
+  const voiceRootRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(
     () => () => {
