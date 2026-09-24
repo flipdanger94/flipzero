@@ -49,6 +49,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ cha
   const { channelId } = await params;
   const access = await accessVoice(channelId);
   if ("error" in access) return access.error;
+  if (new URL(request.url).searchParams.get("leave") === "1") {
+    await access.db.delete(voiceStates).where(and(eq(voiceStates.userId, access.user.id), eq(voiceStates.channelId, channelId)));
+    return NextResponse.json({ connected: false, beacon: true });
+  }
   if (!hasPermission(access.state.permissions, Permission.ConnectVoice)) return NextResponse.json({ code: "FORBIDDEN", message: "Нет права подключаться к голосовому каналу." }, { status: 403 });
   const body = await request.json().catch(() => null);
   const breakout = VOICE_BREAKOUTS.includes(body?.breakout) ? body.breakout : "main";
