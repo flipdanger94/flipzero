@@ -9,6 +9,7 @@ import "./community.css";
 import "./account-settings.css";
 import "./clans.css";
 import "./mobile.css";
+import "./themes.css";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://flipzeroapp.vercel.app"),
