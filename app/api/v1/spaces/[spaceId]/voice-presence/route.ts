@@ -10,6 +10,7 @@ import { getChannelPermissions } from "@/lib/space-permissions";
 import { hasPermission, Permission } from "@/lib/permissions";
 import { normalizeVoicePresence, type VoicePresence } from "@/lib/voice-presence";
 import { parseSpaceVoiceRoom } from "@/lib/livekit-voice";
+import { awardVoiceSessionXp } from "@/lib/xp";
 
 type LiveParticipant = {
   identity: string;
@@ -102,6 +103,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ spac
     selfDeafened: voiceStates.selfDeafened,
     streaming: voiceStates.streaming,
     speaking: voiceStates.speaking,
+    joinedAt: voiceStates.joinedAt,
     lastHeartbeatAt: voiceStates.lastHeartbeatAt,
   }).from(voiceStates)
     .innerJoin(users, eq(users.id, voiceStates.userId))
@@ -118,9 +120,17 @@ export async function GET(request: Request, { params }: { params: Promise<{ spac
 
   const liveIds = new Set(Object.values(liveByChannel).flat().map((entry) => entry.participant.identity));
   const staleCutoff = new Date(Date.now() - STALE_STATE_MS);
-  const staleIds = states.filter((state) => !liveIds.has(state.userId) && state.lastHeartbeatAt < staleCutoff).map((state) => state.userId);
+  const staleStates = states.filter((state) => !liveIds.has(state.userId) && state.lastHeartbeatAt < staleCutoff);
+  const staleIds = staleStates.map((state) => state.userId);
   if (staleIds.length) {
     await database.delete(voiceStates).where(and(inArray(voiceStates.userId, staleIds), lt(voiceStates.lastHeartbeatAt, staleCutoff))).catch(() => undefined);
+    await Promise.all(staleStates.map((state) => awardVoiceSessionXp({
+      userId: state.userId,
+      channelId: state.channelId,
+      spaceId,
+      joinedAt: state.joinedAt,
+      confirmedUntil: state.lastHeartbeatAt,
+    }).catch(() => undefined)));
   }
 
   const stateByUser = new Map(states.map((state) => [state.userId, state]));
