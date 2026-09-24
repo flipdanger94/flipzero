@@ -602,192 +602,132 @@ export function VoiceRoom({
   const streamingParticipants = normalizedPresence.filter((participant) => participant.streaming || participant.sharing);
   const showingVideo = camera || sharing || remoteVideo;
   const connected = status === "connected" || status === "reconnecting";
+  const selectedStream = streamingParticipants.find((participant) => participant.id === selectedStreamId) ?? streamingParticipants[0] ?? null;
+
   function focusStream(participantId: string) {
     setSelectedStreamId(participantId);
+    setFocusMode(true);
     remoteVideoRef.current?.querySelectorAll<HTMLElement>("[data-participant-id]").forEach((element) => {
-      element.hidden = Boolean(participantId) && element.dataset.participantId !== participantId;
+      element.hidden = element.dataset.participantId !== participantId;
     });
-    remoteVideoRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    requestAnimationFrame(() => remoteVideoRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }));
   }
+  function clearFocus() {
+    setFocusMode(false);
+    setSelectedStreamId("");
+    remoteVideoRef.current?.querySelectorAll<HTMLElement>("[data-participant-id]").forEach((element) => { element.hidden = false; });
+  }
+  function applyStreamVolume() {
+    if (!selectedStreamId) return;
+    audioRef.current?.querySelectorAll<HTMLAudioElement>(`audio[data-participant-id="${selectedStreamId}"]`).forEach((audio) => {
+      audio.muted = streamMuted || deafenedRef.current;
+      audio.volume = Math.max(0, Math.min(1, streamVolume / 100));
+    });
+  }
+  useEffect(() => { applyStreamVolume(); }, [selectedStreamId, streamMuted, streamVolume]);
   useEffect(() => {
     if (!initialStreamId || !remoteVideo) return;
     focusStream(initialStreamId);
   }, [initialStreamId, remoteVideo]);
-  return (
-    <div className={`voice-room ${showingVideo ? "has-video" : ""}`}>
-      <div ref={audioRef} className="remote-audio" />
-      <div className={`video-grid ${camera && !sharing && !remoteVideo ? "camera-only" : ""}`} hidden={!showingVideo}>
-          <div ref={remoteVideoRef} className="remote-video" />
-          <div
-            ref={localScreenRef}
-            className={`local-screen ${sharing ? "visible" : ""}`}
-          />
-          <div
-            ref={localCameraRef}
-            className={`local-camera ${camera ? "visible" : ""}`}
-          />
-        </div>
-      <section className="voice-hero">
-        <div className={`voice-orb ${connected ? "is-live" : ""}`}>
-          <Radio size={38} />
-        </div>
-        <small>ГОЛОСОВАЯ КОМНАТА</small>
+  async function toggleFullscreen() {
+    const root = voiceRootRef.current;
+    if (!root) return;
+    try {
+      if (document.fullscreenElement) await document.exitFullscreen();
+      else await root.requestFullscreen();
+    } catch { setError("Полноэкранный режим недоступен в этом браузере."); }
+  }
+  async function openPictureInPicture() {
+    const selector = selectedStreamId ? `video[data-participant-id="${selectedStreamId}"]` : "video";
+    const video = remoteVideoRef.current?.querySelector<HTMLVideoElement>(selector);
+    if (!video || typeof video.requestPictureInPicture !== "function") { setError("Картинка в картинке недоступна для этого стрима."); return; }
+    try { await video.requestPictureInPicture(); } catch { setError("Не удалось открыть картинку в картинке."); }
+  }
+
+  if (!connected) return (
+    <div ref={voiceRootRef} className="voice-room voice-room-idle">
+      <section className="voice-join-screen">
+        <div className="voice-orb"><Radio size={38}/></div>
+        <small>ГОЛОСОВОЙ КАНАЛ</small>
         <h1>{channelName}</h1>
-        <p>
-          {connected
-            ? status === "reconnecting"
-              ? "Восстанавливаем соединение..."
-              : "Вы в эфире. Можно включить камеру или показать экран."
-            : "Подключайтесь к разговору с качественным пространственным звуком."}
-        </p>
-        {connected ? (
-          <div className="voice-status-row">
-            <span className="voice-online">
-              <Users size={16} /> В комнате: {participantCount}
-            </span>
-            <span className={`quality quality-${quality}`}>
-              <Signal size={15} /> {qualityLabels[quality]}
-            </span>
-          </div>
-        ) : null}
-        {activeSpeaker ? (
-          <div className="active-speaker">
-            <i /> Сейчас говорит: <b>{activeSpeaker}</b>
-          </div>
-        ) : null}
-        {connected && normalizedPresence.length ? <div className="voice-participant-grid" aria-label="Участники голосового канала">
-          {normalizedPresence.map((participant) => <article key={participant.id} className={`voice-participant-card ${participant.speaking ? "speaking" : ""} ${participant.streaming || participant.sharing ? "is-streaming" : ""}`}>
-            <span className="voice-participant-avatar">{participant.avatarUrl ? <MediaImage src={participant.avatarUrl} /> : participant.name.slice(0,2).toLocaleUpperCase("ru")}</span>
-            <div className="voice-participant-copy"><strong title={participant.name}>{participant.name}</strong><small>{participant.streaming || participant.sharing ? "В эфире" : participant.camera ? "Камера включена" : participant.muted ? "Микрофон выключен" : "В голосовом канале"}</small></div>
-            <div className="voice-participant-icons" aria-label="Состояние участника">{participant.muted ? <MicOff size={15} aria-label="Микрофон выключен" /> : null}{participant.deafened ? <Headphones size={15} aria-label="Звук выключен" /> : null}</div>
-            {participant.streaming || participant.sharing ? <button type="button" className="voice-watch-stream" onClick={() => focusStream(participant.id)} aria-label={`Смотреть стрим ${participant.name}`}>{selectedStreamId===participant.id?"Смотрим":"Смотреть стрим"}</button> : null}
-          </article>)}
-        </div> : null}
-        {connected && streamingParticipants.length > 1 ? <div className="voice-stream-switcher" aria-label="Выбор стрима"><span>Стримы:</span>{streamingParticipants.map((participant)=><button type="button" className={selectedStreamId===participant.id?"active":""} key={participant.id} onClick={()=>focusStream(participant.id)}>{participant.name}</button>)}</div>:null}
-        {status === "idle" && voiceChecked ? <span className="voice-server-ready" role="status">Сервер голосовой связи доступен</span> : null}
-        {connected && audioBlocked ? <button className="voice-enable-audio" onClick={enableAudio}><Headphones size={18} /> Включить звук</button> : null}
+        <p>{status === "connecting" ? "Подключаемся к голосовой комнате…" : "Подключайтесь к разговору. Участники и активные стримы отображаются прямо в канале."}</p>
+        {voiceAvailable === false ? <div className="voice-unavailable" role="status">{voiceMessage}<button type="button" onClick={() => { setVoiceAvailable(null); setVoiceCheckNonce((value) => value + 1); }}>Проверить ещё раз</button></div> : null}
         {error ? <div className="voice-error">{error}</div> : null}
-        {status === "idle" ? (
-          voiceAvailable === false ? <div className="voice-unavailable" role="status">{voiceMessage}<button type="button" onClick={() => { setVoiceAvailable(null); setVoiceCheckNonce((value) => value + 1); }}>Проверить ещё раз</button></div> :
-          <button className="voice-join" onClick={join} disabled={voiceAvailable === null}>
-            {voiceAvailable === null ? <><LoaderCircle className="spin" size={19} /> Подключаем к комнате…</> : <><Headphones size={19} /> Переподключиться</>}
-          </button>
-        ) : status === "connecting" ? (
-          <button className="voice-join" disabled>
-            <LoaderCircle className="spin" size={19} /> Подключение...
-          </button>
-        ) : (
-          <>
-            <div className="voice-controls">
-              <button className={muted ? "is-muted" : ""} onClick={toggleMute}>
-                {muted ? <MicOff size={20} /> : <Mic size={20} />}
-                <span>{muted ? "Включить" : "Микрофон"}</span>
-              </button>
-              <button className={deafened ? "is-muted" : ""} onClick={toggleDeafen} aria-pressed={deafened}>
-                <Headphones size={20} />
-                <span>{deafened ? "Включить звук" : "Выключить звук"}</span>
-              </button>
-              <button
-                className={camera ? "is-active" : ""}
-                onClick={toggleCamera}
-              >
-                {camera ? <VideoOff size={20} /> : <Video size={20} />}
-                <span>{camera ? "Выключить" : "Камера"}</span>
-              </button>
-              <button
-                className={sharing ? "is-active" : ""}
-                onClick={toggleScreen}
-                disabled={!screenSupported}
-                title={!screenSupported ? "Демонстрация экрана доступна на компьютере" : undefined}
-              >
-                <MonitorUp size={20} />
-                <span>{sharing ? "Остановить" : screenSupported ? "Экран" : "Экран недоступен"}</span>
-              </button>
-              <button onClick={() => setSettings((value) => !value)}>
-                <Settings2 size={20} />
-                <span>Устройства</span>
-              </button>
-              <button onClick={() => setSoundboard((value) => !value)}>
-                <Music2 size={20} />
-                <span>Soundboard</span>
-              </button>
-              <button onClick={requestRecordingConsent}>
-                <ShieldCheck size={20} />
-                <span>Согласие</span>
-              </button>
-              <button className="voice-leave" onClick={leave}>
-                <PhoneOff size={20} />
-                <span>Выйти</span>
-              </button>
-            </div>
-            {settings ? <div className="voice-device-settings">
-              <label className="device-picker"><span>Микрофон</span><select value={deviceId} onChange={(event) => void chooseDevice(event.target.value)} disabled={!devices.length}>
-                {!devices.length ? <option value="">Микрофон недоступен</option> : devices.map((device, index) => <option key={device.deviceId} value={device.deviceId}>{device.label || `Микрофон ${index + 1}`}</option>)}
-              </select></label>
-              <label className="device-picker"><span>Динамики / наушники</span><select value={outputDeviceId} onChange={(event) => void chooseOutput(event.target.value)} disabled={!outputDevices.length}>
-                {!outputDevices.length ? <option value="">Выбор устройства недоступен в этом браузере</option> : outputDevices.map((device, index) => <option key={device.deviceId} value={device.deviceId}>{device.label || `Устройство ${index + 1}`}</option>)}
-              </select></label>
-            </div> : null}
-            {soundboard ? (
-              <div className="soundboard">
-                <button disabled={soundPlaying} onClick={() => playSound(330)}>✨ Магия</button>
-                <button disabled={soundPlaying} onClick={() => playSound(520)}>🎉 Победа</button>
-                <button disabled={soundPlaying} onClick={() => playSound(180)}>🥁 Удар</button>
-                <button disabled={soundPlaying} onClick={() => playSound(760)}>🔔 Сигнал</button>
-              </div>
-            ) : null}
-            {consentPanel ? (
-              <div className="consent-panel">
-                <strong>Согласие на запись</strong>
-                <span>
-                  {
-                    Object.values(consents).filter(
-                      (value) => value === "accepted",
-                    ).length
-                  }{" "}
-                  из {Object.keys(consents).length} подтвердили
-                </span>
-                <div>
-                  {Object.entries(consents).map(([identity, value]) => (
-                    <small key={identity} className={`consent-${value}`}>
-                      {identity.slice(0, 8)} ·{" "}
-                      {value === "accepted"
-                        ? "согласен"
-                        : value === "declined"
-                          ? "отказался"
-                          : "ожидаем"}
-                    </small>
-                  ))}
-                </div>
-                {Object.values(consents).some(
-                  (value) => value === "declined",
-                ) ? (
-                  <b>Запись заблокирована: получен отказ.</b>
-                ) : Object.values(consents).every(
-                    (value) => value === "accepted",
-                  ) ? (
-                  <b className="consent-ready">
-                    Все согласны. Можно запускать запись.
-                  </b>
-                ) : null}
-              </div>
-            ) : null}
-          </>
-        )}
-        {incomingConsent ? (
-          <div className="consent-request">
-            <ShieldCheck size={20} />
-            <div>
-              <strong>{incomingConsent.requester} запрашивает запись</strong>
-              <span>
-                Подтвердите согласие на запись и транскрипцию комнаты.
-              </span>
-            </div>
-            <button onClick={() => respondToConsent(true)}>Согласен</button>
-            <button onClick={() => respondToConsent(false)}>Отказаться</button>
-          </div>
-        ) : null}
+        <button className="voice-join" onClick={join} disabled={status === "connecting" || voiceAvailable === null}>
+          {status === "connecting" || voiceAvailable === null ? <><LoaderCircle className="spin" size={19}/> Подключение…</> : <><Headphones size={19}/> Подключиться</>}
+        </button>
       </section>
+    </div>
+  );
+
+  return (
+    <div ref={voiceRootRef} className={`voice-room voice-room-connected ${focusMode ? "is-focus" : ""} ${showingVideo ? "has-video" : ""}`}>
+      <div ref={audioRef} className="remote-audio"/>
+      <header className="voice-room-topbar">
+        <div><small>ГОЛОСОВОЙ КАНАЛ</small><strong>{channelName}</strong>{spaceName ? <span>{spaceName}</span> : null}</div>
+        <div className="voice-room-health">
+          <span className={`quality quality-${quality}`}><Signal size={14}/>{status === "reconnecting" ? "Переподключение…" : qualityLabels[quality]}</span>
+          <span><Users size={14}/>{normalizedPresence.length}</span>
+        </div>
+      </header>
+
+      <main className="voice-stage-layout">
+        <section className="voice-stage-main" aria-label="Сцена голосового канала">
+          {showingVideo ? <div className={`video-grid ${focusMode ? "focus-stream" : ""} ${camera && !sharing && !remoteVideo ? "camera-only" : ""}`}>
+            <div ref={remoteVideoRef} className="remote-video"/>
+            <div ref={localScreenRef} className={`local-screen ${sharing ? "visible" : ""}`}/>
+            <div ref={localCameraRef} className={`local-camera ${camera ? "visible" : ""}`}/>
+          </div> : <div className="voice-stage-empty"><Radio size={34}/><strong>{normalizedPresence.length ? "Голосовая комната" : "Никого нет"}</strong><span>{normalizedPresence.length ? "Выберите участника или дождитесь стрима." : "Станьте первым участником канала."}</span></div>}
+
+          {focusMode && selectedStream ? <div className="voice-stream-toolbar">
+            <strong><span className="voice-live-badge">LIVE</span>{selectedStream.name}</strong>
+            <label aria-label="Громкость стрима"><Volume2 size={15}/><input type="range" min="0" max="100" value={streamVolume} onChange={(event)=>setStreamVolume(Number(event.target.value))}/></label>
+            <button type="button" onClick={()=>setStreamMuted((value)=>!value)} aria-label={streamMuted ? "Включить звук стрима" : "Выключить звук стрима"}>{streamMuted?<VolumeX size={17}/>:<Volume2 size={17}/>}</button>
+            <button type="button" onClick={()=>void openPictureInPicture()} aria-label="Картинка в картинке"><MonitorUp size={17}/></button>
+            <button type="button" onClick={()=>void toggleFullscreen()} aria-label="Полноэкранный режим"><Maximize2 size={17}/></button>
+            <button type="button" onClick={clearFocus} aria-label="Свернуть стрим"><Minimize2 size={17}/></button>
+          </div> : null}
+
+          <div className="voice-tile-grid" role="list" aria-label="Участники">
+            {normalizedPresence.map((participant)=><article key={participant.id} role="listitem" className={`voice-tile ${participant.speaking ? "speaking" : ""} ${participant.streaming || participant.sharing ? "is-streaming" : ""}`}>
+              <div className="voice-tile-avatar">{participant.avatarUrl?<MediaImage src={participant.avatarUrl}/>:participant.name.slice(0,2).toLocaleUpperCase("ru")}</div>
+              <footer><strong title={participant.name}>{participant.name}</strong><span>{participant.muted?<MicOff size={14}/>:null}{participant.deafened?<Headphones size={14}/>:null}{participant.camera?<Video size={14}/>:null}</span></footer>
+              {participant.streaming || participant.sharing ? <button type="button" className="voice-tile-watch" onClick={()=>focusStream(participant.id)}><span className="voice-live-badge">LIVE</span> Смотреть стрим</button>:null}
+            </article>)}
+          </div>
+          {streamingParticipants.length > 1 ? <div className="voice-stream-switcher" aria-label="Активные стримы">{streamingParticipants.map((participant)=><button type="button" className={selectedStreamId===participant.id?"active":""} key={participant.id} onClick={()=>focusStream(participant.id)}><span className="voice-live-badge">LIVE</span>{participant.name}</button>)}</div>:null}
+        </section>
+
+        <aside className="voice-room-side">
+          <div className={`voice-orb ${status === "connected" ? "is-live" : ""}`}><Radio size={30}/></div>
+          <small>ГОЛОСОВАЯ КОМНАТА</small><h2>{channelName}</h2>
+          <p>{status === "reconnecting" ? "Переподключение…" : "Вы подключены. Камера и демонстрация экрана доступны из панели управления."}</p>
+          {activeSpeaker ? <div className="active-speaker"><i/>Говорит: <b>{activeSpeaker}</b></div>:null}
+          {audioBlocked ? <button className="voice-enable-audio" onClick={enableAudio}><Headphones size={18}/>Включить звук</button>:null}
+          {error ? <div className="voice-error">{error}</div>:null}
+          <div className="voice-secondary-actions">
+            <button type="button" onClick={()=>setSettings((value)=>!value)} aria-label="Устройства"><Settings2 size={18}/><span>Устройства</span></button>
+            <button type="button" onClick={()=>setSoundboard((value)=>!value)} aria-label="Soundboard"><Music2 size={18}/><span>Soundboard</span></button>
+            <button type="button" onClick={requestRecordingConsent} aria-label="Согласие на запись"><ShieldCheck size={18}/><span>Согласие</span></button>
+          </div>
+          {settings ? <div className="voice-device-settings">
+            <label className="device-picker"><span>Микрофон</span><select value={deviceId} onChange={(event)=>void chooseDevice(event.target.value)} disabled={!devices.length}>{!devices.length?<option value="">Микрофон недоступен</option>:devices.map((device,index)=><option key={device.deviceId} value={device.deviceId}>{device.label||`Микрофон ${index+1}`}</option>)}</select></label>
+            <label className="device-picker"><span>Динамики / наушники</span><select value={outputDeviceId} onChange={(event)=>void chooseOutput(event.target.value)} disabled={!outputDevices.length}>{!outputDevices.length?<option value="">Системное устройство</option>:outputDevices.map((device,index)=><option key={device.deviceId} value={device.deviceId}>{device.label||`Устройство ${index+1}`}</option>)}</select></label>
+          </div>:null}
+          {soundboard ? <div className="soundboard"><button disabled={soundPlaying} onClick={()=>playSound(330)}>✨ Магия</button><button disabled={soundPlaying} onClick={()=>playSound(520)}>🎉 Победа</button><button disabled={soundPlaying} onClick={()=>playSound(180)}>🥁 Удар</button><button disabled={soundPlaying} onClick={()=>playSound(760)}>🔔 Сигнал</button></div>:null}
+          {consentPanel ? <div className="consent-panel"><strong>Согласие на запись</strong><span>{Object.values(consents).filter((value)=>value==="accepted").length} из {Object.keys(consents).length} подтвердили</span><div>{Object.entries(consents).map(([identity,value])=><small key={identity} className={`consent-${value}`}>{identity.slice(0,8)} · {value==="accepted"?"согласен":value==="declined"?"отказался":"ожидаем"}</small>)}</div></div>:null}
+        </aside>
+      </main>
+
+      <nav className="voice-bottom-controls" aria-label="Управление голосовым каналом">
+        <button className={muted?"is-muted":""} onClick={toggleMute} aria-label={muted?"Включить микрофон":"Выключить микрофон"}>{muted?<MicOff size={20}/>:<Mic size={20}/>}<span>Микрофон</span></button>
+        <button className={deafened?"is-muted":""} onClick={toggleDeafen} aria-label={deafened?"Включить звук":"Выключить звук"}><Headphones size={20}/><span>Звук</span></button>
+        <button className={camera?"is-active":""} onClick={toggleCamera} aria-label={camera?"Выключить камеру":"Включить камеру"}>{camera?<VideoOff size={20}/>:<Video size={20}/>}<span>Камера</span></button>
+        <button className={sharing?"is-active":""} onClick={toggleScreen} disabled={!screenSupported} aria-label={sharing?"Остановить демонстрацию экрана":"Демонстрация экрана"}><MonitorUp size={20}/><span>Экран</span></button>
+        <button className="voice-leave" onClick={leave} aria-label="Отключиться"><PhoneOff size={20}/><span>Выйти</span></button>
+      </nav>
+
+      {incomingConsent ? <div className="consent-request"><ShieldCheck size={20}/><div><strong>{incomingConsent.requester} запрашивает запись</strong><span>Подтвердите согласие на запись и транскрипцию комнаты.</span></div><button onClick={()=>respondToConsent(true)}>Согласен</button><button onClick={()=>respondToConsent(false)}>Отказаться</button></div>:null}
     </div>
   );
 }
