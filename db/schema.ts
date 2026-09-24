@@ -673,3 +673,20 @@ export const storyReactions=pgTable("story_reactions",{
 export const userPreferences=pgTable("user_preferences",{
  userId:text("user_id").primaryKey().references(()=>users.id,{onDelete:"cascade"}),theme:text("theme").default("midnight").notNull(),accentColor:text("accent_color").default("#8f70ff").notNull(),dndEnabled:boolean("dnd_enabled").default(false).notNull(),dndDays:jsonb("dnd_days").$type<number[]>().default([]).notNull(),dndStart:text("dnd_start").default("22:00").notNull(),dndEnd:text("dnd_end").default("08:00").notNull(),dndTimezone:text("dnd_timezone").default("UTC").notNull(),dndFavoriteIds:jsonb("dnd_favorite_ids").$type<string[]>().default([]).notNull(),dndClanException:boolean("dnd_clan_exception").default(false).notNull(),updatedAt:timestamp("updated_at",{withTimezone:true}).defaultNow().notNull(),
 });
+
+export const appThemes=pgTable("app_themes",{
+  id:text("id").primaryKey(),
+  label:text("label").notNull(),
+  access:text("access").default("free").notNull(),
+  surface:text("surface").notNull(),
+  panel:text("panel").notNull(),
+  deep:text("deep").notNull(),
+  raised:text("raised").notNull(),
+  accent:text("accent").notNull(),
+  textColor:text("text_color").default("#f7f4fb").notNull(),
+  muted:text("muted").default("#9aa1b6").notNull(),
+  createdBy:text("created_by").references(()=>users.id,{onDelete:"set null"}),
+  createdAt:timestamp("created_at",{withTimezone:true}).defaultNow().notNull(),
+  updatedAt:timestamp("updated_at",{withTimezone:true}).defaultNow().notNull(),
+},table=>[index("app_themes_updated_idx").on(table.updatedAt)]);
+
