@@ -201,23 +201,46 @@ function VoiceDeviceSettings() {
   const [notice, setNotice] = useState("");
   async function refresh(askPermission = false) {
     try {
-      if (askPermission) { const stream = await navigator.mediaDevices.getUserMedia({ audio: true }); stream.getTracks().forEach((track) => track.stop()); }
+      if (!navigator.mediaDevices?.enumerateDevices) { setNotice("Этот браузер не поддерживает выбор аудиоустройств."); return; }
+      if (askPermission) {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        stream.getTracks().forEach((track) => track.stop());
+      }
       const all = await navigator.mediaDevices.enumerateDevices();
       const inputs = all.filter((item) => item.kind === "audioinput");
       const outputs = all.filter((item) => item.kind === "audiooutput");
       const stored = JSON.parse(localStorage.getItem("flipzero:audio-devices:v1") ?? "{}");
+      const nextInput = stored.inputId && inputs.some((item) => item.deviceId === stored.inputId) ? stored.inputId : inputs[0]?.deviceId ?? "";
+      const nextOutput = stored.outputId && outputs.some((item) => item.deviceId === stored.outputId) ? stored.outputId : outputs[0]?.deviceId ?? "";
       setDevices({ inputs, outputs });
-      setInputId(stored.inputId && inputs.some((item) => item.deviceId === stored.inputId) ? stored.inputId : inputs[0]?.deviceId ?? "");
-      setOutputId(stored.outputId && outputs.some((item) => item.deviceId === stored.outputId) ? stored.outputId : outputs[0]?.deviceId ?? "");
-      setNotice(inputs.length ? "Устройства обнаружены." : "Разрешите доступ к микрофону, чтобы увидеть устройства.");
-    } catch { setNotice("Браузер не предоставил доступ к аудиоустройствам."); }
+      setInputId(nextInput);
+      setOutputId(nextOutput);
+      if (stored.inputId && nextInput !== stored.inputId) {
+        localStorage.setItem("flipzero:audio-devices:v1", JSON.stringify({ ...stored, inputId: nextInput || undefined }));
+      }
+      setNotice(inputs.length ? "Устройства обнаружены и готовы к работе." : "Разрешите доступ к микрофону, чтобы увидеть устройства.");
+    } catch (cause) {
+      const name = cause instanceof DOMException ? cause.name : "";
+      setNotice(name === "NotAllowedError" ? "Доступ к микрофону запрещён. Разрешите его в настройках браузера или Windows." : "Не удалось открыть аудиоустройства.");
+    }
   }
   useEffect(() => {
     const timer = window.setTimeout(() => { void refresh(false); }, 0);
-    return () => window.clearTimeout(timer);
+    const onChange = () => void refresh(false);
+    navigator.mediaDevices?.addEventListener?.("devicechange", onChange);
+    return () => {
+      window.clearTimeout(timer);
+      navigator.mediaDevices?.removeEventListener?.("devicechange", onChange);
+    };
   }, []);
-  function save(nextInput = inputId, nextOutput = outputId) { localStorage.setItem("flipzero:audio-devices:v1", JSON.stringify({ inputId: nextInput, outputId: nextOutput })); setNotice("Выбор сохранён и будет применён в голосовой комнате."); }
-  return <><SettingsHeading kicker="ГОЛОС И ВИДЕО" title="Аудиоустройства" description="Выберите микрофон и устройство вывода. Настройка сохраняется для следующих подключений." /><div className="audio-device-card"><label><span><Mic size={17} /> Устройство ввода</span><select value={inputId} onChange={(event) => { setInputId(event.target.value); save(event.target.value, outputId); }}>{devices.inputs.length ? devices.inputs.map((item, index) => <option key={item.deviceId} value={item.deviceId}>{item.label || `Микрофон ${index + 1}`}</option>) : <option>Микрофон не найден</option>}</select></label><label><span><Headphones size={17} /> Устройство вывода</span><select value={outputId} onChange={(event) => { setOutputId(event.target.value); save(inputId, event.target.value); }}>{devices.outputs.length ? devices.outputs.map((item, index) => <option key={item.deviceId} value={item.deviceId}>{item.label || `Наушники / динамики ${index + 1}`}</option>) : <option>Системное устройство</option>}</select></label><button type="button" className="security-action" onClick={() => void refresh(true)}><RefreshCw size={16} /> Обновить устройства</button>{notice ? <p>{notice}</p> : null}</div><div className="settings-callout"><Volume2 size={20} /><span><strong>Проверка звука</strong><small>Откройте голосовую комнату — сохранённые устройства подключатся автоматически.</small></span></div></>;
+  function save(nextInput = inputId, nextOutput = outputId) {
+    const current = (() => { try { return JSON.parse(localStorage.getItem("flipzero:audio-devices:v1") ?? "{}"); } catch { return {}; } })();
+    localStorage.setItem("flipzero:audio-devices:v1", JSON.stringify({ ...current, inputId: nextInput || undefined, outputId: nextOutput || undefined }));
+    if (nextInput && nextInput !== inputId) window.dispatchEvent(new CustomEvent("flipzero:voice-control", { detail: { type: "input-device", deviceId: nextInput } }));
+    if (nextOutput && nextOutput !== outputId) window.dispatchEvent(new CustomEvent("flipzero:voice-control", { detail: { type: "output-device", deviceId: nextOutput } }));
+    setNotice("Выбор сохранён и применён к активной голосовой комнате.");
+  }
+  return <><SettingsHeading kicker="ГОЛОС И ВИДЕО" title="Аудиоустройства" description="Выберите микрофон и устройство вывода. FlipZero проверит доступ и применит устройство к активному войсу." /><div className="audio-device-card"><label><span><Mic size={17} /> Устройство ввода</span><select value={inputId} onChange={(event) => { const next=event.target.value; save(next, outputId); setInputId(next); }}>{devices.inputs.length ? devices.inputs.map((item, index) => <option key={item.deviceId} value={item.deviceId}>{item.label || `Микрофон ${index + 1}`}</option>) : <option value="">Микрофон не найден</option>}</select></label><label><span><Headphones size={17} /> Устройство вывода</span><select value={outputId} onChange={(event) => { const next=event.target.value; save(inputId, next); setOutputId(next); }}>{devices.outputs.length ? devices.outputs.map((item, index) => <option key={item.deviceId} value={item.deviceId}>{item.label || `Наушники / динамики ${index + 1}`}</option>) : <option value="">Системное устройство</option>}</select></label><button type="button" className="security-action" onClick={() => void refresh(true)}><RefreshCw size={16} /> Разрешить и обновить устройства</button>{notice ? <p>{notice}</p> : null}</div><div className="settings-callout"><Volume2 size={20} /><span><strong>Проверка устройств</strong><small>Если микрофон был переподключён или Windows изменила его ID, FlipZero автоматически переключится на доступное устройство.</small></span></div></>;
 }
 
 function AppearanceSettings() {
