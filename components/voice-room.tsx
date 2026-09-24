@@ -24,7 +24,6 @@ import {
 import { ConnectionQuality, Room, RoomEvent, Track } from "livekit-client";
 import { MediaImage } from "./media-image";
 import { normalizeVoicePresence, type VoicePresence } from "@/lib/voice-presence";
-import { MediaImage } from "./media-image";
 
 type VoiceStatus = "idle" | "connecting" | "connected" | "reconnecting";
 export type { VoicePresence } from "@/lib/voice-presence";
