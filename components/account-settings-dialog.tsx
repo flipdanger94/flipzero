@@ -35,8 +35,11 @@ export function AccountSettingsDialog({ user, initialSection = "profile", onClos
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [displayName, setDisplayName] = useState(user.displayName);
+  const [username, setUsername] = useState(user.username);
   const [bio, setBio] = useState(user.bio ?? "");
   const [media, setMedia] = useState({ avatarUrl: user.avatarUrl, bannerUrl: user.bannerUrl });
+  const profileDirty = displayName !== user.displayName || username !== user.username || bio !== (user.bio ?? "");
   const [superflipBioLimit, setSuperflipBioLimit] = useState(190);
   useEffect(() => { void fetch("/api/superflip/status").then((response) => response.json()).then((status: { capabilities?: { profileBioLimit?: number } }) => setSuperflipBioLimit(status.capabilities?.profileBioLimit ?? 190)).catch(() => {}); }, []);
   useEffect(() => {
@@ -45,6 +48,7 @@ export function AccountSettingsDialog({ user, initialSection = "profile", onClos
     return () => window.removeEventListener("keydown", onEscape);
   }, [onClose]);
 
+  function resetProfileDraft() { setDisplayName(user.displayName); setUsername(user.username); setBio(user.bio ?? ""); setError(""); setSuccess(""); }
   function openSection(next: AccountSettingsSection) { setSection(next); setError(""); setSuccess(""); }
 
   async function saveProfile(event: FormEvent<HTMLFormElement>) {
@@ -55,6 +59,9 @@ export function AccountSettingsDialog({ user, initialSection = "profile", onClos
       const result = await response.json();
       if (!response.ok) { setError(result.message ?? "Не удалось сохранить профиль."); return; }
       onSaved(result.user);
+      setDisplayName(result.user.displayName);
+      setUsername(result.user.username);
+      setBio(result.user.bio ?? "");
       setSuccess("Профиль сохранён.");
     } catch { setError("Нет соединения. Попробуйте ещё раз."); }
     finally { setBusy(false); }
@@ -110,19 +117,18 @@ export function AccountSettingsDialog({ user, initialSection = "profile", onClos
         <div className="account-nav-user"><span>{media.avatarUrl ? <MediaImage src={media.avatarUrl} /> : initials}</span><div><strong>{user.displayName}</strong><small>@{user.username}</small></div></div>
       </aside>
 
-      <div className="account-settings-content">
+      <div className="account-settings-main"><div className="account-settings-content">
         <button className="account-settings-close" onClick={onClose} aria-label="Закрыть настройки"><X size={20} /></button>
         {section === "profile" ? <>
           <div className="account-settings-heading"><span>ПРОФИЛЬ</span><h2 id="account-settings-title">Мой профиль</h2><p>Так вас видят другие участники FlipZero.</p></div>
           <div className="account-profile-preview"><div className="account-profile-banner" style={media.bannerUrl ? { backgroundImage: `url(${media.bannerUrl})` } : undefined} /><div className="account-profile-details"><span className="account-profile-avatar">{media.avatarUrl ? <MediaImage src={media.avatarUrl} sizes="88px" /> : initials}</span><strong>{user.displayName}</strong><small>@{user.username} · уровень {user.globalLevel}</small><p>{user.bio || "Расскажите немного о себе."}</p></div></div>
           <div className="account-media-controls"><ImageUpload kind="avatar" label="Загрузить аватарку" currentUrl={media.avatarUrl} onUploaded={(result) => { const next = result.user as AccountProfile; setMedia({ avatarUrl: next.avatarUrl, bannerUrl: next.bannerUrl }); onSaved(next); }} /><ImageUpload kind="accountBanner" label="Загрузить баннер" currentUrl={media.bannerUrl} onUploaded={(result) => { const next = result.user as AccountProfile; setMedia({ avatarUrl: next.avatarUrl, bannerUrl: next.bannerUrl }); onSaved(next); }} /><small>Лимиты SuperFlip: аватар до 8 МБ, баннер до 16 МБ · GIF и расширенные лимиты доступны после активации.</small></div>
-          <form className="account-settings-form" onSubmit={saveProfile}>
-            <label><span>Отображаемое имя</span><input name="displayName" defaultValue={user.displayName} minLength={2} maxLength={40} required autoComplete="nickname" /></label>
-            <label><span>Никнейм</span><div className="account-field-icon"><AtSign size={17} /><input name="username" defaultValue={user.username} minLength={3} maxLength={24} pattern="[A-Za-z0-9_]+" required autoComplete="username" /></div><small>Латинские буквы, цифры и нижнее подчёркивание.</small></label>
+          <form id="account-profile-form" className="account-settings-form" onSubmit={saveProfile}>
+            <label><span>Отображаемое имя</span><input name="displayName" value={displayName} onChange={(event)=>setDisplayName(event.target.value)} minLength={2} maxLength={40} required autoComplete="nickname" /></label>
+            <label><span>Никнейм</span><div className="account-field-icon"><AtSign size={17} /><input name="username" value={username} onChange={(event)=>setUsername(event.target.value)} minLength={3} maxLength={24} pattern="[A-Za-z0-9_]+" required autoComplete="username" /></div><small>Латинские буквы, цифры и нижнее подчёркивание.</small></label>
             <label><span>О себе</span><textarea name="bio" value={bio} maxLength={superflipBioLimit} rows={3} placeholder="Пара слов о вас" onChange={(event) => setBio(event.target.value)} /><small>{bio.length}/{superflipBioLimit}{superflipBioLimit > 190 ? " · SuperFlip" : ""}</small></label>
             {error ? <div className="account-feedback error" role="alert">{error}</div> : null}
             {success ? <div className="account-feedback success" role="status"><Check size={16} />{success}</div> : null}
-            <button className="account-primary" disabled={busy}>{busy ? <><LoaderCircle size={17} className="spin" /> Сохраняем…</> : "Сохранить профиль"}</button>
           </form>
           <button className="account-signout-mobile" type="button" onClick={signOut} disabled={busy}><LogOut size={18} /> Выйти из аккаунта</button>
         </> : section === "security" ? <>
@@ -145,6 +151,8 @@ export function AccountSettingsDialog({ user, initialSection = "profile", onClos
           : section === "appearance" ? <AppearanceSettings />
           : section === "superflip" ? <SuperFlipSettings />
           : <SuperUpSettings />}
+      </div>
+      {section === "profile" ? <footer className="account-settings-savebar" aria-live="polite"><span>{profileDirty ? "У вас есть несохранённые изменения" : "Все изменения сохранены"}</span><div><button type="button" className="account-secondary" onClick={resetProfileDraft} disabled={!profileDirty || busy}>Отмена</button><button type="submit" form="account-profile-form" className="account-primary" disabled={!profileDirty || busy}>{busy ? <><LoaderCircle size={17} className="spin" /> Сохраняем…</> : "Сохранить"}</button></div></footer> : null}
       </div>
     </section>
   </div>;

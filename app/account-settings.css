@@ -101,3 +101,27 @@
 .crop-dialog>p{color:#98a3ad;font-size:.76rem;line-height:1.5}.crop-controls{display:flex;align-items:center;gap:10px}.crop-controls input{flex:1;accent-color:#00d4ff}.crop-dialog footer{display:flex;justify-content:flex-end;gap:9px;margin-top:18px}.crop-dialog footer button{border:0;border-radius:10px;padding:10px 15px;color:white;background:#242832;font-weight:750}.crop-dialog footer .crop-confirm{display:flex;align-items:center;gap:7px;color:#071019;background:linear-gradient(135deg,#00d4ff,#6f5cff)}
 
 .account-settings-nav .account-nav-link{min-height:40px;border-radius:8px;color:#8993aa;display:flex;align-items:center;gap:10px;padding:0 10px;text-decoration:none;font-size:.62rem;font-weight:650}.account-settings-nav .account-nav-link:hover,.account-settings-nav .account-nav-link:focus-visible{background:#ffffff0a;color:#fff;outline:none}
+
+
+/* Settings layout: independent scroll area + persistent save actions. */
+.account-settings-main{min-width:0;min-height:0;display:flex;flex-direction:column;overflow:hidden}
+.account-settings-main>.account-settings-content{flex:1 1 auto;min-height:0;overflow-y:auto;padding-bottom:96px}
+.account-settings-savebar{position:relative;z-index:5;flex:0 0 auto;min-height:72px;display:flex;align-items:center;justify-content:space-between;gap:18px;padding:12px clamp(20px,5vw,58px);border-top:1px solid rgba(255,255,255,.1);background:rgba(12,13,17,.97);box-shadow:0 -14px 32px rgba(0,0,0,.28);backdrop-filter:blur(16px)}
+.account-settings-savebar>span{color:#aeb8c4;font-size:.78rem}
+.account-settings-savebar>div{display:flex;align-items:center;gap:9px}
+.account-settings-savebar .account-primary{justify-self:auto}
+.account-secondary{min-height:43px;border:1px solid rgba(255,255,255,.13);border-radius:10px;padding:0 16px;background:#20232c;color:#dbe3eb;font:inherit;font-size:.83rem;font-weight:750;cursor:pointer}
+.account-secondary:hover:not(:disabled){background:#292d38;color:#fff}.account-secondary:disabled{opacity:.45;cursor:not-allowed}
+.account-settings-heading{padding-bottom:24px;margin-bottom:24px;border-bottom:1px solid rgba(255,255,255,.075)}
+.account-settings-heading p{margin-bottom:0}
+.account-settings-form,.account-email-card,.settings-list,.audio-device-card,.premium-hero,.premium-settings-grid,.blocked-users-settings,.settings-callout{margin-top:24px}
+.account-settings-form>h3,.blocked-users-settings>h3{margin-top:0;padding-top:0}
+.account-nav-group{margin-top:18px!important;padding-top:18px!important}
+@media(max-width:700px){
+ .account-settings-main{min-height:0}
+ .account-settings-main>.account-settings-content{padding-bottom:104px}
+ .account-settings-savebar{min-height:76px;padding:10px 14px max(10px,env(safe-area-inset-bottom));gap:10px}
+ .account-settings-savebar>span{font-size:.7rem;max-width:42%}
+ .account-settings-savebar>div{margin-left:auto}
+ .account-settings-savebar .account-primary,.account-settings-savebar .account-secondary{min-height:44px;padding-inline:13px}
+}
