@@ -11,7 +11,8 @@
     "smoke:release": "node scripts/release-smoke.mjs",
     "desktop:dev": "tauri dev",
     "desktop:build": "tauri build",
-    "db:seed-admin": "node scripts/seed-admin.mjs"
+    "db:seed-admin": "node scripts/seed-admin.mjs",
+    "db:seed-test": "node scripts/seed-test-user.mjs"
   },
   "dependencies": {
     "@vercel/analytics": "^2.0.1",
