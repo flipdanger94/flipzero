@@ -2470,3 +2470,9 @@ html[data-motion="off"] *::after {
   .channel-limit-controls{grid-template-columns:1fr 92px!important;gap:10px!important}
   .channel-overview-savebar{position:sticky!important;bottom:0!important;z-index:8!important}
 }
+
+@media(max-width:767px){
+  .voice-secondary-toolbar{width:100%!important;justify-content:flex-start!important;overflow-x:auto!important;padding:4px!important}
+  .voice-secondary-toolbar button{min-width:max-content!important;min-height:44px!important}
+  .voice-inline-panel{width:100%!important}
+}
