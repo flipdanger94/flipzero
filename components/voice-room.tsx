@@ -35,12 +35,14 @@ export function VoiceRoom({
   channelName,
   autoJoin = false,
   presence = [],
+  initialStreamId = "",
   onPresenceChange,
 }: {
   channelId: string;
   channelName: string;
   autoJoin?: boolean;
   presence?: VoicePresence[];
+  initialStreamId?: string;
   onPresenceChange?: (participants: VoicePresence[]) => void;
 }) {
   const [status, setStatus] = useState<VoiceStatus>("idle");
@@ -54,7 +56,7 @@ export function VoiceRoom({
   const [camera, setCamera] = useState(false);
   const [sharing, setSharing] = useState(false);
   const [remoteVideo, setRemoteVideo] = useState(false);
-  const [selectedStreamId, setSelectedStreamId] = useState("");
+  const [selectedStreamId, setSelectedStreamId] = useState(initialStreamId);
   const [participantCount, setParticipantCount] = useState(0);
   const [quality, setQuality] = useState(ConnectionQuality.Unknown);
   const [activeSpeaker, setActiveSpeaker] = useState("");
@@ -560,6 +562,10 @@ export function VoiceRoom({
     });
     remoteVideoRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
   }
+  useEffect(() => {
+    if (!initialStreamId || !remoteVideo) return;
+    focusStream(initialStreamId);
+  }, [initialStreamId, remoteVideo]);
   return (
     <div className={`voice-room ${showingVideo ? "has-video" : ""}`}>
       <div ref={audioRef} className="remote-audio" />
