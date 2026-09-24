@@ -608,6 +608,8 @@ export function VoiceRoom({
 
   const normalizedPresence = normalizeVoicePresence(presence);
   const streamingParticipants = normalizedPresence.filter((participant) => participant.streaming || participant.sharing);
+  const visibleParticipants = normalizedPresence.slice(0, 50);
+  const hiddenParticipantCount = Math.max(0, normalizedPresence.length - visibleParticipants.length);
   const showingVideo = camera || sharing || remoteVideo;
   const connected = status === "connected" || status === "reconnecting";
   const selectedStream = streamingParticipants.find((participant) => participant.id === selectedStreamId) ?? streamingParticipants[0] ?? null;
@@ -703,11 +705,12 @@ export function VoiceRoom({
 
           {selectedStreamId && !focusMode ? <div className="voice-mini-stream-controls" aria-label="Мини-плеер стрима"><button type="button" onClick={()=>setFocusMode(true)} aria-label="Развернуть стрим"><Maximize2 size={16}/></button><button type="button" onClick={clearFocus} aria-label="Закрыть стрим">×</button></div>:null}
           <div className="voice-tile-grid" role="list" aria-label="Участники">
-            {normalizedPresence.map((participant)=><article key={participant.id} role="listitem" className={`voice-tile ${participant.speaking ? "speaking" : ""} ${participant.streaming || participant.sharing ? "is-streaming" : ""}`}>
+            {visibleParticipants.map((participant)=><article key={participant.id} role="listitem" className={`voice-tile ${participant.speaking ? "speaking" : ""} ${participant.streaming || participant.sharing ? "is-streaming" : ""}`}>
               <div className="voice-tile-avatar">{participant.avatarUrl?<MediaImage src={participant.avatarUrl}/>:participant.name.slice(0,2).toLocaleUpperCase("ru")}</div>
               <footer><strong title={participant.name}>{participant.name}</strong><span>{participant.muted?<MicOff size={14}/>:null}{participant.deafened?<Headphones size={14}/>:null}{participant.camera?<Video size={14}/>:null}</span></footer>
               {participant.streaming || participant.sharing ? <button type="button" className="voice-tile-watch" onClick={()=>focusStream(participant.id)}><span className="voice-live-badge">LIVE</span> Смотреть стрим</button>:null}
             </article>)}
+            {hiddenParticipantCount ? <article className="voice-tile voice-tile-more" role="listitem"><strong>+{hiddenParticipantCount}</strong><span>ещё участников</span></article>:null}
           </div>
           {streamingParticipants.length > 1 ? <div className="voice-stream-switcher" aria-label="Активные стримы">{streamingParticipants.map((participant)=><button type="button" className={selectedStreamId===participant.id?"active":""} key={participant.id} onClick={()=>focusStream(participant.id)}><span className="voice-live-badge">LIVE</span>{participant.name}</button>)}</div>:null}
         </section>
