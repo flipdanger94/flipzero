@@ -5,6 +5,7 @@ import { compare } from "bcryptjs";
 export function isTrustedMutationRequest(request: Request) {
   const fetchSite = request.headers.get("sec-fetch-site");
   if (fetchSite === "cross-site") return false;
+  if (fetchSite === "same-origin") return true;
 
   const origin = request.headers.get("origin");
   if (!origin) return true;
