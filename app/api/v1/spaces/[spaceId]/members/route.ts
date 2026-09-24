@@ -2,8 +2,7 @@ import { and, asc, eq, gt, inArray, or, sql } from "drizzle-orm";
 import { after, NextResponse } from "next/server";
 import { getDatabase } from "@/db/client";
 import { clanTagsForUsers } from "@/lib/clan-tags";
-import { levelFromXp } from "@/lib/gamification";
-import { memberRoles, members, roles, spaces, spaceSuperupSupports, superflipPurchases, users } from "@/db/schema";
+import { memberRoles, members, roles, spaces, spaceSuperupSupports, superflipPurchases, userProgress, users } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
 import { dispatchDeveloperEvent } from "@/lib/developer-webhooks";
 import { hasPermission, Permission } from "@/lib/permissions";
@@ -63,7 +62,8 @@ export async function GET(request: Request, { params }: { params: Promise<{ spac
       userId: members.userId,
       nickname: members.nickname,
       level: members.level,
-      globalXp:users.globalXp,
+      globalXp:userProgress.totalXp,
+      globalLevel:userProgress.level,
       joinedAt: members.joinedAt,
       username: users.username,
       displayName: users.displayName,
@@ -71,6 +71,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ spac
       lastSeenAt: users.lastSeenAt,
     }).from(members)
       .innerJoin(users, eq(members.userId, users.id))
+      .leftJoin(userProgress, eq(userProgress.userId, users.id))
       .where(and(...memberConditions))
       .orderBy(asc(members.joinedAt), asc(members.userId))
       .limit(limit + 1),
@@ -96,7 +97,8 @@ export async function GET(request: Request, { params }: { params: Promise<{ spac
     roles: spaceRoles,
     members: page.map((member) => ({
       ...member,
-      globalLevel:levelFromXp(member.globalXp),
+      globalXp:member.globalXp??0,
+      globalLevel:member.globalLevel??1,
       clan:clanTags.get(member.userId)??null,
       online: Boolean(member.lastSeenAt && member.lastSeenAt.getTime() > Date.now() - 90_000),
       superupSupporter: supporterIds.has(member.userId),
