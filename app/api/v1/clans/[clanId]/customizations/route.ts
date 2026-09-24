@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { getDatabase } from "@/db/client";
 import { clanMembers, clanUpgrades, clans } from "@/db/schema";
@@ -8,7 +8,7 @@ import { getClanRole } from "@/lib/clans";
 import { isTrustedMutationRequest } from "@/lib/security-controls";
 export async function GET(_:Request,{params}:{params:Promise<{clanId:string}>}){
  const user=await getCurrentUser(),{clanId}=await params;if(!user||!await getClanRole(user.id,clanId))return NextResponse.json({message:"Нет доступа."},{status:403});
- const [clan]=await getDatabase().select({customRoles:clans.customRoles,customEmoji:clans.customEmoji,bannerTheme:clans.bannerTheme}).from(clans).where(eq(clans.id,clanId)).limit(1);return NextResponse.json(clan);
+ const db=getDatabase();const [[clan],roles]=await Promise.all([db.select({customRoles:clans.customRoles,customEmoji:clans.customEmoji,bannerTheme:clans.bannerTheme}).from(clans).where(eq(clans.id,clanId)).limit(1),db.select({userId:clanMembers.userId,customRoleId:clanMembers.customRoleId}).from(clanMembers).where(eq(clanMembers.clanId,clanId))]);return NextResponse.json({...clan,memberRoles:roles});
 }
 export async function PATCH(request:Request,{params}:{params:Promise<{clanId:string}>}){
  if(!isTrustedMutationRequest(request))return NextResponse.json({message:"Запрос отклонён."},{status:403});
@@ -22,8 +22,7 @@ export async function PATCH(request:Request,{params}:{params:Promise<{clanId:str
  if(type==="role"){
   const name=typeof body?.name==="string"?body.name.trim():"",color=body?.color;
   if(name.length<2||name.length>24||!/^#[0-9a-fA-F]{6}$/.test(color))return NextResponse.json({message:"Укажите имя и цвет роли."},{status:400});
-  if(clan.customRoles.length>=upgrade.level*2)return NextResponse.json({message:"Лимит ролей достигнут."},{status:409});
-  const role={id:randomUUID(),name,color};await db.update(clans).set({customRoles:[...clan.customRoles,role]}).where(eq(clans.id,clanId));return NextResponse.json({role});
+  const role={id:randomUUID(),name,color};const created=await db.transaction(async tx=>{await tx.execute(sql`select 1 from clans where id=${clanId} for update`);const [fresh]=await tx.select({customRoles:clans.customRoles}).from(clans).where(eq(clans.id,clanId));if(fresh.customRoles.length>=upgrade.level*2)return false;await tx.update(clans).set({customRoles:[...fresh.customRoles,role]}).where(eq(clans.id,clanId));return true});return created?NextResponse.json({role}):NextResponse.json({message:"Лимит ролей достигнут."},{status:409});
  }
  if(type==="assign_role"){
   const roleId=String(body?.roleId??""),userId=String(body?.userId??"");
@@ -33,8 +32,7 @@ export async function PATCH(request:Request,{params}:{params:Promise<{clanId:str
  if(type==="emoji"){
   const emoji=typeof body?.emoji==="string"?body.emoji.trim():"";
   if(!emoji||emoji.length>12||/[<>]/.test(emoji))return NextResponse.json({message:"Неверный эмодзи."},{status:400});
-  const list=[...new Set([...clan.customEmoji,emoji])];if(list.length>upgrade.level*5)return NextResponse.json({message:"Лимит эмодзи достигнут."},{status:409});
-  await db.update(clans).set({customEmoji:list}).where(eq(clans.id,clanId));return NextResponse.json({emoji});
+  const created=await db.transaction(async tx=>{await tx.execute(sql`select 1 from clans where id=${clanId} for update`);const [fresh]=await tx.select({customEmoji:clans.customEmoji}).from(clans).where(eq(clans.id,clanId));const list=[...new Set([...fresh.customEmoji,emoji])];if(list.length>upgrade.level*5)return false;await tx.update(clans).set({customEmoji:list}).where(eq(clans.id,clanId));return true});return created?NextResponse.json({emoji}):NextResponse.json({message:"Лимит эмодзи достигнут."},{status:409});
  }
  if(type==="banner"){
   const theme=String(body?.theme??"");if(!["default","nebula","constellation"].includes(theme)||theme==="constellation"&&upgrade.level<2)return NextResponse.json({message:"Этот баннер пока закрыт."},{status:403});
