@@ -33,6 +33,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ spa
       selfMuted: voiceStates.selfMuted,
       selfDeafened: voiceStates.selfDeafened,
       streaming: voiceStates.streaming,
+      speaking: voiceStates.speaking,
     })
     .from(voiceStates)
     .innerJoin(users, eq(users.id, voiceStates.userId))
@@ -65,7 +66,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ spa
           camera: participant.tracks.some((track) => track.source === TrackSource.CAMERA && !track.muted),
           sharing,
           streaming: state?.streaming || sharing,
-          speaking: false,
+          speaking: state?.speaking ?? false,
         };
       }))] as const;
     }));
