@@ -2476,3 +2476,123 @@ html[data-motion="off"] *::after {
   .voice-secondary-toolbar button{min-width:max-content!important;min-height:44px!important}
   .voice-inline-panel{width:100%!important}
 }
+
+
+/* Mobile usability fixes: voice, social overflow, readable navigation. */
+@media (max-width: 767px) {
+  html, body { max-width: 100%; overflow-x: hidden; }
+  .app-shell,
+  .platform-workspace,
+  .social-hub,
+  .social-hub-embedded,
+  .social-main-v2,
+  .direct-layout,
+  .direct-layout > aside,
+  .direct-layout > section {
+    min-width: 0 !important;
+    max-width: 100% !important;
+    overflow-x: hidden !important;
+  }
+
+  .global-user-dock { display: none; }
+
+  .voice-persistent-host.is-visible {
+    grid-row: 2 / -1;
+    width: 100%;
+    min-width: 0;
+    min-height: 0;
+  }
+  .voice-persistent-host.is-background {
+    inset: 56px 0 var(--mobile-bottom-nav);
+  }
+
+  .voice-stage-layout {
+    padding: 7px !important;
+    min-height: 0;
+  }
+  .voice-stage-main {
+    overflow-y: auto !important;
+    padding-bottom: 74px;
+  }
+  .voice-tile-grid,
+  .voice-grid-one,
+  .voice-grid-two,
+  .voice-grid-three,
+  .voice-grid-four,
+  .voice-grid-five-nine,
+  .voice-grid-ten-plus {
+    grid-template-columns: minmax(0, 1fr) !important;
+    grid-auto-rows: minmax(180px, auto) !important;
+    gap: 7px !important;
+  }
+  .voice-tile {
+    min-height: 180px !important;
+  }
+  .voice-bottom-controls {
+    position: absolute !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    z-index: 40 !important;
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    justify-content: flex-start !important;
+    gap: 5px !important;
+    overflow-x: auto !important;
+    padding: 7px 7px max(7px, env(safe-area-inset-bottom)) !important;
+    scroll-snap-type: x proximity;
+  }
+  .voice-bottom-controls button {
+    flex: 0 0 68px !important;
+    width: 68px !important;
+    min-width: 68px !important;
+    min-height: 54px !important;
+    padding: 4px !important;
+    font-size: .62rem !important;
+    scroll-snap-align: start;
+  }
+  .voice-room-health {
+    min-width: 0;
+    gap: 5px;
+  }
+  .voice-room-health > span {
+    font-size: .61rem;
+  }
+  .voice-live-self span {
+    display: none;
+  }
+  .voice-live-self {
+    width: 36px;
+    padding: 0 !important;
+    justify-content: center;
+  }
+  .voice-tile-footer strong { font-size: .7rem !important; }
+  .voice-tile-footer small { font-size: .61rem !important; }
+
+  .app-shell .mobile-tab-bar button {
+    font-size: .62rem !important;
+    line-height: 1.1;
+  }
+  .app-shell .mobile-tab-bar button span {
+    overflow: visible;
+    text-overflow: clip;
+  }
+  .member small,
+  .direct-list small,
+  .social-hub aside small,
+  .social-hub nav button {
+    font-size: .68rem !important;
+    line-height: 1.35;
+  }
+
+  .mobile-voice-session {
+    left: 8px;
+    right: 8px;
+    min-height: 56px;
+  }
+  .mobile-voice-session strong { font-size: .7rem !important; }
+  .mobile-voice-session small { font-size: .64rem !important; }
+}
+@media (max-width: 420px) {
+  .app-shell .mobile-tab-bar button { font-size: .6rem !important; }
+}
