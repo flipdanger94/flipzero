@@ -29,6 +29,36 @@ const qualityLabels = {
   [ConnectionQuality.Unknown]: "Проверка",
 };
 
+type AudioPrefs = {
+  inputId?: string;
+  outputId?: string;
+  inputVolume?: number;
+  outputVolume?: number;
+  inputProfile?: "standard" | "noise" | "raw";
+};
+
+function readAudioPrefs(): AudioPrefs {
+  try { return JSON.parse(localStorage.getItem("flipzero:audio-devices:v1") ?? "{}") as AudioPrefs; }
+  catch { return {}; }
+}
+
+function captureOptions(prefs: AudioPrefs, inputId?: string) {
+  return {
+    ...(inputId ? { deviceId: inputId } : {}),
+    echoCancellation: prefs.inputProfile !== "raw",
+    noiseSuppression: prefs.inputProfile === "noise",
+    autoGainControl: prefs.inputProfile !== "raw",
+  };
+}
+
+function microphoneErrorMessage(cause: unknown) {
+  const name = cause instanceof DOMException ? cause.name : cause instanceof Error ? cause.name : "";
+  if (name === "NotAllowedError" || name === "SecurityError") return "Доступ к микрофону запрещён. Разрешите микрофон для FlipZero в браузере или Windows и нажмите «Включить».";
+  if (name === "NotFoundError" || name === "DevicesNotFoundError") return "Микрофон не найден. Подключите устройство и попробуйте ещё раз.";
+  if (name === "NotReadableError" || name === "TrackStartError") return "Микрофон занят другим приложением или недоступен системе. Закройте программу, использующую микрофон, и попробуйте снова.";
+  return "Не удалось открыть микрофон. Проверьте разрешения и выбранное устройство.";
+}
+
 export function VoiceRoom({
   channelId,
   channelName,
@@ -118,6 +148,56 @@ export function VoiceRoom({
       roomRef.current?.localParticipant.getTrackPublication(source)?.track;
     if (track && container) container.appendChild(track.attach());
   }
+
+  async function refreshDeviceLists() {
+    if (!navigator.mediaDevices?.enumerateDevices) return { microphones: [] as MediaDeviceInfo[], speakers: [] as MediaDeviceInfo[] };
+    const all = await navigator.mediaDevices.enumerateDevices();
+    const microphones = all.filter((item) => item.kind === "audioinput");
+    const speakers = all.filter((item) => item.kind === "audiooutput");
+    setDevices(microphones);
+    setOutputDevices(speakers);
+    return { microphones, speakers };
+  }
+
+  async function requestMicrophone(preferredId?: string) {
+    if (!navigator.mediaDevices?.getUserMedia) throw new Error("MEDIA_DEVICES_UNAVAILABLE");
+    const prefs = readAudioPrefs();
+    let stream: MediaStream | null = null;
+    let selectedId = preferredId;
+    try {
+      if (preferredId) {
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({ audio: { ...captureOptions(prefs), deviceId: { exact: preferredId } } });
+        } catch (cause) {
+          const name = cause instanceof DOMException ? cause.name : cause instanceof Error ? cause.name : "";
+          if (name !== "OverconstrainedError" && name !== "NotFoundError" && name !== "DevicesNotFoundError") throw cause;
+          selectedId = undefined;
+        }
+      }
+      if (!stream) stream = await navigator.mediaDevices.getUserMedia({ audio: captureOptions(prefs) });
+      const actualId = stream.getAudioTracks()[0]?.getSettings().deviceId;
+      if (actualId) selectedId = actualId;
+      return selectedId;
+    } finally {
+      stream?.getTracks().forEach((track) => track.stop());
+    }
+  }
+
+  useEffect(() => {
+    if (!navigator.mediaDevices?.addEventListener) return;
+    const handleDeviceChange = () => {
+      void refreshDeviceLists().then(({ microphones, speakers }) => {
+        const activeInput = roomRef.current?.getActiveDevice("audioinput");
+        const activeOutput = roomRef.current?.getActiveDevice("audiooutput");
+        if (activeInput && microphones.some((item) => item.deviceId === activeInput)) setDeviceId(activeInput);
+        else if (microphones[0]) setDeviceId(microphones[0].deviceId);
+        if (activeOutput && speakers.some((item) => item.deviceId === activeOutput)) setOutputDeviceId(activeOutput);
+        else if (speakers[0]) setOutputDeviceId(speakers[0].deviceId);
+      }).catch(() => {});
+    };
+    navigator.mediaDevices.addEventListener("devicechange", handleDeviceChange);
+    return () => navigator.mediaDevices.removeEventListener("devicechange", handleDeviceChange);
+  }, []);
 
   async function join() {
     if (status !== "idle") return;
@@ -253,31 +333,51 @@ export function VoiceRoom({
       ]);
       window.clearTimeout(connectTimeout);
       if (attempt !== joinAttemptRef.current) { void room.disconnect(); return; }
-      let audioPrefs: { inputId?: string; outputId?: string; inputVolume?: number; outputVolume?: number; inputProfile?: "standard"|"noise"|"raw" } = {};
-      try { audioPrefs = JSON.parse(localStorage.getItem("flipzero:audio-devices:v1") ?? "{}"); } catch { audioPrefs = {}; }
+      const audioPrefs = readAudioPrefs();
       outputVolumeRef.current = Math.max(0, Math.min(1, Number(audioPrefs.outputVolume ?? 100) / 100));
-      const microphoneOptions = {
-        ...(audioPrefs.inputId ? { deviceId: audioPrefs.inputId } : {}),
-        echoCancellation: audioPrefs.inputProfile !== "raw",
-        noiseSuppression: audioPrefs.inputProfile === "noise",
-        autoGainControl: audioPrefs.inputProfile !== "raw",
-      };
-      try { await room.localParticipant.setMicrophoneEnabled(true, microphoneOptions); setMuted(false); }
-      catch { setMuted(true); setError("Микрофон недоступен. Разрешите доступ в настройках браузера и нажмите «Включить»."); }
+      let validatedInput: string | undefined;
+      try {
+        validatedInput = await requestMicrophone(audioPrefs.inputId);
+      } catch (cause) {
+        setMuted(true);
+        setError(microphoneErrorMessage(cause));
+      }
+      const { microphones, speakers } = await refreshDeviceLists().catch(() => ({ microphones: [] as MediaDeviceInfo[], speakers: [] as MediaDeviceInfo[] }));
+      if (attempt !== joinAttemptRef.current) { void room.disconnect(); return; }
+      if (!validatedInput && audioPrefs.inputId && !microphones.some((item) => item.deviceId === audioPrefs.inputId)) {
+        try {
+          const current = readAudioPrefs();
+          localStorage.setItem("flipzero:audio-devices:v1", JSON.stringify({ ...current, inputId: undefined }));
+        } catch {}
+      }
+      const preferredInput = validatedInput && microphones.some((item) => item.deviceId === validatedInput)
+        ? validatedInput
+        : microphones.some((item) => item.deviceId === audioPrefs.inputId)
+          ? audioPrefs.inputId
+          : microphones[0]?.deviceId;
+      const preferredOutput = speakers.some((item) => item.deviceId === audioPrefs.outputId) ? audioPrefs.outputId : speakers[0]?.deviceId;
+      if (preferredInput) {
+        try {
+          await room.localParticipant.setMicrophoneEnabled(true, captureOptions(audioPrefs, preferredInput));
+          setMuted(false);
+          setError("");
+        } catch (firstCause) {
+          try {
+            await room.localParticipant.setMicrophoneEnabled(true, captureOptions(audioPrefs));
+            setMuted(false);
+            setError("");
+          } catch {
+            setMuted(true);
+            setError(microphoneErrorMessage(firstCause));
+          }
+        }
+      }
       try { await room.startAudio(); } catch { setAudioBlocked(true); }
       setAudioBlocked(!room.canPlaybackAudio);
-      const [microphones, speakers] = await Promise.all([Room.getLocalDevices("audioinput").catch(() => []), Room.getLocalDevices("audiooutput").catch(() => [])]);
-      if (attempt !== joinAttemptRef.current) { void room.disconnect(); return; }
-      let preferred: { inputId?: string; outputId?: string } = {};
-      try { preferred = JSON.parse(localStorage.getItem("flipzero:audio-devices:v1") ?? "{}"); } catch { preferred = {}; }
-      const preferredInput = microphones.some((item) => item.deviceId === preferred.inputId) ? preferred.inputId : undefined;
-      const preferredOutput = speakers.some((item) => item.deviceId === preferred.outputId) ? preferred.outputId : undefined;
       if (preferredInput) await room.switchActiveDevice("audioinput", preferredInput).catch(() => {});
       if (preferredOutput) await room.switchActiveDevice("audiooutput", preferredOutput).catch(() => {});
-      setDevices(microphones);
-      setDeviceId(room.getActiveDevice("audioinput") ?? preferredInput ?? microphones[0]?.deviceId ?? "");
-      setOutputDevices(speakers);
-      setOutputDeviceId(room.getActiveDevice("audiooutput") ?? preferredOutput ?? speakers[0]?.deviceId ?? "");
+      setDeviceId(room.getActiveDevice("audioinput") ?? preferredInput ?? "");
+      setOutputDeviceId(room.getActiveDevice("audiooutput") ?? preferredOutput ?? "");
       refresh();
       setStatus("connected");
     } catch (cause) {
@@ -301,7 +401,15 @@ export function VoiceRoom({
       if (!room) return;
       if (detail.type === "toggle-mic") {
         const nextMuted = Boolean(detail.muted);
-        void room.localParticipant.setMicrophoneEnabled(!nextMuted).then(() => setMuted(nextMuted)).catch(() => setError("Не удалось переключить микрофон."));
+        if (nextMuted) {
+          void room.localParticipant.setMicrophoneEnabled(false).then(() => { setMuted(true); setError(""); }).catch(() => setError("Не удалось выключить микрофон."));
+        } else {
+          const prefs = readAudioPrefs();
+          void requestMicrophone(prefs.inputId)
+            .then((selected) => room.localParticipant.setMicrophoneEnabled(true, captureOptions(prefs, selected)))
+            .then(() => { setMuted(false); setError(""); })
+            .catch((cause) => { setMuted(true); setError(microphoneErrorMessage(cause)); });
+        }
       }
       if (detail.type === "toggle-output") {
         const nextDeafened = Boolean(detail.deafened);
@@ -310,7 +418,12 @@ export function VoiceRoom({
         setDeafened(nextDeafened);
       }
       if (detail.type === "input-device" && typeof detail.deviceId === "string") {
-        void room.switchActiveDevice("audioinput", detail.deviceId).then(() => setDeviceId(detail.deviceId as string)).catch(() => setError("Не удалось переключить микрофон."));
+        const nextId = detail.deviceId;
+        void requestMicrophone(nextId)
+          .then(() => room.switchActiveDevice("audioinput", nextId))
+          .then(() => room.localParticipant.isMicrophoneEnabled ? undefined : room.localParticipant.setMicrophoneEnabled(true, captureOptions(readAudioPrefs(), nextId)))
+          .then(() => { setDeviceId(nextId); setMuted(false); setError(""); })
+          .catch((cause) => setError(microphoneErrorMessage(cause)));
       }
       if (detail.type === "output-device" && typeof detail.deviceId === "string") {
         void room.switchActiveDevice("audiooutput", detail.deviceId).then(() => setOutputDeviceId(detail.deviceId as string)).catch(() => setError("Не удалось переключить устройство вывода."));
@@ -323,13 +436,11 @@ export function VoiceRoom({
       if (detail.type === "input-profile") {
         const profile = detail.profile;
         if (profile === "standard" || profile === "noise" || profile === "raw") {
-          const prefs = (() => { try { return JSON.parse(localStorage.getItem("flipzero:audio-devices:v1") ?? "{}"); } catch { return {}; } })();
-          void room.localParticipant.setMicrophoneEnabled(true, {
-            ...(prefs.inputId ? { deviceId: prefs.inputId } : {}),
-            echoCancellation: profile !== "raw",
-            noiseSuppression: profile === "noise",
-            autoGainControl: profile !== "raw",
-          }).catch(() => setError("Не удалось применить профиль микрофона."));
+          const prefs = { ...readAudioPrefs(), inputProfile: profile };
+          void requestMicrophone(prefs.inputId)
+            .then((selected) => room.localParticipant.setMicrophoneEnabled(true, captureOptions(prefs, selected)))
+            .then(() => { setMuted(false); setError(""); })
+            .catch((cause) => setError(microphoneErrorMessage(cause)));
         }
       }
     }
@@ -339,9 +450,17 @@ export function VoiceRoom({
 
 
   async function chooseDevice(next: string) {
-    if (!roomRef.current) return;
-    try { await roomRef.current.switchActiveDevice("audioinput", next); setDeviceId(next); saveDevicePreference("inputId", next); setError(""); }
-    catch { setError("Не удалось переключить микрофон."); }
+    const room = roomRef.current;
+    if (!room) return;
+    try {
+      await requestMicrophone(next);
+      await room.switchActiveDevice("audioinput", next);
+      if (!room.localParticipant.isMicrophoneEnabled) await room.localParticipant.setMicrophoneEnabled(true, captureOptions(readAudioPrefs(), next));
+      setDeviceId(next);
+      setMuted(false);
+      saveDevicePreference("inputId", next);
+      setError("");
+    } catch (cause) { setError(microphoneErrorMessage(cause)); }
   }
   async function chooseOutput(next: string) {
     if (!roomRef.current) return;
@@ -453,8 +572,19 @@ export function VoiceRoom({
     const room = roomRef.current;
     if (!room) return;
     const next = !muted;
-    try { await room.localParticipant.setMicrophoneEnabled(!next); setMuted(next); void fetch(`/api/v1/channels/${channelId}/voice`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ selfMuted: next }) }); setError(""); }
-    catch { setError("Не удалось включить микрофон. Разрешите доступ в настройках браузера."); }
+    try {
+      if (!next) {
+        const prefs = readAudioPrefs();
+        const selected = await requestMicrophone(prefs.inputId);
+        await room.localParticipant.setMicrophoneEnabled(true, captureOptions(prefs, selected));
+        if (selected) { setDeviceId(selected); saveDevicePreference("inputId", selected); }
+      } else {
+        await room.localParticipant.setMicrophoneEnabled(false);
+      }
+      setMuted(next);
+      void fetch(`/api/v1/channels/${channelId}/voice`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ selfMuted: next }) });
+      setError("");
+    } catch (cause) { setMuted(true); setError(microphoneErrorMessage(cause)); }
   }
   async function toggleCamera() {
     const room = roomRef.current;
