@@ -3,7 +3,7 @@ import { and, eq, or } from "drizzle-orm";
 import { AccessToken, TrackSource } from "livekit-server-sdk";
 import { NextResponse } from "next/server";
 import { getDatabase } from "@/db/client";
-import { friends, notifications, userBlocks, userPrivacySettings, users } from "@/db/schema";
+import { directCallSessions, friends, notifications, userBlocks, userPrivacySettings, users } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
 import { isTrustedMutationRequest } from "@/lib/security-controls";
 
@@ -39,7 +39,7 @@ export async function POST(request: Request) {
   const token = new AccessToken(apiKey, apiSecret, {
     identity: user.id,
     name: user.displayName,
-    ttl: "2h",
+    ttl: "2m",
     metadata: JSON.stringify({ username: user.username, receiverId, directCall: true }),
   });
   token.addGrant({
@@ -50,6 +50,19 @@ export async function POST(request: Request) {
     canSubscribe: true,
   });
 
+  const callId=randomUUID();
+  const expiresAt=new Date(Date.now()+40_000);
+  await db.update(directCallSessions).set({status:"cancelled",endedAt:new Date()})
+    .where(and(eq(directCallSessions.callerId,user.id),eq(directCallSessions.receiverId,receiverId),eq(directCallSessions.status,"ringing")));
+  await db.insert(directCallSessions).values({
+    id:callId,
+    roomName:room,
+    callerId:user.id,
+    receiverId,
+    video,
+    status:"ringing",
+    expiresAt,
+  });
   await db.insert(notifications).values({
     id: randomUUID(),
     userId: receiverId,
@@ -58,8 +71,8 @@ export async function POST(request: Request) {
     title: video ? "Входящий видеозвонок" : "Входящий звонок",
     body: `${user.displayName} звонит вам в FlipZero.`,
     entityType: "direct_call",
-    entityId: room,
+    entityId: callId,
   });
 
-  return NextResponse.json({ token: await token.toJwt(), url, room, video });
+  return NextResponse.json({ token: await token.toJwt(), url, room, video, callId, expiresAt });
 }
