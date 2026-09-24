@@ -20,7 +20,7 @@ import {
 import { ConnectionQuality, Room, RoomEvent, Track } from "livekit-client";
 
 type VoiceStatus = "idle" | "connecting" | "connected" | "reconnecting";
-export type VoicePresence = { id: string; name: string; muted: boolean; camera: boolean; sharing: boolean; speaking: boolean };
+export type VoicePresence = { id: string; name: string; username?: string | null; avatarUrl?: string | null; muted: boolean; deafened?: boolean; camera: boolean; sharing: boolean; streaming?: boolean; speaking: boolean };
 const qualityLabels = {
   [ConnectionQuality.Excellent]: "Отличная",
   [ConnectionQuality.Good]: "Хорошая",
@@ -33,11 +33,13 @@ export function VoiceRoom({
   channelId,
   channelName,
   autoJoin = false,
+  presence = [],
   onPresenceChange,
 }: {
   channelId: string;
   channelName: string;
   autoJoin?: boolean;
+  presence?: VoicePresence[];
   onPresenceChange?: (participants: VoicePresence[]) => void;
 }) {
   const [status, setStatus] = useState<VoiceStatus>("idle");
@@ -51,6 +53,7 @@ export function VoiceRoom({
   const [camera, setCamera] = useState(false);
   const [sharing, setSharing] = useState(false);
   const [remoteVideo, setRemoteVideo] = useState(false);
+  const [selectedStreamId, setSelectedStreamId] = useState("");
   const [participantCount, setParticipantCount] = useState(0);
   const [quality, setQuality] = useState(ConnectionQuality.Unknown);
   const [activeSpeaker, setActiveSpeaker] = useState("");
@@ -151,6 +154,7 @@ export function VoiceRoom({
           muted: !participant.isMicrophoneEnabled,
           camera: participant.isCameraEnabled,
           sharing: participant.isScreenShareEnabled,
+          streaming: participant.isScreenShareEnabled,
           speaking: participant.isSpeaking,
         })));
       };
@@ -195,7 +199,7 @@ export function VoiceRoom({
       });
       room.on(RoomEvent.Reconnecting, () => setStatus("reconnecting"));
       room.on(RoomEvent.Reconnected, () => setStatus("connected"));
-      room.on(RoomEvent.TrackSubscribed, (track) => {
+      room.on(RoomEvent.TrackSubscribed, (track, _publication, participant) => {
         if (track.kind === Track.Kind.Audio) {
           const element = track.attach();
           if (element instanceof HTMLAudioElement) { element.muted = deafenedRef.current; element.volume = outputVolumeRef.current; }
@@ -204,6 +208,7 @@ export function VoiceRoom({
         if (track.kind === Track.Kind.Video) {
           const element = track.attach();
           element.dataset.source = track.source;
+          element.dataset.participantId = participant.identity;
           remoteVideoRef.current?.appendChild(element);
           setRemoteVideo(true);
         }
@@ -544,8 +549,16 @@ export function VoiceRoom({
     onPresenceChange?.([]);
   }
 
+  const streamingParticipants = presence.filter((participant) => participant.streaming || participant.sharing);
   const showingVideo = camera || sharing || remoteVideo;
   const connected = status === "connected" || status === "reconnecting";
+  function focusStream(participantId: string) {
+    setSelectedStreamId(participantId);
+    remoteVideoRef.current?.querySelectorAll<HTMLElement>("[data-participant-id]").forEach((element) => {
+      element.hidden = Boolean(participantId) && element.dataset.participantId !== participantId;
+    });
+    remoteVideoRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }
   return (
     <div className={`voice-room ${showingVideo ? "has-video" : ""}`}>
       <div ref={audioRef} className="remote-audio" />
@@ -588,6 +601,15 @@ export function VoiceRoom({
             <i /> Сейчас говорит: <b>{activeSpeaker}</b>
           </div>
         ) : null}
+        {connected && presence.length ? <div className="voice-participant-grid" aria-label="Участники голосового канала">
+          {presence.map((participant) => <article key={participant.id} className={`voice-participant-card ${participant.speaking ? "speaking" : ""} ${participant.streaming || participant.sharing ? "is-streaming" : ""}`}>
+            <span className="voice-participant-avatar">{participant.avatarUrl ? <img src={participant.avatarUrl} alt="" /> : participant.name.slice(0,2).toLocaleUpperCase("ru")}</span>
+            <div className="voice-participant-copy"><strong title={participant.name}>{participant.name}</strong><small>{participant.streaming || participant.sharing ? "В эфире" : participant.camera ? "Камера включена" : participant.muted ? "Микрофон выключен" : "В голосовом канале"}</small></div>
+            <div className="voice-participant-icons" aria-label="Состояние участника">{participant.muted ? <MicOff size={15} aria-label="Микрофон выключен" /> : null}{participant.deafened ? <Headphones size={15} aria-label="Звук выключен" /> : null}</div>
+            {participant.streaming || participant.sharing ? <button type="button" className="voice-watch-stream" onClick={() => focusStream(participant.id)} aria-label={`Смотреть стрим ${participant.name}`}>{selectedStreamId===participant.id?"Смотрим":"Смотреть стрим"}</button> : null}
+          </article>)}
+        </div> : null}
+        {connected && streamingParticipants.length > 1 ? <div className="voice-stream-switcher" aria-label="Выбор стрима"><span>Стримы:</span>{streamingParticipants.map((participant)=><button type="button" className={selectedStreamId===participant.id?"active":""} key={participant.id} onClick={()=>focusStream(participant.id)}>{participant.name}</button>)}</div>:null}
         {status === "idle" && voiceChecked ? <span className="voice-server-ready" role="status">Сервер голосовой связи доступен</span> : null}
         {connected && audioBlocked ? <button className="voice-enable-audio" onClick={enableAudio}><Headphones size={18} /> Включить звук</button> : null}
         {error ? <div className="voice-error">{error}</div> : null}
