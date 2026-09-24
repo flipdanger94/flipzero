@@ -184,15 +184,16 @@ export function VoiceRoom({
       const refresh = () => {
         const participants = [connectedRoom.localParticipant, ...connectedRoom.remoteParticipants.values()];
         setParticipantCount(participants.length);
-        onPresenceChange?.(participants.map((participant) => ({
+        onPresenceChange?.(normalizeVoicePresence(participants.map((participant) => ({
           id: participant.identity,
           name: participant.name || participant.identity,
           muted: !participant.isMicrophoneEnabled,
+          deafened: false,
           camera: participant.isCameraEnabled,
           sharing: participant.isScreenShareEnabled,
           streaming: participant.isScreenShareEnabled,
           speaking: participant.isSpeaking,
-        })));
+        }))));
       };
       room.on(RoomEvent.ParticipantConnected, refresh);
       room.on(RoomEvent.ParticipantDisconnected, refresh);
@@ -597,7 +598,8 @@ export function VoiceRoom({
     onPresenceChange?.([]);
   }
 
-  const streamingParticipants = presence.filter((participant) => participant.streaming || participant.sharing);
+  const normalizedPresence = normalizeVoicePresence(presence);
+  const streamingParticipants = normalizedPresence.filter((participant) => participant.streaming || participant.sharing);
   const showingVideo = camera || sharing || remoteVideo;
   const connected = status === "connected" || status === "reconnecting";
   function focusStream(participantId: string) {
@@ -653,8 +655,8 @@ export function VoiceRoom({
             <i /> Сейчас говорит: <b>{activeSpeaker}</b>
           </div>
         ) : null}
-        {connected && presence.length ? <div className="voice-participant-grid" aria-label="Участники голосового канала">
-          {presence.map((participant) => <article key={participant.id} className={`voice-participant-card ${participant.speaking ? "speaking" : ""} ${participant.streaming || participant.sharing ? "is-streaming" : ""}`}>
+        {connected && normalizedPresence.length ? <div className="voice-participant-grid" aria-label="Участники голосового канала">
+          {normalizedPresence.map((participant) => <article key={participant.id} className={`voice-participant-card ${participant.speaking ? "speaking" : ""} ${participant.streaming || participant.sharing ? "is-streaming" : ""}`}>
             <span className="voice-participant-avatar">{participant.avatarUrl ? <MediaImage src={participant.avatarUrl} /> : participant.name.slice(0,2).toLocaleUpperCase("ru")}</span>
             <div className="voice-participant-copy"><strong title={participant.name}>{participant.name}</strong><small>{participant.streaming || participant.sharing ? "В эфире" : participant.camera ? "Камера включена" : participant.muted ? "Микрофон выключен" : "В голосовом канале"}</small></div>
             <div className="voice-participant-icons" aria-label="Состояние участника">{participant.muted ? <MicOff size={15} aria-label="Микрофон выключен" /> : null}{participant.deafened ? <Headphones size={15} aria-label="Звук выключен" /> : null}</div>
