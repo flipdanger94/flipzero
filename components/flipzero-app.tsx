@@ -18,6 +18,7 @@ import { PersistentChat } from "@/components/persistent-chat";
 import { ChannelBoard } from "@/components/channel-board";
 import { ForumChannel } from "@/components/forum-channel";
 import { VoiceRoom, type VoicePresence } from "@/components/voice-room";
+import { normalizeVoicePresence } from "@/lib/voice-presence";
 import { DiscoveryDialog } from "@/components/discovery-dialog";
 import { EventsDialog } from "@/components/events-dialog";
 import { WikiDialog } from "@/components/wiki-dialog";
@@ -55,6 +56,9 @@ export default function Home({ initialSpaceId, initialChannelId }: { initialSpac
   const [activeChannel, setActiveChannel] = useState("общий-чат");
   const [voicePresence, setVoicePresence] = useState<Record<string, VoicePresence[]>>({});
   const [voiceStreamTarget, setVoiceStreamTarget] = useState<{ channelId: string; participantId: string } | null>(null);
+  const [voiceProfile, setVoiceProfile] = useState<{ id: string; name: string } | null>(null);
+  const [voiceSession, setVoiceSession] = useState<{ connected: boolean; channelId: string; channelName: string; spaceName?: string } | null>(null);
+  const [pendingVoiceSwitch, setPendingVoiceSwitch] = useState<{ channel: ApiChannel; participantId?: string } | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [globalSearchOpen, setGlobalSearchOpen] = useState(false);
   const [showMembers, setShowMembers] = useState(true);
@@ -72,6 +76,15 @@ export default function Home({ initialSpaceId, initialChannelId }: { initialSpac
     return () => window.removeEventListener("keydown", focusSearch);
   }, []);
   const [user, setUser] = useState<CurrentUser | null>(null);
+  useEffect(() => {
+    const handler = (event: Event) => {
+      const detail = (event as CustomEvent<{ connected?: boolean; channelId?: string; channelName?: string; spaceName?: string }>).detail;
+      if (!detail?.connected) { setVoiceSession(null); return; }
+      if (detail.channelId && detail.channelName) setVoiceSession({ connected: true, channelId: detail.channelId, channelName: detail.channelName, spaceName: detail.spaceName });
+    };
+    window.addEventListener("flipzero:voice-session", handler);
+    return () => window.removeEventListener("flipzero:voice-session", handler);
+  }, []);
   useEffect(() => {
     if (!user) return;
     const heartbeat = () => { if (document.visibilityState === "visible") void fetch("/api/v1/presence", { method: "POST" }).catch(() => {}); };
@@ -262,7 +275,11 @@ export default function Home({ initialSpaceId, initialChannelId }: { initialSpac
       const response = await fetch(`/api/v1/spaces/${encodeURIComponent(activeSpaceId)}/voice-presence`, { cache: "no-store" }).catch(() => null);
       if (!response?.ok || cancelled) return;
       const data = await response.json();
-      if (!cancelled) setVoicePresence(data.channels ?? {});
+      if (!cancelled) {
+        const next: Record<string, VoicePresence[]> = {};
+        for (const [channelId, participants] of Object.entries(data.channels ?? {}) as [string, VoicePresence[]][]) next[channelId] = normalizeVoicePresence(participants);
+        setVoicePresence(next);
+      }
     };
     void refresh();
     const interval = window.setInterval(refresh, 2000);
@@ -335,6 +352,15 @@ export default function Home({ initialSpaceId, initialChannelId }: { initialSpac
     setSearchQuery("");
     setMobileChannelsOpen(false);
     if (channelId && spaceId && window.location.pathname !== `/channels/${spaceId}/${channelId}`) window.history.pushState({}, "", `/channels/${spaceId}/${channelId}`);
+  }
+  function openVoiceChannel(channel: ApiChannel, participantId?: string) {
+    if (!activeSpace) return;
+    if (voiceSession?.connected && voiceSession.channelId !== channel.id) {
+      setPendingVoiceSwitch({ channel, participantId });
+      return;
+    }
+    setVoiceStreamTarget(participantId ? { channelId: channel.id, participantId } : null);
+    selectChannel(channel.name, channel.id, activeSpace.id);
   }
 
   function addChannel(channel: CreatedChannel) {
