@@ -160,7 +160,7 @@ export function AccountSettingsDialog({ user, initialSection = "profile", onClos
           : section === "superflip" ? <SuperFlipSettings />
           : <SuperUpSettings />}
       </div>
-      {section === "profile" ? <footer className="account-settings-savebar" aria-live="polite"><span>{profileDirty ? "У вас есть несохранённые изменения" : "Все изменения сохранены"}</span><div><button type="button" className="account-secondary" onClick={resetProfileDraft} disabled={!profileDirty || busy}>Отмена</button><button type="submit" form="account-profile-form" className="account-primary" disabled={!profileDirty || busy}>{busy ? <><LoaderCircle size={17} className="spin" /> Сохраняем…</> : "Сохранить"}</button></div></footer> : null}
+      {section === "profile" ? <footer className="account-settings-savebar" aria-live="polite"><span>{profileDirty ? "У вас есть несохранённые изменения" : "Все изменения сохранены"}</span><div><button type="button" className="account-secondary" onClick={resetProfileDraft} disabled={!profileDirty || busy}>Сбросить</button><button type="submit" form="account-profile-form" className="account-primary" disabled={!profileDirty || busy}>{busy ? <><LoaderCircle size={17} className="spin" /> Сохраняем…</> : "Сохранить"}</button></div></footer> : null}
       </div>
     </section>
   </div>;
