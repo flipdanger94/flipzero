@@ -2,14 +2,14 @@ import { randomUUID } from "node:crypto";
 import { and, eq, gte, lt, sql } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { getDatabase } from "@/db/client";
-import { clanMembers, clans, questClaims, users, xpEvents } from "@/db/schema";
+import { questClaims, xpEvents } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
 import { creditCoins } from "@/lib/economy";
 import { awardClanContribution } from "@/lib/clan-season";
 import { ECONOMY, QUEST_CATALOG } from "@/lib/economy-config";
-import { levelFromXp } from "@/lib/gamification";
 import { getSuperFlipCapabilities } from "@/lib/superflip";
 import { isTrustedMutationRequest } from "@/lib/security-controls";
+import { awardXpInTransaction } from "@/lib/xp";
 
 type Quest=(typeof QUEST_CATALOG)[number];
 function period(quest:Quest,now=new Date()){
@@ -18,9 +18,10 @@ function period(quest:Quest,now=new Date()){
   const end=new Date(start);end.setUTCDate(end.getUTCDate()+(quest.period==="daily"?1:7));
   return {start,end,key:start.toISOString().slice(0,10)};
 }
-async function progress(userId:string,quest:Quest,db= getDatabase()){
+async function progress(userId:string,quest:Quest,db=getDatabase()){
   const {start,end}=period(quest);
-  const [row]=await db.select({count:quest.source==="voice_minute"?sql<number>`coalesce(sum(${xpEvents.amount}),0)::int`:sql<number>`count(*)::int`}).from(xpEvents).where(and(eq(xpEvents.userId,userId),eq(xpEvents.source,quest.source),gte(xpEvents.createdAt,start),lt(xpEvents.createdAt,end)));
+  const [row]=await db.select({count:quest.source==="voice_minute"?sql<number>`coalesce(count(*),0)::int`:sql<number>`count(*)::int`})
+    .from(xpEvents).where(and(eq(xpEvents.userId,userId),eq(xpEvents.source,quest.source),gte(xpEvents.createdAt,start),lt(xpEvents.createdAt,end)));
   return Math.min(quest.target,row?.count??0);
 }
 export async function GET(){
@@ -40,17 +41,24 @@ export async function POST(request:Request){
   const db=getDatabase();const superflip=await getSuperFlipCapabilities(user.id);
   try{
     const awarded=await db.transaction(async tx=>{
-      await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${user.id}))`);
       const {start,end,key}=period(quest);
-      const [count]=await tx.select({count:quest.source==="voice_minute"?sql<number>`coalesce(sum(${xpEvents.amount}),0)::int`:sql<number>`count(*)::int`}).from(xpEvents).where(and(eq(xpEvents.userId,user.id),eq(xpEvents.source,quest.source),gte(xpEvents.createdAt,start),lt(xpEvents.createdAt,end)));
+      const [count]=await tx.select({count:quest.source==="voice_minute"?sql<number>`coalesce(count(*),0)::int`:sql<number>`count(*)::int`})
+        .from(xpEvents).where(and(eq(xpEvents.userId,user.id),eq(xpEvents.source,quest.source),gte(xpEvents.createdAt,start),lt(xpEvents.createdAt,end)));
       if((count?.count??0)<quest.target)return "incomplete" as const;
       const [claim]=await tx.insert(questClaims).values({id:randomUUID(),userId:user.id,questKey:quest.key,periodKey:key}).onConflictDoNothing().returning({id:questClaims.id});
       if(!claim)return "claimed" as const;
+
       const xp=Math.round(quest.xp*(superflip.active?ECONOMY.superFlipRewardMultiplier:1));
       const coins=Math.round(quest.coins*(superflip.active?ECONOMY.superFlipRewardMultiplier:1));
-      await tx.insert(xpEvents).values({id:randomUUID(),userId:user.id,source:"quest",amount:xp,idempotencyKey:`quest:${user.id}:${quest.key}:${key}`});
-      const [updated]=await tx.update(users).set({globalXp:sql`${users.globalXp}+${xp}`}).where(eq(users.id,user.id)).returning({globalXp:users.globalXp});
-      await tx.update(users).set({globalLevel:levelFromXp(updated.globalXp)}).where(eq(users.id,user.id));
+      const xpAward=await awardXpInTransaction(tx,{
+        userId:user.id,
+        source:"quest",
+        amount:xp,
+        dedupeKey:`quest:${user.id}:${quest.key}:${key}`,
+        meta:{questKey:quest.key,periodKey:key},
+      });
+      if(!xpAward.awarded)return "claimed" as const;
+
       await awardClanContribution(tx,user.id,xp);
       await creditCoins(tx,user.id,coins,`Квест: ${quest.title}`,`quest:${quest.key}:${key}`);
       let streakCoins=0;
@@ -62,7 +70,7 @@ export async function POST(request:Request){
         const bonus=Math.min(ECONOMY.streakMaxBonus,5*daysInRow);
         if(await creditCoins(tx,user.id,bonus,`Серия ${daysInRow} дн.`,`streak:${key}`))streakCoins=bonus;
       }
-      return {xp,coins,streakCoins};
+      return {xp,coins,streakCoins,profile:{globalXp:xpAward.totalXp,globalLevel:xpAward.newLevel,levelUp:xpAward.leveledUp}};
     });
     if(awarded==="incomplete")return NextResponse.json({message:"Задание ещё не выполнено."},{status:409});
     if(awarded==="claimed")return NextResponse.json({message:"Награда уже получена."},{status:409});
