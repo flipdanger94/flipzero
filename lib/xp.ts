@@ -41,9 +41,10 @@ export async function awardXpInTransaction(tx: XpTransaction, input: AwardXpInpu
     source: input.source,
     amount: input.amount,
     idempotencyKey: input.dedupeKey,
+    dedupeKey: input.dedupeKey,
     meta: input.meta ?? {},
   }).onConflictDoNothing({
-    target: [xpEvents.userId, xpEvents.source, xpEvents.idempotencyKey],
+    target: [xpEvents.userId, xpEvents.source, xpEvents.dedupeKey],
   }).returning({ id: xpEvents.id });
 
   if (!inserted) {
