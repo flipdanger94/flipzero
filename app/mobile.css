@@ -2440,3 +2440,22 @@ html[data-motion="off"] *::after {
   .mobile-tab-bar{display:none!important}
   .mobile-voice-session{display:none!important}
 }
+
+@media(max-width:767px){
+  .voice-room-connected.has-mini-stream .video-grid{
+    position:fixed!important;
+    z-index:95!important;
+    right:10px!important;
+    bottom:calc(var(--mobile-bottom-nav,66px) + env(safe-area-inset-bottom) + 68px)!important;
+    width:min(46vw,220px)!important;
+    min-height:0!important;
+    border-radius:12px!important;
+  }
+  .voice-room-connected.has-mini-stream .voice-mini-stream-controls{
+    position:fixed!important;
+    z-index:96!important;
+    right:14px!important;
+    bottom:calc(var(--mobile-bottom-nav,66px) + env(safe-area-inset-bottom) + 70px)!important;
+    top:auto!important;
+  }
+}
