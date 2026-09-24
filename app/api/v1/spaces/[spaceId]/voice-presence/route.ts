@@ -6,6 +6,7 @@ import { channels, members, users, voiceStates } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
 import { getChannelPermissions } from "@/lib/space-permissions";
 import { hasPermission, Permission } from "@/lib/permissions";
+import { normalizeVoicePresence } from "@/lib/voice-presence";
 
 export async function GET(_request: Request, { params }: { params: Promise<{ spaceId: string }> }) {
   const user = await getCurrentUser();
@@ -50,7 +51,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ spa
     const result = await Promise.all(voiceChannels.map(async (channel) => {
       const participants = await service.listParticipants(`${spaceId}:${channel.id}:main`).catch(() => []);
       const stateMap = stateByChannel.get(channel.id) ?? new Map();
-      return [channel.id, participants.map((participant) => {
+      return [channel.id, normalizeVoicePresence(participants.map((participant) => {
         const state = stateMap.get(participant.identity);
         const microphone = participant.tracks.find((track) => track.source === TrackSource.MICROPHONE);
         const sharing = participant.tracks.some((track) => track.source === TrackSource.SCREEN_SHARE && !track.muted);
@@ -66,7 +67,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ spa
           streaming: state?.streaming || sharing,
           speaking: false,
         };
-      })] as const;
+      }))] as const;
     }));
     return NextResponse.json({ channels: Object.fromEntries(result) }, { headers: { "cache-control": "no-store" } });
   } catch {
