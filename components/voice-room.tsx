@@ -581,8 +581,12 @@ export function VoiceRoom({
   }
   function leave() {
     joinAttemptRef.current++;
-    roomRef.current?.disconnect();
+    const room = roomRef.current;
     roomRef.current = null;
+    void room?.disconnect();
+    void fetch(`/api/v1/channels/${channelId}/voice`, { method: "DELETE" });
+    emitVoiceSession(false);
+    playVoiceCue("leave");
     [audioRef, remoteVideoRef, localCameraRef, localScreenRef].forEach((ref) =>
       clearMedia(ref.current),
     );
