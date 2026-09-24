@@ -1,9 +1,9 @@
 import { and, count, eq, inArray, or, sql } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { getDatabase } from "@/db/client";
-import { friendRequests, friends, members, messages, spaces, userBlocks, userPrivacySettings, users } from "@/db/schema";
+import { friendRequests, friends, members, messages, spaces, userBlocks, userPrivacySettings, userProgress, users } from "@/db/schema";
 import { getUserClan } from "@/lib/clans";
-import { levelFromXp } from "@/lib/gamification";
+import { totalXpForLevel } from "@/lib/gamification";
 import { presentationForUsers } from "@/lib/presentation";
 import { getCurrentUser } from "@/lib/auth";
 
@@ -16,10 +16,10 @@ export async function GET(_request: Request, { params }: { params: Promise<{ use
   const [user] = await db.select({
     id: users.id, username: users.username, displayName: users.displayName, avatarUrl: users.avatarUrl,
     bannerUrl: users.bannerUrl, bio: users.bio, accentColor: users.accentColor, presence: users.presence, lastSeenAt: users.lastSeenAt,
-    globalXp: users.globalXp, globalLevel: users.globalLevel, createdAt: users.createdAt,
+    globalXp: userProgress.totalXp, globalLevel: userProgress.level, createdAt: users.createdAt,
     profileLocation: users.profileLocation, profileStatus: users.profileStatus, profileLinks: users.profileLinks,
     profileGames:users.profileGames,profileMusic:users.profileMusic,profileWidgets:users.profileWidgets,customStatusEmoji:users.customStatusEmoji,customStatusExpiresAt:users.customStatusExpiresAt,
-  }).from(users).where(eq(users.id, userId)).limit(1);
+  }).from(users).leftJoin(userProgress, eq(userProgress.userId, users.id)).where(eq(users.id, userId)).limit(1);
   if (!user) return NextResponse.json({ code: "NOT_FOUND", message: "Пользователь не найден." }, { status: 404 });
   if (viewer.id !== userId) {
     const [blocked] = await db.select().from(userBlocks).where(or(and(eq(userBlocks.blockerId, viewer.id), eq(userBlocks.blockedId, userId)), and(eq(userBlocks.blockerId, userId), eq(userBlocks.blockedId, viewer.id)))).limit(1);
@@ -60,7 +60,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ use
   const [outgoingRequest] = viewer.id === userId || friendship ? [] : await db.select({ id: friendRequests.id }).from(friendRequests).where(and(eq(friendRequests.fromId, viewer.id), eq(friendRequests.toId, userId), eq(friendRequests.status, "pending"))).limit(1);
   const [incomingRequest] = viewer.id === userId || friendship ? [] : await db.select({ id: friendRequests.id }).from(friendRequests).where(and(eq(friendRequests.fromId, userId), eq(friendRequests.toId, viewer.id), eq(friendRequests.status, "pending"))).limit(1);
   return NextResponse.json({
-    profile: { ...user,profileStatus:user.customStatusExpiresAt&&user.customStatusExpiresAt<new Date()?null:user.profileStatus,customStatusEmoji:user.customStatusExpiresAt&&user.customStatusExpiresAt<new Date()?null:user.customStatusEmoji, globalLevel:levelFromXp(user.globalXp), clan, cosmetics:presentation?.cosmetics??{},badges:presentation?.badges??[], presence: user.lastSeenAt && user.lastSeenAt.getTime() > Date.now() - 90_000 ? "online" : "offline", lastSeenAt: undefined, isOwnProfile: viewer.id === userId, isFriend: Boolean(friendship), friendshipStatus: friendship ? "friends" : outgoingRequest ? "outgoing" : incomingRequest ? "incoming" : "none", incomingRequestId: incomingRequest?.id ?? null,
+    profile: { ...user, globalXp:user.globalXp??0, globalLevel:user.globalLevel??1, nextLevelXp:(user.globalLevel??1)>=100?null:totalXpForLevel((user.globalLevel??1)+1), profileStatus:user.customStatusExpiresAt&&user.customStatusExpiresAt<new Date()?null:user.profileStatus,customStatusEmoji:user.customStatusExpiresAt&&user.customStatusExpiresAt<new Date()?null:user.customStatusEmoji, clan, cosmetics:presentation?.cosmetics??{},badges:presentation?.badges??[], presence: user.lastSeenAt && user.lastSeenAt.getTime() > Date.now() - 90_000 ? "online" : "offline", lastSeenAt: undefined, isOwnProfile: viewer.id === userId, isFriend: Boolean(friendship), friendshipStatus: friendship ? "friends" : outgoingRequest ? "outgoing" : incomingRequest ? "incoming" : "none", incomingRequestId: incomingRequest?.id ?? null,
       stats: { messages: messageCount?.value ?? 0, friends: friendCount?.value ?? 0, servers: serverCount?.value ?? 0 },
       servers: serverRows,
       commonFriends,
