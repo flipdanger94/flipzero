@@ -244,9 +244,9 @@ export function VoiceRoom({
       });
       room.on(RoomEvent.TrackMuted, refresh);
       room.on(RoomEvent.TrackUnmuted, refresh);
-      room.on(RoomEvent.TrackPublished, (publication) => {
+      room.on(RoomEvent.TrackPublished, (publication, participant) => {
         if (publication.source === Track.Source.ScreenShare || publication.source === Track.Source.ScreenShareAudio) {
-          publication.setSubscribed(publication.participant?.identity === selectedStreamRef.current);
+          publication.setSubscribed(participant.identity === selectedStreamRef.current);
         } else {
           publication.setSubscribed(true);
         }
