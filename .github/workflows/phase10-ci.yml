@@ -66,4 +66,4 @@ jobs:
           components/flipzero-app.tsx
 
       - name: Build
-        run: pnpm build
+        run: pnpm exec next build
