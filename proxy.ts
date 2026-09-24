@@ -6,13 +6,25 @@ export function proxy(request: NextRequest) {
   if (request.nextUrl.pathname.startsWith("/api/") && !["GET", "HEAD", "OPTIONS"].includes(request.method)) {
     const fetchSite = request.headers.get("sec-fetch-site");
     const origin = request.headers.get("origin");
-    const forwardedHost = request.headers.get("x-forwarded-host")?.split(",")[0]?.trim();
-    const expectedHost = forwardedHost || request.nextUrl.host;
-    let trusted = fetchSite !== "cross-site";
-    if (origin) {
-      try { trusted = trusted && new URL(origin).host === expectedHost; }
-      catch { trusted = false; }
+
+    // Browser-confirmed same-origin requests are authoritative here. Reverse
+    // proxies such as GitHub Codespaces can rewrite Host/request.nextUrl to an
+    // internal address even though the browser request is genuinely same-origin.
+    let trusted = fetchSite === "same-origin";
+
+    if (!trusted) {
+      trusted = fetchSite !== "cross-site";
+      if (origin) {
+        const forwardedHost = request.headers.get("x-forwarded-host")?.split(",")[0]?.trim();
+        const host = request.headers.get("host")?.trim();
+        const expectedHosts = new Set(
+          [forwardedHost, host, request.nextUrl.host].filter((value): value is string => Boolean(value)),
+        );
+        try { trusted = trusted && expectedHosts.has(new URL(origin).host); }
+        catch { trusted = false; }
+      }
     }
+
     if (!trusted) return NextResponse.json({ code: "UNTRUSTED_ORIGIN", message: "Запрос отклонён." }, { status: 403 });
   }
 
