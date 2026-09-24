@@ -1,6 +1,11 @@
 name: Electron Windows
 on:
   workflow_dispatch:
+    inputs:
+      sign:
+        description: 'Sign installer with the configured Code Signing certificate'
+        type: boolean
+        default: false
   push:
     branches: [main, feat/electron-windows]
     paths:
@@ -25,6 +30,7 @@ jobs:
         working-directory: desktop-electron
         run: npm install --no-audit --no-fund
       - name: Validate and prepare signing certificate
+        if: inputs.sign == true
         shell: pwsh
         env:
           CERTIFICATE: ${{ secrets.CSC_LINK }}
@@ -52,8 +58,9 @@ jobs:
         run: npm run build:win
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
-          WIN_CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+          WIN_CSC_KEY_PASSWORD: ${{ inputs.sign && secrets.CSC_KEY_PASSWORD || '' }}
       - name: Verify Authenticode signature
+        if: inputs.sign == true
         shell: pwsh
         run: |
           $installer = Get-ChildItem desktop-electron/dist/*Setup.exe | Select-Object -First 1
@@ -63,6 +70,6 @@ jobs:
           Write-Host "Signed by $($signature.SignerCertificate.Subject)"
       - uses: actions/upload-artifact@v4
         with:
-          name: FlipZero-Electron-Windows-Signed
+          name: ${{ inputs.sign && 'FlipZero-Electron-Windows-Signed' || 'FlipZero-Electron-Windows-Unsigned' }}
           path: desktop-electron/dist/*Setup.exe
           if-no-files-found: error
