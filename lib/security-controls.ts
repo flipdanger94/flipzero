@@ -13,10 +13,18 @@ export function isTrustedMutationRequest(request: Request) {
     const originUrl = new URL(origin);
     const requestUrl = new URL(request.url);
     const forwardedHost = request.headers.get("x-forwarded-host")?.split(",")[0]?.trim();
-    const expectedHost = forwardedHost || requestUrl.host;
-    return originUrl.protocol === "https:" || requestUrl.protocol !== "https:"
-      ? originUrl.host === expectedHost
-      : false;
+    const host = request.headers.get("host")?.trim();
+    const allowedHosts = new Set([forwardedHost, host, requestUrl.host].filter((value): value is string => Boolean(value)));
+
+    if (!allowedHosts.has(originUrl.host)) return false;
+
+    // Reverse proxies such as GitHub Codespaces terminate HTTPS before the
+    // request reaches Next.js, so request.url may be http://localhost while
+    // the browser Origin remains the public https://*.app.github.dev host.
+    // Matching the externally forwarded/Host value keeps the mutation
+    // same-origin without rejecting that proxy setup.
+    if (originUrl.protocol === "https:") return true;
+    return originUrl.protocol === requestUrl.protocol;
   } catch {
     return false;
   }
