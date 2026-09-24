@@ -256,22 +256,36 @@ export function VoiceRoom({
       let audioPrefs: { inputId?: string; outputId?: string; inputVolume?: number; outputVolume?: number; inputProfile?: "standard"|"noise"|"raw" } = {};
       try { audioPrefs = JSON.parse(localStorage.getItem("flipzero:audio-devices:v1") ?? "{}"); } catch { audioPrefs = {}; }
       outputVolumeRef.current = Math.max(0, Math.min(1, Number(audioPrefs.outputVolume ?? 100) / 100));
+      const [microphones, speakers] = await Promise.all([Room.getLocalDevices("audioinput").catch(() => []), Room.getLocalDevices("audiooutput").catch(() => [])]);
+      if (attempt !== joinAttemptRef.current) { void room.disconnect(); return; }
+      const preferredInput = microphones.some((item) => item.deviceId === audioPrefs.inputId) ? audioPrefs.inputId : undefined;
+      const preferredOutput = speakers.some((item) => item.deviceId === audioPrefs.outputId) ? audioPrefs.outputId : undefined;
       const microphoneOptions = {
-        ...(audioPrefs.inputId ? { deviceId: audioPrefs.inputId } : {}),
+        ...(preferredInput ? { deviceId: preferredInput } : {}),
         echoCancellation: audioPrefs.inputProfile !== "raw",
         noiseSuppression: audioPrefs.inputProfile === "noise",
         autoGainControl: audioPrefs.inputProfile !== "raw",
       };
-      try { await room.localParticipant.setMicrophoneEnabled(true, microphoneOptions); setMuted(false); }
-      catch { setMuted(true); setError("Микрофон недоступен. Разрешите доступ в настройках браузера и нажмите «Включить»."); }
+      try {
+        await room.localParticipant.setMicrophoneEnabled(true, microphoneOptions);
+        setMuted(false);
+        setError("");
+      } catch {
+        try {
+          await room.localParticipant.setMicrophoneEnabled(true, {
+            echoCancellation: audioPrefs.inputProfile !== "raw",
+            noiseSuppression: audioPrefs.inputProfile === "noise",
+            autoGainControl: audioPrefs.inputProfile !== "raw",
+          });
+          setMuted(false);
+          setError("");
+        } catch {
+          setMuted(true);
+          setError("Микрофон недоступен. Разрешите доступ в настройках браузера и нажмите «Включить».");
+        }
+      }
       try { await room.startAudio(); } catch { setAudioBlocked(true); }
       setAudioBlocked(!room.canPlaybackAudio);
-      const [microphones, speakers] = await Promise.all([Room.getLocalDevices("audioinput").catch(() => []), Room.getLocalDevices("audiooutput").catch(() => [])]);
-      if (attempt !== joinAttemptRef.current) { void room.disconnect(); return; }
-      let preferred: { inputId?: string; outputId?: string } = {};
-      try { preferred = JSON.parse(localStorage.getItem("flipzero:audio-devices:v1") ?? "{}"); } catch { preferred = {}; }
-      const preferredInput = microphones.some((item) => item.deviceId === preferred.inputId) ? preferred.inputId : undefined;
-      const preferredOutput = speakers.some((item) => item.deviceId === preferred.outputId) ? preferred.outputId : undefined;
       if (preferredInput) await room.switchActiveDevice("audioinput", preferredInput).catch(() => {});
       if (preferredOutput) await room.switchActiveDevice("audiooutput", preferredOutput).catch(() => {});
       setDevices(microphones);
@@ -453,8 +467,26 @@ export function VoiceRoom({
     const room = roomRef.current;
     if (!room) return;
     const next = !muted;
-    try { await room.localParticipant.setMicrophoneEnabled(!next); setMuted(next); void fetch(`/api/v1/channels/${channelId}/voice`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ selfMuted: next }) }); setError(""); }
-    catch { setError("Не удалось включить микрофон. Разрешите доступ в настройках браузера."); }
+    try {
+      if (next) {
+        await room.localParticipant.setMicrophoneEnabled(false);
+      } else {
+        const microphones = await Room.getLocalDevices("audioinput").catch(() => []);
+        let prefs: { inputId?: string; inputProfile?: "standard"|"noise"|"raw" } = {};
+        try { prefs = JSON.parse(localStorage.getItem("flipzero:audio-devices:v1") ?? "{}"); } catch { prefs = {}; }
+        const preferredInput = microphones.some((item) => item.deviceId === prefs.inputId) ? prefs.inputId : undefined;
+        await room.localParticipant.setMicrophoneEnabled(true, {
+          ...(preferredInput ? { deviceId: preferredInput } : {}),
+          echoCancellation: prefs.inputProfile !== "raw",
+          noiseSuppression: prefs.inputProfile === "noise",
+          autoGainControl: prefs.inputProfile !== "raw",
+        });
+        setDeviceId(room.getActiveDevice("audioinput") ?? preferredInput ?? microphones[0]?.deviceId ?? "");
+      }
+      setMuted(next);
+      void fetch(`/api/v1/channels/${channelId}/voice`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ selfMuted: next }) });
+      setError("");
+    } catch { setError("Не удалось включить микрофон. Разрешите доступ в настройках браузера."); }
   }
   async function toggleCamera() {
     const room = roomRef.current;
