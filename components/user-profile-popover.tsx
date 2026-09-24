@@ -8,6 +8,7 @@ import {
 import { MediaImage } from "./media-image";
 import { ClanTag, type ClanTagData } from "./clan-tag";
 import { DirectCallOverlay } from "./direct-call-overlay";
+import { ProfileVisitCard } from "./profile-visit-card";
 import { useModalA11y } from "@/hooks/use-modal-a11y";
 
 type CommonFriend = { id:string; username:string; displayName:string; avatarUrl:string|null };
@@ -18,7 +19,7 @@ type Profile = {
   profileStatus:string|null; isOwnProfile:boolean; isFriend:boolean; friendshipStatus:"friends"|"outgoing"|"incoming"|"none";
   incomingRequestId:string|null; stats:{messages:number;friends:number;servers:number}; commonFriends:CommonFriend[];
   commonServers:CommonServer[]; servers:Array<{id:string;name:string;iconUrl:string|null}>;
-  clan:ClanTagData|null;
+  clan:ClanTagData|null;cosmetics?:Record<string,string>;badges?:Array<{id:string;name:string;icon:string;rarity:string}>;profileGames?:string[];profileMusic?:{title?:string;artist?:string;url?:string};profileWidgets?:string[];customStatusEmoji?:string|null;customStatusExpiresAt?:string|null;profileLinks?:string[];
 };
 
 type Anchor = { x:number; y:number } | null;
@@ -132,15 +133,15 @@ export function UserProfilePopover({
   function message(){onOpenDirect?.(userId);onClose()}
 
   const position:CSSProperties|undefined=anchor&&typeof window!=="undefined"?{left:Math.max(12,Math.min(anchor.x,window.innerWidth-360)),top:Math.max(12,Math.min(anchor.y,window.innerHeight-520))}:undefined;
-  const p=profile;
+  const p=profile?.id===userId?profile:null;
   return <div className="fz-user-profile-layer" role="presentation" onMouseDown={(event)=>{if(event.target===event.currentTarget&&!full&&!reporting)onClose()}}>
     <section ref={miniRef} className="fz-mini-profile" style={{...position,"--profile-accent":p?.accentColor??"#7c5cff"} as CSSProperties} role="dialog" aria-label={`Профиль ${displayName}`}>
       {!p?<div className="fz-mini-profile-state">{error?<><ShieldCheck/><strong>Профиль недоступен</strong><small>{error}</small></>:<><LoaderCircle className="spin"/><span>Загрузка профиля…</span></>}</div>:<>
-        <div className="fz-mini-banner" style={p.bannerUrl?{backgroundImage:`linear-gradient(180deg,transparent,rgba(7,12,25,.5)),url("${p.bannerUrl}")`}:undefined}>
+        <div className={`fz-mini-banner cosmetic-${p.cosmetics?.banner??"none"}`} style={p.bannerUrl?{backgroundImage:`linear-gradient(180deg,transparent,rgba(7,12,25,.5)),url("${p.bannerUrl}")`}:undefined}>
           <button className="fz-mini-kebab" type="button" aria-label="Дополнительные действия" title="Дополнительные действия" aria-expanded={menu} onClick={()=>setMenu(value=>!value)}><Ellipsis size={19}/></button>
         </div>
         <div className="fz-mini-body">
-          <div className="fz-mini-avatar">{p.avatarUrl?<MediaImage src={p.avatarUrl}/>:p.displayName.slice(0,2).toLocaleUpperCase("ru")}<i className={p.presence==="online"?"online":""}/></div>
+          <div className={`fz-mini-avatar frame-${p.cosmetics?.avatar_frame??"none"}`}>{p.avatarUrl?<MediaImage src={p.avatarUrl}/>:p.displayName.slice(0,2).toLocaleUpperCase("ru")}<i className={p.presence==="online"?"online":""}/></div>
           <div className="fz-mini-identity"><strong>{p.displayName}</strong><ClanTag clan={p.clan}/><span>@{p.username}</span><small>Уровень {p.globalLevel} · {p.presence==="online"?"в сети":"не в сети"}</small></div>
           {!p.isOwnProfile?<div className="fz-profile-icon-actions">
             <button type="button" onClick={message} aria-label="Написать сообщение" title="Написать сообщение"><MessageCircle size={17}/></button>
@@ -148,8 +149,8 @@ export function UserProfilePopover({
             <button type="button" onClick={()=>setCallMode("video")} aria-label="Видеозвонок" title="Видеозвонок"><Video size={17}/></button>
             <button type="button" onClick={()=>void friendAction()} aria-label={p.friendshipStatus==="friends"?"Удалить из друзей":"Добавить в друзья"} title={p.friendshipStatus==="friends"?"Удалить из друзей":p.friendshipStatus==="outgoing"?"Заявка отправлена":"Добавить в друзья"} disabled={busy||p.friendshipStatus==="outgoing"}>{p.friendshipStatus==="friends"?<UserMinus size={17}/>:p.friendshipStatus==="outgoing"?<Check size={17}/>:<UserPlus size={17}/>}</button>
           </div>:null}
-          <div className="fz-mini-section"><small>ОБО МНЕ</small><p>{p.bio||"Пользователь пока ничего о себе не рассказал."}</p></div>
-          <div className="fz-mini-badges"><span>LVL {p.globalLevel}</span>{p.isFriend?<span>ДРУГ</span>:null}{p.presence==="online"?<span>ONLINE</span>:null}</div>
+          <div className="fz-mini-section"><small>ОБО МНЕ</small><p>{p.bio||"Пользователь пока ничего о себе не рассказал."}</p>{p.profileStatus?<p>{p.customStatusEmoji} {p.profileStatus}</p>:null}{p.profileGames?.length?<p>🎮 {p.profileGames.slice(0,2).join(" · ")}</p>:null}</div>
+          <div className="fz-mini-badges"><span>LVL {p.globalLevel}</span>{p.badges?.map(badge=><span key={badge.id} title={badge.name} aria-label={badge.name}>{badge.icon} {badge.name}</span>)}{p.isFriend?<span>ДРУГ</span>:null}{p.presence==="online"?<span>ONLINE</span>:null}</div>
           <button className="fz-mini-full" type="button" onClick={()=>setFull(true)}>Посмотреть полный профиль</button>
           {notice?<p className="fz-mini-notice" role="status">{notice}</p>:null}
         </div>
@@ -169,14 +170,15 @@ export function UserProfilePopover({
     {p&&full?<div className="fz-full-profile-backdrop" role="presentation" onMouseDown={(event)=>{if(event.target===event.currentTarget)setFull(false)}}><section ref={fullRef} tabIndex={-1} className="fz-full-profile" role="dialog" aria-modal="true" aria-label={`Полный профиль ${p.displayName}`} style={{"--profile-accent":p.accentColor} as CSSProperties}>
       <button className="fz-full-close" type="button" onClick={()=>setFull(false)} aria-label="Закрыть полный профиль"><X size={20}/></button>
       <aside>
-        <div className="fz-full-banner" style={p.bannerUrl?{backgroundImage:`linear-gradient(180deg,transparent,#08101e),url("${p.bannerUrl}")`}:undefined}/>
-        <div className="fz-full-avatar">{p.avatarUrl?<MediaImage src={p.avatarUrl}/>:p.displayName.slice(0,2)}<i className={p.presence==="online"?"online":""}/></div>
-        <h2>{p.displayName}</h2><ClanTag clan={p.clan} details/><p>@{p.username}</p><small>Уровень {p.globalLevel} · {p.presence==="online"?"в сети":"не в сети"}</small>
+        <div className={`fz-full-banner cosmetic-${p.cosmetics?.banner??"none"}`} style={p.bannerUrl?{backgroundImage:`linear-gradient(180deg,transparent,#08101e),url("${p.bannerUrl}")`}:undefined}/>
+        <div className={`fz-full-avatar frame-${p.cosmetics?.avatar_frame??"none"}`}>{p.avatarUrl?<MediaImage src={p.avatarUrl}/>:p.displayName.slice(0,2)}<i className={p.presence==="online"?"online":""}/></div>
+        <h2 className={p.cosmetics?.nickname?`nick-${p.cosmetics.nickname}`:""}>{p.displayName}</h2><ClanTag clan={p.clan} details/><p>@{p.username}</p><small>Уровень {p.globalLevel} · {p.presence==="online"?"в сети":"не в сети"}</small>
         {!p.isOwnProfile?<div className="fz-profile-icon-actions fz-full-actions"><button onClick={message} aria-label="Написать сообщение" title="Написать сообщение"><MessageCircle/></button><button onClick={()=>setCallMode("voice")} aria-label="Голосовой звонок" title="Голосовой звонок"><Phone/></button><button onClick={()=>setCallMode("video")} aria-label="Видеозвонок" title="Видеозвонок"><Video/></button><button onClick={()=>void friendAction()} aria-label={p.friendshipStatus==="friends"?"Удалить из друзей":"Добавить в друзья"} title={p.friendshipStatus==="friends"?"Удалить из друзей":p.friendshipStatus==="outgoing"?"Заявка отправлена":"Добавить в друзья"} disabled={busy||p.friendshipStatus==="outgoing"}>{p.friendshipStatus==="friends"?<UserMinus/>:p.friendshipStatus==="outgoing"?<Check/>:<UserPlus/>}</button></div>:null}
         <section><h3>О пользователе</h3><p>{p.bio||"Описание не заполнено."}</p>{p.profileStatus?<span>{p.profileStatus}</span>:null}</section>
         <div className="fz-full-stats"><span><b>{p.stats.messages}</b><small>сообщений</small></span><span><b>{p.stats.friends}</b><small>друзей</small></span><span><b>{p.stats.servers}</b><small>серверов</small></span></div>
       </aside>
       <main>
+        <ProfileVisitCard key={p.id} profile={p} onSaved={updates=>setProfile(current=>current?{...current,...updates}:current)}/>
         <nav><button className={fullTab==="activity"?"active":""} onClick={()=>setFullTab("activity")}>Активность</button><button className={fullTab==="friends"?"active":""} onClick={()=>setFullTab("friends")}>Общие друзья <b>{p.commonFriends.length}</b></button><button className={fullTab==="servers"?"active":""} onClick={()=>setFullTab("servers")}>Общие серверы <b>{p.commonServers.length}</b></button></nav>
         {fullTab==="activity"?<div className="fz-full-empty"><strong>{p.presence==="online"?"Сейчас в сети":"Сейчас не в сети"}</strong><p>{p.profileStatus||"Публичной активности пока нет."}</p><div className="fz-activity-cards"><span><b>{p.globalXp}</b><small>XP аккаунта</small></span><span><b>{p.globalLevel}</b><small>уровень</small></span><span><b>{new Date(p.createdAt).toLocaleDateString("ru-RU")}</b><small>в FlipZero с</small></span></div></div>:null}
         {fullTab==="friends"?<div className="fz-full-list">{p.commonFriends.length?p.commonFriends.map(friend=><article key={friend.id}><i>{friend.avatarUrl?<MediaImage src={friend.avatarUrl}/>:friend.displayName.slice(0,2)}</i><span><strong>{friend.displayName}</strong><small>@{friend.username}</small></span></article>):<div className="fz-full-empty"><strong>Нет общих друзей</strong><p>Когда появятся общие контакты, они будут показаны здесь.</p></div>}</div>:null}

@@ -1,0 +1,16 @@
+ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_games jsonb NOT NULL DEFAULT '[]'::jsonb;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_music jsonb NOT NULL DEFAULT '{}'::jsonb;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_widgets jsonb NOT NULL DEFAULT '["about","status","games","music","badges","clan","links"]'::jsonb;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS custom_status_emoji text;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS custom_status_expires_at timestamptz;
+CREATE TABLE IF NOT EXISTS chat_games(id text PRIMARY KEY,channel_id text REFERENCES channels(id) ON DELETE CASCADE,conversation_id text REFERENCES direct_conversations(id) ON DELETE CASCADE,clan_id text REFERENCES clans(id) ON DELETE CASCADE,creator_id text NOT NULL REFERENCES users(id) ON DELETE CASCADE,opponent_id text REFERENCES users(id) ON DELETE SET NULL,kind text NOT NULL CHECK(kind IN('trivia','duel','guess')),prompt text NOT NULL,answer_hash text NOT NULL,options jsonb NOT NULL DEFAULT '[]'::jsonb,expires_at timestamptz NOT NULL,settled_at timestamptz,winner_id text REFERENCES users(id) ON DELETE SET NULL,created_at timestamptz NOT NULL DEFAULT now());
+CREATE TABLE IF NOT EXISTS chat_game_plays(game_id text NOT NULL REFERENCES chat_games(id) ON DELETE CASCADE,user_id text NOT NULL REFERENCES users(id) ON DELETE CASCADE,answer text NOT NULL,correct boolean NOT NULL,created_at timestamptz NOT NULL DEFAULT now(),PRIMARY KEY(game_id,user_id));
+CREATE TABLE IF NOT EXISTS temporary_voice_rooms(id text PRIMARY KEY,creator_id text NOT NULL REFERENCES users(id) ON DELETE CASCADE,context_type text NOT NULL,context_id text NOT NULL,expires_at timestamptz NOT NULL,created_at timestamptz NOT NULL DEFAULT now());
+CREATE INDEX IF NOT EXISTS temporary_voice_room_expiry_idx ON temporary_voice_rooms(expires_at);
+CREATE TABLE IF NOT EXISTS temporary_voice_invites(room_id text NOT NULL REFERENCES temporary_voice_rooms(id) ON DELETE CASCADE,user_id text NOT NULL REFERENCES users(id) ON DELETE CASCADE,PRIMARY KEY(room_id,user_id));
+CREATE TABLE IF NOT EXISTS user_stories(id text PRIMARY KEY,user_id text NOT NULL REFERENCES users(id) ON DELETE CASCADE,content text NOT NULL DEFAULT '',image_url text,emoji text,audience text NOT NULL CHECK(audience IN('friends','clan','both')),hidden_user_ids jsonb NOT NULL DEFAULT '[]'::jsonb,created_at timestamptz NOT NULL DEFAULT now(),expires_at timestamptz NOT NULL);
+CREATE INDEX IF NOT EXISTS user_stories_active_idx ON user_stories(expires_at,user_id);
+CREATE TABLE IF NOT EXISTS story_views(story_id text NOT NULL REFERENCES user_stories(id) ON DELETE CASCADE,user_id text NOT NULL REFERENCES users(id) ON DELETE CASCADE,viewed_at timestamptz NOT NULL DEFAULT now(),PRIMARY KEY(story_id,user_id));
+CREATE TABLE IF NOT EXISTS story_reactions(story_id text NOT NULL REFERENCES user_stories(id) ON DELETE CASCADE,user_id text NOT NULL REFERENCES users(id) ON DELETE CASCADE,emoji text NOT NULL,created_at timestamptz NOT NULL DEFAULT now(),PRIMARY KEY(story_id,user_id));
+ALTER TABLE media_assets ADD COLUMN IF NOT EXISTS owner_id text REFERENCES users(id) ON DELETE SET NULL;
+ALTER TABLE media_assets ADD COLUMN IF NOT EXISTS purpose text;

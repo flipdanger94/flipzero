@@ -1,12 +1,13 @@
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, lte } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { getDatabase } from "@/db/client";
-import { clanMembers, clanRequests, clans, users } from "@/db/schema";
+import { clanMembers, clanRequests, clanSeasonAwards, clanUpgrades, clans, users } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
 import { canManageClan, canModerateClan, getClanRole, normalizeClanDescription, normalizeClanJoinType, normalizeClanName, normalizeClanTag } from "@/lib/clans";
 import { isTrustedMutationRequest } from "@/lib/security-controls";
 import { clanLevel, validTagColor, validTagIcon } from "@/lib/clan-progress";
 import { levelFromXp } from "@/lib/gamification";
+import { presentationForUsers } from "@/lib/presentation";
 
 export async function GET(_request:Request,{params}:{params:Promise<{clanId:string}>}) {
   const user=await getCurrentUser();
@@ -19,16 +20,19 @@ export async function GET(_request:Request,{params}:{params:Promise<{clanId:stri
   if(!role)return NextResponse.json({clan:{id:clan.id,name:clan.name,tag:clan.tag,tagColor:clan.tagColor,tagIcon:clan.tagIcon,description:clan.description,avatarUrl:clan.avatarUrl,bannerUrl:clan.bannerUrl,joinType:clan.joinType,memberCount:clan.memberCount,xp:clan.xp,level:clanLevel(clan.xp)},role:null});
   const members=await db.select({
     userId:users.id,username:users.username,displayName:users.displayName,avatarUrl:users.avatarUrl,presence:users.presence,
-    globalLevel:users.globalLevel,globalXp:users.globalXp,contributionXp:clanMembers.contributionXp,role:clanMembers.role,joinedAt:clanMembers.joinedAt,lastSeenAt:users.lastSeenAt,
+    globalLevel:users.globalLevel,globalXp:users.globalXp,contributionXp:clanMembers.contributionXp,customRoleId:clanMembers.customRoleId,role:clanMembers.role,joinedAt:clanMembers.joinedAt,lastSeenAt:users.lastSeenAt,
   }).from(clanMembers).innerJoin(users,eq(users.id,clanMembers.userId)).where(eq(clanMembers.clanId,clanId)).orderBy(desc(clanMembers.contributionXp),desc(clanMembers.joinedAt));
   const now=Date.now();
-  const normalizedMembers=members.map(({lastSeenAt,...member})=>({...member,globalLevel:levelFromXp(member.globalXp),presence:lastSeenAt&&lastSeenAt.getTime()>now-90_000?"online":"offline"}));
+  const [tagUpgrade]=await db.select({level:clanUpgrades.level}).from(clanUpgrades).where(and(eq(clanUpgrades.clanId,clanId),eq(clanUpgrades.upgradeKey,"tag_palette"))).limit(1);
+  const [seasonWinner]=await db.select({rank:clanSeasonAwards.rank}).from(clanSeasonAwards).where(and(eq(clanSeasonAwards.clanId,clanId),lte(clanSeasonAwards.rank,3))).limit(1);
+  const presentation=await presentationForUsers(members.map(member=>member.userId));
+  const normalizedMembers=members.map(({lastSeenAt,...member})=>({...member,globalLevel:levelFromXp(member.globalXp),cosmetics:presentation.get(member.userId)?.cosmetics??{},badges:presentation.get(member.userId)?.badges??[],presence:lastSeenAt&&lastSeenAt.getTime()>now-90_000?"online":"offline"}));
   const requests=canModerateClan(role)?await db.select({
     id:clanRequests.id,userId:clanRequests.userId,kind:clanRequests.kind,status:clanRequests.status,createdAt:clanRequests.createdAt,
-    username:users.username,displayName:users.displayName,avatarUrl:users.avatarUrl,globalLevel:users.globalLevel,
+    username:users.username,displayName:users.displayName,avatarUrl:users.avatarUrl,globalXp:users.globalXp,
   }).from(clanRequests).innerJoin(users,eq(users.id,clanRequests.userId)).where(and(eq(clanRequests.clanId,clanId),eq(clanRequests.status,"pending"))).orderBy(desc(clanRequests.createdAt)):[];
 
-  return NextResponse.json({clan:{...clan,level:clanLevel(clan.xp)},role,members:normalizedMembers,requests,permissions:{moderate:canModerateClan(role),manage:canManageClan(role)}});
+  return NextResponse.json({clan:{...clan,level:clanLevel(clan.xp)},tagUpgradeLevel:tagUpgrade?.level??0,seasonWinner:Boolean(seasonWinner),role,members:normalizedMembers,requests:requests.map(request=>({...request,globalLevel:levelFromXp(request.globalXp)})),permissions:{moderate:canModerateClan(role),manage:canManageClan(role)}});
 }
 
 export async function PATCH(request:Request,{params}:{params:Promise<{clanId:string}>}) {
@@ -45,7 +49,7 @@ export async function PATCH(request:Request,{params}:{params:Promise<{clanId:str
   if(body?.description!==undefined) values.description=normalizeClanDescription(body.description);
   if(body?.joinType!==undefined){const joinType=normalizeClanJoinType(body.joinType);if(!joinType)return NextResponse.json({message:"Некорректный тип вступления."},{status:400});values.joinType=joinType;}
   if(body?.tagColor!==undefined){if(!validTagColor(body.tagColor))return NextResponse.json({message:"Цвет должен быть в формате #RRGGBB."},{status:400});values.tagColor=body.tagColor;}
-  if(body?.tagIcon!==undefined){if(!validTagIcon(body.tagIcon))return NextResponse.json({message:"Выберите значок из списка."},{status:400});values.tagIcon=body.tagIcon;}
+  if(body?.tagIcon!==undefined){if(!validTagIcon(body.tagIcon))return NextResponse.json({message:"Выберите значок из списка."},{status:400});if(["orbit","moon"].includes(body.tagIcon)){const [upgrade]=await getDatabase().select({level:clanUpgrades.level}).from(clanUpgrades).where(and(eq(clanUpgrades.clanId,clanId),eq(clanUpgrades.upgradeKey,"tag_palette"))).limit(1);if((upgrade?.level??0)<(body.tagIcon==="orbit"?1:2))return NextResponse.json({message:"Этот значок открывается улучшением казны."},{status:403})}if(body.tagIcon==="laurel"){const [award]=await getDatabase().select({rank:clanSeasonAwards.rank}).from(clanSeasonAwards).where(and(eq(clanSeasonAwards.clanId,clanId),lte(clanSeasonAwards.rank,3))).limit(1);if(!award)return NextResponse.json({message:"Значок доступен призёрам сезона."},{status:403})}values.tagIcon=body.tagIcon;}
   try{
     const [updated]=await getDatabase().update(clans).set(values).where(eq(clans.id,clanId)).returning();
     return NextResponse.json({clan:updated});

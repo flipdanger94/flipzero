@@ -7,7 +7,7 @@ export function clanLevel(xp: number) {
   }
   return level;
 }
-export const CLAN_TAG_ICONS = ["shield", "crown", "swords", "flame", "zap", "skull", "star"] as const;
+export const CLAN_TAG_ICONS = ["shield", "crown", "swords", "flame", "zap", "skull", "star", "orbit", "moon", "laurel"] as const;
 export function validTagColor(value: unknown): value is string {
   return typeof value === "string" && /^#[0-9a-fA-F]{6}$/.test(value);
 }

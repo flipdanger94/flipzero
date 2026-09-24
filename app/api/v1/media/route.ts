@@ -11,8 +11,8 @@ import { getClanRole } from "@/lib/clans";
 
 export const runtime = "nodejs";
 
-type ImageKind = "avatar" | "accountBanner" | "spaceIcon" | "spaceBanner" | "clanAvatar" | "clanBanner";
-const kinds: ImageKind[] = ["avatar", "accountBanner", "spaceIcon", "spaceBanner", "clanAvatar", "clanBanner"];
+type ImageKind = "avatar" | "accountBanner" | "spaceIcon" | "spaceBanner" | "clanAvatar" | "clanBanner" | "story";
+const kinds: ImageKind[] = ["avatar", "accountBanner", "spaceIcon", "spaceBanner", "clanAvatar", "clanBanner", "story"];
 function imageType(bytes: Buffer) {
   if (bytes.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]))) return "image/png";
   if (bytes.subarray(0, 3).equals(Buffer.from([255, 216, 255]))) return "image/jpeg";
@@ -63,7 +63,8 @@ export async function POST(request: Request) {
   const url = `/api/v1/media/${id}`;
 
   const updated = await database.transaction(async (tx) => {
-    await tx.insert(mediaAssets).values({ id, bytes: storedImage.bytes, contentType: storedImage.contentType });
+    await tx.insert(mediaAssets).values({ id, bytes: storedImage.bytes, contentType: storedImage.contentType,ownerId:imageKind==="story"?user.id:null,purpose:imageKind==="story"?"story":null });
+    if(imageKind==="story")return {story:{url}};
     if (imageKind === "avatar" || imageKind === "accountBanner") {
       const column = imageKind === "avatar" ? "avatarUrl" : "bannerUrl";
       const [previous] = await tx.select({ url: users[column] }).from(users).where(eq(users.id, user.id)).limit(1);

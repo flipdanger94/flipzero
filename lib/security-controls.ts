@@ -9,8 +9,6 @@ export function isTrustedMutationRequest(request: Request) {
   // Explicitly reject cross-site mutations, while allowing same-origin,
   // same-site and browser/user initiated requests.
   if (fetchSite === "cross-site") return false;
-  if (fetchSite === "same-origin" || fetchSite === "same-site" || fetchSite === "none") return true;
-
   const origin = request.headers.get("origin");
   if (!origin) return true;
 
@@ -25,6 +23,8 @@ export function isTrustedMutationRequest(request: Request) {
       if (originUrl.protocol === "https:") return true;
       return originUrl.protocol === requestUrl.protocol;
     }
+
+    if (fetchSite === "same-origin" && ["127.0.0.1", "localhost"].includes(requestUrl.hostname) && originUrl.protocol === "https:" && originUrl.hostname.endsWith(".app.github.dev")) return true;
 
     // GitHub Codespaces terminates TLS and may rewrite Host/request.url to an
     // internal address before Next.js receives the request. In that runtime,

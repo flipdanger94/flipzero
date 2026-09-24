@@ -17,7 +17,8 @@ type Item={
 
 export function NotificationCenter({onOpenMessages,onOpenFriends,onOpenClans}:{onOpenMessages:(userId:string|null)=>void;onOpenFriends:()=>void;onOpenClans:()=>void}){
  const [open,setOpen]=useState(false),[items,setItems]=useState<Item[]>([]),[unread,setUnread]=useState(0);
- const load=useCallback(async()=>{const r=await fetch("/api/notifications",{cache:"no-store"});if(r.ok){const d=await r.json();setItems(d.notifications??[]);setUnread(d.unread??0)}},[]);
+ const [quiet,setQuiet]=useState(false);
+ const load=useCallback(async()=>{const r=await fetch("/api/notifications",{cache:"no-store"});if(r.ok){const d=await r.json();setItems(d.notifications??[]);setUnread(d.unread??0);setQuiet(Boolean(d.quiet))}},[]);
 
  useEffect(()=>{const first=window.setTimeout(()=>void load(),0);const t=window.setInterval(()=>void load(),15000);return()=>{window.clearTimeout(first);window.clearInterval(t)}},[load]);
  useEffect(()=>{const close=()=>setOpen(false);window.addEventListener("flipzero:close-notifications",close);return()=>window.removeEventListener("flipzero:close-notifications",close)},[]);
@@ -77,5 +78,5 @@ export function NotificationCenter({onOpenMessages,onOpenFriends,onOpenClans}:{o
   document.body
  ):null;
 
- return <><div className="notification-center"><button type="button" className={open?"is-active":""} aria-label="Уведомления" aria-expanded={open} onClick={toggle}><Bell size={19}/>{unread?<b className="notification-badge">{unread>99?"99+":unread}</b>:null}</button></div>{overlay}</>;
+ return <><div className="notification-center"><button type="button" className={open?"is-active":""} aria-label={quiet?"Уведомления · Не беспокоить":"Уведомления"} title={quiet?"Не беспокоить активно":"Уведомления"} aria-expanded={open} onClick={toggle}><Bell size={19}/>{quiet?<i className="quiet-dot" aria-hidden="true"/>:null}{unread?<b className="notification-badge">{unread>99?"99+":unread}</b>:null}</button></div>{overlay}</>;
 }

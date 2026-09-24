@@ -4,6 +4,7 @@ import { getDatabase } from "@/db/client";
 import { friendRequests, friends, members, messages, spaces, userBlocks, userPrivacySettings, users } from "@/db/schema";
 import { getUserClan } from "@/lib/clans";
 import { levelFromXp } from "@/lib/gamification";
+import { presentationForUsers } from "@/lib/presentation";
 import { getCurrentUser } from "@/lib/auth";
 
 export async function GET(_request: Request, { params }: { params: Promise<{ userId: string }> }) {
@@ -17,6 +18,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ use
     bannerUrl: users.bannerUrl, bio: users.bio, accentColor: users.accentColor, presence: users.presence, lastSeenAt: users.lastSeenAt,
     globalXp: users.globalXp, globalLevel: users.globalLevel, createdAt: users.createdAt,
     profileLocation: users.profileLocation, profileStatus: users.profileStatus, profileLinks: users.profileLinks,
+    profileGames:users.profileGames,profileMusic:users.profileMusic,profileWidgets:users.profileWidgets,customStatusEmoji:users.customStatusEmoji,customStatusExpiresAt:users.customStatusExpiresAt,
   }).from(users).where(eq(users.id, userId)).limit(1);
   if (!user) return NextResponse.json({ code: "NOT_FOUND", message: "Пользователь не найден." }, { status: 404 });
   if (viewer.id !== userId) {
@@ -36,6 +38,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ use
     db.select({ id: spaces.id, name: spaces.name, iconUrl: spaces.iconUrl }).from(members).innerJoin(spaces, eq(spaces.id, members.spaceId)).where(eq(members.userId, userId)).limit(3),
     getUserClan(userId),
   ]);
+  const presentation=(await presentationForUsers([userId])).get(userId);
   const [viewerFriends, targetFriends, viewerSpaces, targetSpaces] = viewer.id === userId
     ? [[], [], [], []]
     : await Promise.all([
@@ -57,7 +60,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ use
   const [outgoingRequest] = viewer.id === userId || friendship ? [] : await db.select({ id: friendRequests.id }).from(friendRequests).where(and(eq(friendRequests.fromId, viewer.id), eq(friendRequests.toId, userId), eq(friendRequests.status, "pending"))).limit(1);
   const [incomingRequest] = viewer.id === userId || friendship ? [] : await db.select({ id: friendRequests.id }).from(friendRequests).where(and(eq(friendRequests.fromId, userId), eq(friendRequests.toId, viewer.id), eq(friendRequests.status, "pending"))).limit(1);
   return NextResponse.json({
-    profile: { ...user, globalLevel:levelFromXp(user.globalXp), clan, presence: user.lastSeenAt && user.lastSeenAt.getTime() > Date.now() - 90_000 ? "online" : "offline", lastSeenAt: undefined, isOwnProfile: viewer.id === userId, isFriend: Boolean(friendship), friendshipStatus: friendship ? "friends" : outgoingRequest ? "outgoing" : incomingRequest ? "incoming" : "none", incomingRequestId: incomingRequest?.id ?? null,
+    profile: { ...user,profileStatus:user.customStatusExpiresAt&&user.customStatusExpiresAt<new Date()?null:user.profileStatus,customStatusEmoji:user.customStatusExpiresAt&&user.customStatusExpiresAt<new Date()?null:user.customStatusEmoji, globalLevel:levelFromXp(user.globalXp), clan, cosmetics:presentation?.cosmetics??{},badges:presentation?.badges??[], presence: user.lastSeenAt && user.lastSeenAt.getTime() > Date.now() - 90_000 ? "online" : "offline", lastSeenAt: undefined, isOwnProfile: viewer.id === userId, isFriend: Boolean(friendship), friendshipStatus: friendship ? "friends" : outgoingRequest ? "outgoing" : incomingRequest ? "incoming" : "none", incomingRequestId: incomingRequest?.id ?? null,
       stats: { messages: messageCount?.value ?? 0, friends: friendCount?.value ?? 0, servers: serverCount?.value ?? 0 },
       servers: serverRows,
       commonFriends,

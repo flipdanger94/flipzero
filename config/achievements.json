@@ -1,0 +1,6 @@
+[
+ {"id":"global-first-message","key":"first-message","name":"Первый сигнал","description":"Отправьте первое сообщение в канале","icon":"✦","rarity":"common","eventSource":"message","target":1,"xpReward":0},
+ {"id":"global-social-10","key":"social-10","name":"Свой человек","description":"Отправьте десять сообщений","icon":"◆","rarity":"rare","eventSource":"message","target":10,"xpReward":0},
+ {"id":"global-social-100","key":"social-100","name":"Душа сообщества","description":"Отправьте сто сообщений","icon":"★","rarity":"epic","eventSource":"message","target":100,"xpReward":0},
+ {"id":"global-level-10","key":"level-10","name":"Восходящая звезда","description":"Достигните 10 уровня","icon":"⚡","rarity":"legendary","eventSource":"level","target":10,"xpReward":0}
+]

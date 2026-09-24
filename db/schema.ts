@@ -31,6 +31,11 @@ export const users = pgTable("users", {
   profileLocation: text("profile_location"),
   profileStatus: text("profile_status"),
   profileLinks: jsonb("profile_links").$type<string[]>().default([]).notNull(),
+  profileGames:jsonb("profile_games").$type<string[]>().default([]).notNull(),
+  profileMusic:jsonb("profile_music").$type<{title?:string;artist?:string;url?:string}>().default({}).notNull(),
+  profileWidgets:jsonb("profile_widgets").$type<string[]>().default(["about","status","games","music","badges","clan","links"]).notNull(),
+  customStatusEmoji:text("custom_status_emoji"),
+  customStatusExpiresAt:timestamp("custom_status_expires_at",{withTimezone:true}),
   accentColor: text("accent_color").default("#ff5c70").notNull(),
   presence: presenceStatus("presence").default("offline").notNull(),
   lastSeenAt: timestamp("last_seen_at", { withTimezone: true }),
@@ -52,6 +57,8 @@ const imageBytes = customType<{ data: Buffer; driverData: Buffer }>({ dataType: 
 export const mediaAssets = pgTable("media_assets", {
   id: text("id").primaryKey(),
   contentType: text("content_type").notNull(),
+  ownerId:text("owner_id").references(()=>users.id,{onDelete:"set null"}),
+  purpose:text("purpose"),
   bytes: imageBytes("bytes").notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
@@ -507,6 +514,12 @@ export const clans = pgTable("clans", {
   tagColor: text("tag_color").default("#8B77FF").notNull(),
   tagIcon: text("tag_icon").default("shield").notNull(),
   xp: bigint("xp", { mode: "number" }).default(0).notNull(),
+  treasury:bigint("treasury",{mode:"number"}).default(0).notNull(),
+  welcomeText:text("welcome_text").default("Добро пожаловать в клан!").notNull(),
+  officerTreasuryAccess:boolean("officer_treasury_access").default(false).notNull(),
+  customRoles:jsonb("custom_roles").$type<Array<{id:string;name:string;color:string}>>().default([]).notNull(),
+  customEmoji:jsonb("custom_emoji").$type<string[]>().default([]).notNull(),
+  bannerTheme:text("banner_theme").default("default").notNull(),
   description: text("description"),
   avatarUrl: text("avatar_url"),
   bannerUrl: text("banner_url"),
@@ -525,6 +538,7 @@ export const clanMembers = pgTable("clan_members", {
   clanId: text("clan_id").notNull().references(() => clans.id, { onDelete: "cascade" }),
   userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   contributionXp: bigint("contribution_xp", { mode: "number" }).default(0).notNull(),
+  customRoleId:text("custom_role_id"),
   role: clanRole("role").default("member").notNull(),
   joinedAt: timestamp("joined_at", { withTimezone: true }).defaultNow().notNull(),
 }, (table) => [
@@ -560,3 +574,79 @@ export const clanMessages = pgTable("clan_messages", {
   index("clan_messages_clan_created_idx").on(table.clanId, table.createdAt),
   index("clan_messages_author_idx").on(table.authorId),
 ]);
+
+export const userWallets = pgTable("user_wallets", {
+  userId:text("user_id").primaryKey().references(()=>users.id,{onDelete:"cascade"}),
+  balance:bigint("balance",{mode:"number"}).default(0).notNull(),
+  updatedAt:timestamp("updated_at",{withTimezone:true}).defaultNow().notNull(),
+});
+export const coinTransactions = pgTable("coin_transactions", {
+  id:text("id").primaryKey(),userId:text("user_id").notNull().references(()=>users.id,{onDelete:"cascade"}),
+  amount:integer("amount").notNull(),reason:text("reason").notNull(),idempotencyKey:text("idempotency_key").notNull(),
+  createdAt:timestamp("created_at",{withTimezone:true}).defaultNow().notNull(),
+},table=>[uniqueIndex("coin_transactions_idempotency_unique").on(table.idempotencyKey),index("coin_transactions_user_date_idx").on(table.userId,table.createdAt)]);
+export const questClaims=pgTable("quest_claims",{
+  id:text("id").primaryKey(),userId:text("user_id").notNull().references(()=>users.id,{onDelete:"cascade"}),
+  questKey:text("quest_key").notNull(),periodKey:text("period_key").notNull(),createdAt:timestamp("created_at",{withTimezone:true}).defaultNow().notNull(),
+},table=>[uniqueIndex("quest_claim_unique").on(table.userId,table.questKey,table.periodKey)]);
+export const cosmeticItems=pgTable("cosmetic_items",{
+  id:text("id").primaryKey(),title:text("title").notNull(),description:text("description").default("").notNull(),category:text("category").notNull(),rarity:text("rarity").notNull(),
+  price:integer("price").notNull(),preview:text("preview").notNull(),superflipOnly:boolean("superflip_only").default(false).notNull(),
+  availableUntil:timestamp("available_until",{withTimezone:true}),
+});
+export const cosmeticInventory=pgTable("cosmetic_inventory",{
+  userId:text("user_id").notNull().references(()=>users.id,{onDelete:"cascade"}),itemId:text("item_id").notNull().references(()=>cosmeticItems.id,{onDelete:"cascade"}),
+  acquiredAt:timestamp("acquired_at",{withTimezone:true}).defaultNow().notNull(),
+},table=>[primaryKey({columns:[table.userId,table.itemId]})]);
+export const cosmeticEquipped=pgTable("cosmetic_equipped",{
+  userId:text("user_id").notNull().references(()=>users.id,{onDelete:"cascade"}),category:text("category").notNull(),itemId:text("item_id").notNull().references(()=>cosmeticItems.id,{onDelete:"cascade"}),
+},table=>[primaryKey({columns:[table.userId,table.category]})]);
+
+export const clanSeasonScores=pgTable("clan_season_scores",{
+ clanId:text("clan_id").notNull().references(()=>clans.id,{onDelete:"cascade"}),seasonKey:text("season_key").notNull(),xp:bigint("xp",{mode:"number"}).default(0).notNull(),closedAt:timestamp("closed_at",{withTimezone:true}),
+},table=>[primaryKey({columns:[table.clanId,table.seasonKey]})]);
+export const clanSeasonContributions=pgTable("clan_season_contributions",{
+ clanId:text("clan_id").notNull().references(()=>clans.id,{onDelete:"cascade"}),userId:text("user_id").notNull().references(()=>users.id,{onDelete:"cascade"}),seasonKey:text("season_key").notNull(),xp:bigint("xp",{mode:"number"}).default(0).notNull(),
+},table=>[primaryKey({columns:[table.clanId,table.userId,table.seasonKey]})]);
+export const clanSeasonAwards=pgTable("clan_season_awards",{
+ clanId:text("clan_id").notNull().references(()=>clans.id,{onDelete:"cascade"}),userId:text("user_id").notNull().references(()=>users.id,{onDelete:"cascade"}),seasonKey:text("season_key").notNull(),rank:integer("rank").notNull(),coins:integer("coins").notNull(),awardedAt:timestamp("awarded_at",{withTimezone:true}).defaultNow().notNull(),
+},table=>[primaryKey({columns:[table.clanId,table.userId,table.seasonKey]})]);
+export const clanTreasuryEntries=pgTable("clan_treasury_entries",{
+ id:text("id").primaryKey(),clanId:text("clan_id").notNull().references(()=>clans.id,{onDelete:"cascade"}),userId:text("user_id").references(()=>users.id,{onDelete:"set null"}),amount:integer("amount").notNull(),reason:text("reason").notNull(),idempotencyKey:text("idempotency_key").notNull(),createdAt:timestamp("created_at",{withTimezone:true}).defaultNow().notNull(),
+},table=>[uniqueIndex("clan_treasury_key_unique").on(table.idempotencyKey),index("clan_treasury_date_idx").on(table.clanId,table.createdAt)]);
+export const clanUpgrades=pgTable("clan_upgrades",{
+ clanId:text("clan_id").notNull().references(()=>clans.id,{onDelete:"cascade"}),upgradeKey:text("upgrade_key").notNull(),level:integer("level").default(0).notNull(),
+},table=>[primaryKey({columns:[table.clanId,table.upgradeKey]})]);
+export const clanEvents=pgTable("clan_events",{
+ id:text("id").primaryKey(),clanId:text("clan_id").notNull().references(()=>clans.id,{onDelete:"cascade"}),creatorId:text("creator_id").notNull().references(()=>users.id,{onDelete:"cascade"}),title:text("title").notNull(),description:text("description").notNull(),startAt:timestamp("start_at",{withTimezone:true}).notNull(),capacity:integer("capacity").notNull(),rewardCoins:integer("reward_coins").default(0).notNull(),completedAt:timestamp("completed_at",{withTimezone:true}),remindedAt:timestamp("reminded_at",{withTimezone:true}),createdAt:timestamp("created_at",{withTimezone:true}).defaultNow().notNull(),
+},table=>[index("clan_events_start_idx").on(table.clanId,table.startAt)]);
+export const clanEventRsvps=pgTable("clan_event_rsvps",{
+ eventId:text("event_id").notNull().references(()=>clanEvents.id,{onDelete:"cascade"}),userId:text("user_id").notNull().references(()=>users.id,{onDelete:"cascade"}),status:text("status").notNull(),createdAt:timestamp("created_at",{withTimezone:true}).defaultNow().notNull(),
+},table=>[primaryKey({columns:[table.eventId,table.userId]})]);
+export const clanAnnouncements=pgTable("clan_announcements",{
+ id:text("id").primaryKey(),clanId:text("clan_id").notNull().references(()=>clans.id,{onDelete:"cascade"}),authorId:text("author_id").notNull().references(()=>users.id,{onDelete:"cascade"}),content:text("content").notNull(),createdAt:timestamp("created_at",{withTimezone:true}).defaultNow().notNull(),
+},table=>[index("clan_announcements_date_idx").on(table.clanId,table.createdAt)]);
+export const chatGames=pgTable("chat_games",{
+ id:text("id").primaryKey(),channelId:text("channel_id").references(()=>channels.id,{onDelete:"cascade"}),conversationId:text("conversation_id").references(()=>directConversations.id,{onDelete:"cascade"}),clanId:text("clan_id").references(()=>clans.id,{onDelete:"cascade"}),creatorId:text("creator_id").notNull().references(()=>users.id,{onDelete:"cascade"}),opponentId:text("opponent_id").references(()=>users.id,{onDelete:"set null"}),kind:text("kind").notNull(),prompt:text("prompt").notNull(),answerHash:text("answer_hash").notNull(),options:jsonb("options").$type<string[]>().default([]).notNull(),expiresAt:timestamp("expires_at",{withTimezone:true}).notNull(),settledAt:timestamp("settled_at",{withTimezone:true}),winnerId:text("winner_id").references(()=>users.id,{onDelete:"set null"}),createdAt:timestamp("created_at",{withTimezone:true}).defaultNow().notNull(),
+});
+export const chatGamePlays=pgTable("chat_game_plays",{
+ gameId:text("game_id").notNull().references(()=>chatGames.id,{onDelete:"cascade"}),userId:text("user_id").notNull().references(()=>users.id,{onDelete:"cascade"}),answer:text("answer").notNull(),correct:boolean("correct").notNull(),createdAt:timestamp("created_at",{withTimezone:true}).defaultNow().notNull(),
+},table=>[primaryKey({columns:[table.gameId,table.userId]})]);
+export const temporaryVoiceRooms=pgTable("temporary_voice_rooms",{
+ id:text("id").primaryKey(),creatorId:text("creator_id").notNull().references(()=>users.id,{onDelete:"cascade"}),contextType:text("context_type").notNull(),contextId:text("context_id").notNull(),expiresAt:timestamp("expires_at",{withTimezone:true}).notNull(),createdAt:timestamp("created_at",{withTimezone:true}).defaultNow().notNull(),
+},table=>[index("temporary_voice_room_expiry_idx").on(table.expiresAt)]);
+export const temporaryVoiceInvites=pgTable("temporary_voice_invites",{
+ roomId:text("room_id").notNull().references(()=>temporaryVoiceRooms.id,{onDelete:"cascade"}),userId:text("user_id").notNull().references(()=>users.id,{onDelete:"cascade"}),
+},table=>[primaryKey({columns:[table.roomId,table.userId]})]);
+export const userStories=pgTable("user_stories",{
+ id:text("id").primaryKey(),userId:text("user_id").notNull().references(()=>users.id,{onDelete:"cascade"}),content:text("content").default("").notNull(),imageUrl:text("image_url"),emoji:text("emoji"),audience:text("audience").notNull(),hiddenUserIds:jsonb("hidden_user_ids").$type<string[]>().default([]).notNull(),createdAt:timestamp("created_at",{withTimezone:true}).defaultNow().notNull(),expiresAt:timestamp("expires_at",{withTimezone:true}).notNull(),
+},table=>[index("user_stories_active_idx").on(table.expiresAt,table.userId)]);
+export const storyViews=pgTable("story_views",{
+ storyId:text("story_id").notNull().references(()=>userStories.id,{onDelete:"cascade"}),userId:text("user_id").notNull().references(()=>users.id,{onDelete:"cascade"}),viewedAt:timestamp("viewed_at",{withTimezone:true}).defaultNow().notNull(),
+},table=>[primaryKey({columns:[table.storyId,table.userId]})]);
+export const storyReactions=pgTable("story_reactions",{
+ storyId:text("story_id").notNull().references(()=>userStories.id,{onDelete:"cascade"}),userId:text("user_id").notNull().references(()=>users.id,{onDelete:"cascade"}),emoji:text("emoji").notNull(),createdAt:timestamp("created_at",{withTimezone:true}).defaultNow().notNull(),
+},table=>[primaryKey({columns:[table.storyId,table.userId]})]);
+export const userPreferences=pgTable("user_preferences",{
+ userId:text("user_id").primaryKey().references(()=>users.id,{onDelete:"cascade"}),theme:text("theme").default("midnight").notNull(),accentColor:text("accent_color").default("#8f70ff").notNull(),dndEnabled:boolean("dnd_enabled").default(false).notNull(),dndDays:jsonb("dnd_days").$type<number[]>().default([]).notNull(),dndStart:text("dnd_start").default("22:00").notNull(),dndEnd:text("dnd_end").default("08:00").notNull(),dndTimezone:text("dnd_timezone").default("UTC").notNull(),dndFavoriteIds:jsonb("dnd_favorite_ids").$type<string[]>().default([]).notNull(),dndClanException:boolean("dnd_clan_exception").default(false).notNull(),updatedAt:timestamp("updated_at",{withTimezone:true}).defaultNow().notNull(),
+});

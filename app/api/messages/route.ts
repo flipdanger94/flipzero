@@ -5,6 +5,8 @@ import { NextResponse } from "next/server";
 import { getDatabase } from "@/db/client";
 import { directConversationMembers, directConversations, directMessages, friends, notifications, userBlocks, userPrivacySettings, users } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
+import { levelFromXp } from "@/lib/gamification";
+import { presentationForUsers } from "@/lib/presentation";
 import { decodeDirectMessage, directMessagePreview, encodeDirectMessage, normalizeDirectAttachments, normalizeDirectMessage } from "@/lib/direct-message";
 import { getSuperFlipCapabilities } from "@/lib/superflip";
 import { isTrustedMutationRequest } from "@/lib/security-controls";
@@ -24,14 +26,15 @@ export async function GET(request: Request) {
     const requestedLimit = Number(params.get("limit") ?? 50);
     const limit = Number.isFinite(requestedLimit) ? Math.min(100, Math.max(20, Math.trunc(requestedLimit))) : 50;
     const cursorValue = params.get("cursor");
-    const cursor = cursorValue ? new Date(cursorValue) : null;
-    if (cursorValue && (!cursor || Number.isNaN(cursor.getTime()))) {
+    const [cursorDate,cursorId]=cursorValue?.split("|")??[];
+    const cursor = cursorValue ? new Date(cursorDate) : null;
+    if (cursorValue && (!cursor || Number.isNaN(cursor.getTime()) || !/^[0-9a-f-]{36}$/i.test(cursorId??""))) {
       return NextResponse.json({ message: "Некорректный cursor." }, { status: 400 });
     }
     const conditions = [
       eq(directMessages.conversationId, conversationId),
       isNull(directMessages.deletedAt),
-      ...(cursor ? [lt(directMessages.createdAt, cursor)] : []),
+      ...(cursor ? [or(lt(directMessages.createdAt, cursor),and(eq(directMessages.createdAt,cursor),lt(directMessages.id,cursorId)))!] : []),
     ];
     const rows = await database.select({
       id: directMessages.id,
@@ -41,14 +44,14 @@ export async function GET(request: Request) {
       text: directMessages.text,
       createdAt: directMessages.createdAt,
       readAt: directMessages.readAt,
-    }).from(directMessages).where(and(...conditions)).orderBy(desc(directMessages.createdAt)).limit(limit + 1);
+    }).from(directMessages).where(and(...conditions)).orderBy(desc(directMessages.createdAt),desc(directMessages.id)).limit(limit + 1);
     const hasMore = rows.length > limit;
     const page = rows.slice(0, limit).reverse();
     await database.update(directMessages).set({ readAt: new Date() }).where(and(eq(directMessages.conversationId, conversationId), eq(directMessages.receiverId, user.id), isNull(directMessages.readAt)));
     const messageTags=await clanTagsForUsers(page.map(message=>message.senderId));
     return NextResponse.json({
       messages: page.map((message) => ({ ...message, clan:messageTags.get(message.senderId)??null, ...decodeDirectMessage(message.text) })),
-      nextCursor: hasMore && page[0] ? page[0].createdAt.toISOString() : null,
+      nextCursor: hasMore && page[0] ? `${page[0].createdAt.toISOString()}|${page[0].id}` : null,
       hasMore,
     });
   }
@@ -58,14 +61,15 @@ export async function GET(request: Request) {
     if (!otherMember) return null;
     const [blocked] = await database.select({ blockerId: userBlocks.blockerId }).from(userBlocks).where(or(and(eq(userBlocks.blockerId,user.id),eq(userBlocks.blockedId,otherMember.userId)),and(eq(userBlocks.blockerId,otherMember.userId),eq(userBlocks.blockedId,user.id)))).limit(1);
     if (blocked) return null;
-    const [other] = await database.select({ id: users.id, username: users.username, displayName: users.displayName, avatarUrl: users.avatarUrl, presence: users.presence }).from(users).where(eq(users.id, otherMember.userId)).limit(1);
+    const [other] = await database.select({ id: users.id, username: users.username, displayName: users.displayName, avatarUrl: users.avatarUrl, presence: users.presence, globalXp:users.globalXp }).from(users).where(eq(users.id, otherMember.userId)).limit(1);
     const [lastMessageRow] = await database.select({ text: directMessages.text, createdAt: directMessages.createdAt }).from(directMessages).where(and(eq(directMessages.conversationId, id), isNull(directMessages.deletedAt))).orderBy(desc(directMessages.createdAt)).limit(1);
     const lastMessage = lastMessageRow ? { text: directMessagePreview(lastMessageRow.text), createdAt: lastMessageRow.createdAt } : null;
     const [counter] = await database.select({ count: sql<number>`count(*)::int` }).from(directMessages).where(and(eq(directMessages.conversationId, id), eq(directMessages.receiverId, user.id), isNull(directMessages.readAt), isNull(directMessages.deletedAt)));
-    return { id, other, lastMessage: lastMessage ?? null, unread: counter?.count ?? 0 };
+    return { id, other:{...other,globalLevel:levelFromXp(other.globalXp)}, lastMessage: lastMessage ?? null, unread: counter?.count ?? 0 };
   }));
   const clanTags=await clanTagsForUsers(conversations.map(item=>item?.other?.id).filter((id):id is string=>Boolean(id)));
-  return NextResponse.json({ conversations: conversations.filter(Boolean).map(item=>({...item!,other:{...item!.other,clan:clanTags.get(item!.other.id)??null}})), unread: conversations.reduce((sum, item) => sum + (item?.unread ?? 0), 0) });
+  const presentation=await presentationForUsers(conversations.map(item=>item?.other?.id).filter((id):id is string=>Boolean(id)));
+  return NextResponse.json({ conversations: conversations.filter(Boolean).map(item=>({...item!,other:{...item!.other,clan:clanTags.get(item!.other.id)??null,cosmetics:presentation.get(item!.other.id)?.cosmetics??{},badges:presentation.get(item!.other.id)?.badges??[]}})), unread: conversations.reduce((sum, item) => sum + (item?.unread ?? 0), 0) });
 }
 
 export async function POST(request: Request) {

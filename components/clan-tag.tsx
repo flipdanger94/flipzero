@@ -1,8 +1,8 @@
 "use client";
-import { Crown, Flame, Shield, Skull, Star, Swords, Zap } from "lucide-react";
+import { Crown, Flame, MoonStar, Orbit, Shield, Skull, Star, Swords, Trophy, Zap } from "lucide-react";
 
 export type ClanTagData={id:string;name:string;tag:string;tagColor:string;tagIcon:string;level?:number;rank?:number};
-const icons={crown:Crown,flame:Flame,shield:Shield,skull:Skull,star:Star,swords:Swords,zap:Zap};
+const icons={crown:Crown,flame:Flame,shield:Shield,skull:Skull,star:Star,swords:Swords,zap:Zap,orbit:Orbit,moon:MoonStar,laurel:Trophy};
 export function ClanTag({clan,details=false,preview=false}:{clan:ClanTagData|null|undefined;details?:boolean;preview?:boolean}){
   if(!clan)return null;
   const Icon=icons[clan.tagIcon as keyof typeof icons]??Shield;

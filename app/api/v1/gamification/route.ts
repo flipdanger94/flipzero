@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { getDatabase } from "@/db/client";
 import { achievementDefinitions, members, pathProgress, profileCosmetics, userAchievements, users } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
+import { getSuperFlipCapabilities } from "@/lib/superflip";
 import { levelProgress, PATH_META, PATHS } from "@/lib/gamification";
 
 export async function GET(request: Request) {
@@ -44,7 +45,8 @@ export async function PATCH(request: Request) {
     if (!current) return NextResponse.json({ code: "LOCKED", message: "Сначала разблокируйте достижение." }, { status: 409 });
     if (!current.isShowcased) {
       const [{ count }] = await database.select({ count: sql<number>`count(*)::int` }).from(userAchievements).where(and(eq(userAchievements.userId, user.id), eq(userAchievements.isShowcased, true)));
-      if (count >= 5) return NextResponse.json({ code: "SHOWCASE_FULL", message: "На витрине можно закрепить до 5 достижений." }, { status: 409 });
+      const limit=(await getSuperFlipCapabilities(user.id)).active?5:3;
+      if (count >= limit) return NextResponse.json({ code: "SHOWCASE_FULL", message: `На витрине можно закрепить до ${limit} достижений.` }, { status: 409 });
     }
     await database.update(userAchievements).set({ isShowcased: !current.isShowcased, updatedAt: new Date() }).where(and(eq(userAchievements.userId, user.id), eq(userAchievements.achievementId, achievementId)));
     return NextResponse.json({ isShowcased: !current.isShowcased });

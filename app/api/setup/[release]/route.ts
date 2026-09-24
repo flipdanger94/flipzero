@@ -28,6 +28,11 @@ const releases: Record<string, { migrationUrl: URL; title: string; check: string
   "release-0019": { migrationUrl: new URL("../../../../drizzle/0018_soundboard.sql", import.meta.url), title: "Звуковая панель", check: "SELECT to_regclass('public.space_sounds') IS NOT NULL AS applied" },
   "release-0020": { migrationUrl: new URL("../../../../drizzle/0019_clans.sql", import.meta.url), title: "Кланы", check: "SELECT (to_regclass('public.clans') IS NOT NULL AND to_regclass('public.clan_members') IS NOT NULL AND to_regclass('public.clan_requests') IS NOT NULL AND to_regclass('public.clan_messages') IS NOT NULL) AS applied" },
   "release-0021": { migrationUrl: new URL("../../../../drizzle/0020_clan_progress.sql", import.meta.url), title: "Прогресс кланов", check: "SELECT EXISTS(SELECT 1 FROM information_schema.columns WHERE table_name='clan_members' AND column_name='contribution_xp') AS applied" },
+  "release-0022": { migrationUrl: new URL("../../../../drizzle/0021_clan_xp_backfill.sql", import.meta.url), title: "История XP кланов", check: "SELECT EXISTS(SELECT 1 FROM information_schema.tables WHERE table_name='clan_xp_backfill') AS applied" },
+  "release-0023": { migrationUrl: new URL("../../../../drizzle/0022_economy.sql", import.meta.url), title: "Экономика и магазин", check: "SELECT to_regclass('public.user_wallets') IS NOT NULL AS applied" },
+  "release-0024": { migrationUrl: new URL("../../../../drizzle/0023_clan_governance.sql", import.meta.url), title: "Клановые сезоны и казна", check: "SELECT to_regclass('public.clan_events') IS NOT NULL AS applied" },
+  "release-0025": { migrationUrl: new URL("../../../../drizzle/0024_social_world.sql", import.meta.url), title: "Профили и истории", check: "SELECT to_regclass('public.user_stories') IS NOT NULL AS applied" },
+  "release-0026": { migrationUrl: new URL("../../../../drizzle/0025_personalization.sql", import.meta.url), title: "Темы и тихие часы", check: "SELECT to_regclass('public.user_preferences') IS NOT NULL AS applied" },
 
 };
 

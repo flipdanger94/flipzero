@@ -1,7 +1,8 @@
+import { randomUUID } from "node:crypto";
 import { and, eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { getDatabase } from "@/db/client";
-import { channels, users, voiceStates } from "@/db/schema";
+import { channels, users, voiceStates, xpEvents } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
 import { getChannelPermissions } from "@/lib/space-permissions";
 import { hasPermission, Permission } from "@/lib/permissions";
@@ -49,6 +50,9 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ ch
 export async function DELETE(request: Request, { params }: { params: Promise<{ channelId: string }> }) {
   if (!isTrustedMutationRequest(request)) return NextResponse.json({ code: "UNTRUSTED_ORIGIN", message: "Запрос отклонён." }, { status: 403 });
   const { channelId } = await params; const access = await accessVoice(channelId); if ("error" in access) return access.error;
-  await access.db.delete(voiceStates).where(and(eq(voiceStates.userId, access.user.id), eq(voiceStates.channelId, channelId)));
+  await access.db.transaction(async tx=>{
+    const [session]=await tx.delete(voiceStates).where(and(eq(voiceStates.userId, access.user.id), eq(voiceStates.channelId, channelId))).returning({joinedAt:voiceStates.joinedAt});
+    if(session){const minutes=Math.min(120,Math.floor((Date.now()-session.joinedAt.getTime())/60_000));if(minutes>0)await tx.insert(xpEvents).values({id:randomUUID(),userId:access.user.id,spaceId:access.state.spaceId,source:"voice_minute",amount:minutes,idempotencyKey:`voice:${access.user.id}:${channelId}:${session.joinedAt.toISOString()}`}).onConflictDoNothing()}
+  });
   return NextResponse.json({ connected: false });
 }

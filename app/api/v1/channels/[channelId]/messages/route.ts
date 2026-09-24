@@ -1,10 +1,12 @@
 import { randomUUID } from "node:crypto";
-import { and, asc, desc, eq, gt, ilike, inArray, isNull, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gt, ilike, inArray, isNull, lt, or, sql } from "drizzle-orm";
 import { after, NextResponse } from "next/server";
 import { getDatabase } from "@/db/client";
 import { clanTagsForUsers } from "@/lib/clan-tags";
 import { channels, channelNotificationSettings, members, messages, moderationCases, moderationFlags, reactions, spaces, users } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
+import { levelFromXp } from "@/lib/gamification";
+import { presentationForUsers } from "@/lib/presentation";
 import { dispatchDeveloperEvent } from "@/lib/developer-webhooks";
 import { assessMessageSafety } from "@/lib/trust-safety";
 import { getChannelPermissions, hasPermission, SpacePermission } from "@/lib/space-permissions";
@@ -26,15 +28,21 @@ async function accessChannel(channelId: string) {
 export async function GET(request: Request, { params }: { params: Promise<{ channelId: string }> }) {
   const { channelId } = await params; const access = await accessChannel(channelId); if ("error" in access) return access.error;
   const url = new URL(request.url); const query = url.searchParams.get("q")?.trim(); const pinned = url.searchParams.get("pinned") === "1"; const threadRootId = url.searchParams.get("threadRootId");
+  const before = url.searchParams.get("before");
+  const [beforeDate,beforeId]=before?.split("|")??[];
+  if (before && (!Number.isFinite(Date.parse(beforeDate)) || !/Z$/.test(beforeDate) || !/^[0-9a-f-]{36}$/i.test(beforeId??""))) return NextResponse.json({ message: "Некорректный курсор истории." }, { status: 400 });
   const conditions = [eq(messages.channelId, channelId), isNull(messages.deletedAt)];
+  if (before && !query && !threadRootId) conditions.push(or(lt(messages.createdAt, new Date(beforeDate)),and(eq(messages.createdAt,new Date(beforeDate)),lt(messages.id,beforeId)))!);
   if (query) conditions.push(or(ilike(messages.content, `%${query}%`), ilike(users.displayName, `%${query}%`))!);
   if (pinned) conditions.push(sql`${messages.pinnedAt} IS NOT NULL`);
   if (threadRootId) conditions.push(eq(messages.threadRootId, threadRootId)); else conditions.push(isNull(messages.threadRootId));
-  const rows = await access.database.select({ id: messages.id, content: messages.content, attachments: messages.attachments, replyToId: messages.replyToId, threadRootId: messages.threadRootId, editedAt: messages.editedAt, pinnedAt: messages.pinnedAt, createdAt: messages.createdAt, authorId: users.id, displayName: users.displayName, username: users.username, avatarUrl: users.avatarUrl }).from(messages).innerJoin(users, eq(users.id, messages.authorId)).where(and(...conditions)).orderBy(threadRootId ? asc(messages.createdAt) : desc(messages.createdAt)).limit(100);
+  const rows = await access.database.select({ id: messages.id, content: messages.content, attachments: messages.attachments, replyToId: messages.replyToId, threadRootId: messages.threadRootId, editedAt: messages.editedAt, pinnedAt: messages.pinnedAt, createdAt: messages.createdAt, authorId: users.id, displayName: users.displayName, username: users.username, avatarUrl: users.avatarUrl, globalXp: users.globalXp }).from(messages).innerJoin(users, eq(users.id, messages.authorId)).where(and(...conditions)).orderBy(threadRootId ? asc(messages.createdAt) : desc(messages.createdAt), threadRootId ? asc(messages.id) : desc(messages.id)).limit(51);
   const clanTags=await clanTagsForUsers(rows.map(row=>row.authorId));
+  const presentation=await presentationForUsers(rows.map(row=>row.authorId));
   const ids = rows.map((row) => row.id); const reactionRows = ids.length ? await access.database.select().from(reactions).where(inArray(reactions.messageId, ids)) : [];
   return NextResponse.json({
-    messages: (threadRootId ? rows : rows.reverse()).map((row) => ({ ...row, clan:clanTags.get(row.authorId)??null, reactions: reactionRows.filter((item) => item.messageId === row.id) })),
+    messages: (threadRootId ? rows.slice(0,50) : rows.slice(0,50).reverse()).map(({globalXp,...row}) => ({ ...row, globalXp, globalLevel:levelFromXp(globalXp), clan:clanTags.get(row.authorId)??null, cosmetics:presentation.get(row.authorId)?.cosmetics??{},badges:presentation.get(row.authorId)?.badges??[], reactions: reactionRows.filter((item) => item.messageId === row.id) })),
+    nextCursor: !query && !threadRootId && rows.length > 50 ? `${rows[49].createdAt.toISOString()}|${rows[49].id}` : null,
     permissions: {
       canSend: (access.channel.kind !== "announcement" || access.channel.ownerId === access.user.id) && (access.owner || hasPermission(access.permissions, SpacePermission.SendMessages)),
       canReact: access.owner || hasPermission(access.permissions, SpacePermission.AddReactions),

@@ -6,6 +6,7 @@ import { clanMembers, clanRequests, clans, notifications, users } from "@/db/sch
 import { getCurrentUser } from "@/lib/auth";
 import { CLAN_MEMBER_LIMIT, canModerateClan, getClanMembership, getClanRole } from "@/lib/clans";
 import { isTrustedMutationRequest } from "@/lib/security-controls";
+import { removeClanSeasonContribution } from "@/lib/clan-season";
 
 async function addMemberAtomically(clanId:string,userId:string,role:"member"|"officer"="member") {
   const db=getDatabase();
@@ -14,6 +15,8 @@ async function addMemberAtomically(clanId:string,userId:string,role:"member"|"of
       .where(and(eq(clans.id,clanId),lt(clans.memberCount,CLAN_MEMBER_LIMIT))).returning({id:clans.id});
     if(!slot) throw new Error("CLAN_FULL");
     await tx.insert(clanMembers).values({clanId,userId,role});
+    const [clan]=await tx.select({welcomeText:clans.welcomeText,leaderId:clans.leaderId}).from(clans).where(eq(clans.id,clanId)).limit(1);
+    if(clan)await tx.insert(notifications).values({id:randomUUID(),userId,actorId:clan.leaderId,type:"clan_welcome",title:"Добро пожаловать в клан",body:clan.welcomeText,entityType:"clan",entityId:clanId});
     await tx.update(clanRequests).set({status:"cancelled",respondedAt:new Date()}).where(and(eq(clanRequests.userId,userId),eq(clanRequests.status,"pending")));
   });
 }
@@ -87,6 +90,7 @@ export async function POST(request:Request,{params}:{params:Promise<{clanId:stri
         const [slot]=await tx.update(clans).set({memberCount:sql`${clans.memberCount}+1`,updatedAt:new Date()}).where(and(eq(clans.id,clanId),lt(clans.memberCount,CLAN_MEMBER_LIMIT))).returning({id:clans.id});
         if(!slot) throw new Error("CLAN_FULL");
         await tx.insert(clanMembers).values({clanId,userId:user.id,role:"member"});
+        await tx.insert(notifications).values({id:randomUUID(),userId:user.id,actorId:clan.leaderId,type:"clan_welcome",title:"Добро пожаловать в клан",body:clan.welcomeText,entityType:"clan",entityId:clanId});
         await tx.update(clanRequests).set({status:"cancelled",respondedAt:new Date()}).where(and(eq(clanRequests.userId,user.id),eq(clanRequests.status,"pending")));
         await tx.update(clanRequests).set({status:"accepted",respondedAt:new Date()}).where(eq(clanRequests.id,requestId));
       });
@@ -121,6 +125,7 @@ export async function PATCH(request:Request,{params}:{params:Promise<{clanId:str
     await db.transaction(async(tx)=>{
       const [removed]=await tx.delete(clanMembers).where(and(eq(clanMembers.clanId,clanId),eq(clanMembers.userId,targetUserId))).returning({xp:clanMembers.contributionXp});
       if(!removed) throw new Error("MEMBER_NOT_FOUND");
+      await removeClanSeasonContribution(tx,clanId,targetUserId);
       await tx.update(clans).set({memberCount:sql`greatest(${clans.memberCount}-1,0)`,xp:sql`${clans.xp}-${removed.xp}`,updatedAt:new Date()}).where(eq(clans.id,clanId));
       await tx.insert(notifications).values({id:randomUUID(),userId:targetUserId,actorId:user.id,type:"clan_kicked",title:"Вы исключены из клана",body:"Вы больше не состоите в клане.",entityType:"clan",entityId:clanId});
     });
@@ -157,6 +162,7 @@ export async function DELETE(request:Request,{params}:{params:Promise<{clanId:st
   await db.transaction(async(tx)=>{
     const [removed]=await tx.delete(clanMembers).where(and(eq(clanMembers.clanId,clanId),eq(clanMembers.userId,user.id))).returning({xp:clanMembers.contributionXp});
     if(!removed) throw new Error("MEMBER_NOT_FOUND");
+    await removeClanSeasonContribution(tx,clanId,user.id);
     await tx.update(clans).set({memberCount:sql`greatest(${clans.memberCount}-1,0)`,xp:sql`${clans.xp}-${removed.xp}`,updatedAt:new Date()}).where(eq(clans.id,clanId));
   });
   return NextResponse.json({ok:true});

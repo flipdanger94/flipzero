@@ -3,8 +3,10 @@ import { randomUUID } from "node:crypto";
 import { and, desc, eq, or } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { getDatabase } from "@/db/client";
-import { friendRequests, friends, notifications, userBlocks, userPrivacySettings, users } from "@/db/schema";
+import { friendRequests, friends, notifications, userBlocks, userPrivacySettings, users, xpEvents } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
+import { levelFromXp } from "@/lib/gamification";
+import { presentationForUsers } from "@/lib/presentation";
 
 export async function GET() {
   const user = await getCurrentUser(); if (!user) return NextResponse.json({ message: "Требуется вход." }, { status: 401 });
@@ -14,11 +16,12 @@ export async function GET() {
   const links = (await database.select().from(friends).where(eq(friends.userId, user.id))).filter(link=>!blockedIds.has(link.friendId));
   const pending = (await database.select().from(friendRequests).where(and(eq(friendRequests.toId, user.id), eq(friendRequests.status, "pending"))).orderBy(desc(friendRequests.createdAt))).filter(item=>!blockedIds.has(item.fromId));
   const outgoingPending = (await database.select().from(friendRequests).where(and(eq(friendRequests.fromId, user.id), eq(friendRequests.status, "pending"))).orderBy(desc(friendRequests.createdAt))).filter(item=>!blockedIds.has(item.toId));
-  const friendUsers = await Promise.all(links.map(async (link) => (await database.select({ id: users.id, username: users.username, displayName: users.displayName, avatarUrl: users.avatarUrl, presence: users.presence }).from(users).where(eq(users.id, link.friendId)).limit(1))[0]));
+  const friendUsers = await Promise.all(links.map(async (link) => (await database.select({ id: users.id, username: users.username, displayName: users.displayName, avatarUrl: users.avatarUrl, presence: users.presence, globalXp:users.globalXp }).from(users).where(eq(users.id, link.friendId)).limit(1))[0]));
   const requests = await Promise.all(pending.map(async (request) => ({ ...request, from: (await database.select({ id: users.id, username: users.username, displayName: users.displayName, avatarUrl: users.avatarUrl, presence: users.presence }).from(users).where(eq(users.id, request.fromId)).limit(1))[0] })));
   const outgoingRequests = await Promise.all(outgoingPending.map(async (request) => ({ ...request, to: (await database.select({ id: users.id, username: users.username, displayName: users.displayName, avatarUrl: users.avatarUrl, presence: users.presence }).from(users).where(eq(users.id, request.toId)).limit(1))[0] })));
   const tags=await clanTagsForUsers([...friendUsers.map(item=>item?.id).filter((id):id is string=>Boolean(id)),...requests.map(item=>item.from?.id).filter((id):id is string=>Boolean(id)),...outgoingRequests.map(item=>item.to?.id).filter((id):id is string=>Boolean(id))]);
-  return NextResponse.json({ friends: friendUsers.filter(Boolean).map(item=>({...item,clan:tags.get(item.id)??null})), requests:requests.map(item=>({...item,from:{...item.from,clan:tags.get(item.from?.id)??null}})), outgoingRequests: outgoingRequests.filter((item)=>Boolean(item.to)).map(item=>({...item,to:{...item.to,clan:tags.get(item.to.id)??null}})), unreadRequests: requests.length });
+  const presentation=await presentationForUsers(friendUsers.map(item=>item?.id).filter((id):id is string=>Boolean(id)));
+  return NextResponse.json({ friends: friendUsers.filter(Boolean).map(item=>({...item,globalLevel:levelFromXp(item.globalXp),clan:tags.get(item.id)??null,cosmetics:presentation.get(item.id)?.cosmetics??{},badges:presentation.get(item.id)?.badges??[]})), requests:requests.map(item=>({...item,from:{...item.from,clan:tags.get(item.from?.id)??null}})), outgoingRequests: outgoingRequests.filter((item)=>Boolean(item.to)).map(item=>({...item,to:{...item.to,clan:tags.get(item.to.id)??null}})), unreadRequests: requests.length });
 }
 
 export async function POST(request: Request) {
@@ -40,8 +43,10 @@ export async function POST(request: Request) {
 
 async function acceptRequest(database: ReturnType<typeof getDatabase>, requestId: string, currentUserId: string, friendId: string) {
   await database.transaction(async (tx) => {
-    await tx.update(friendRequests).set({ status: "accepted", respondedAt: new Date() }).where(eq(friendRequests.id, requestId));
+    const [accepted]=await tx.update(friendRequests).set({ status: "accepted", respondedAt: new Date() }).where(and(eq(friendRequests.id, requestId),eq(friendRequests.status,"pending"))).returning({id:friendRequests.id});
+    if(!accepted)return;
     await tx.insert(friends).values([{ userId: currentUserId, friendId }, { userId: friendId, friendId: currentUserId }]).onConflictDoNothing();
+    await tx.insert(xpEvents).values({id:randomUUID(),userId:friendId,source:"invite_joined",amount:0,idempotencyKey:`friend:${friendId}:${requestId}`}).onConflictDoNothing();
     const [actor]=await tx.select({username:users.username}).from(users).where(eq(users.id,currentUserId)).limit(1);
     await tx.insert(notifications).values({id:randomUUID(),userId:friendId,actorId:currentUserId,type:"friend_accepted",title:"Заявка в друзья принята",body:actor?`@${actor.username} теперь у вас в друзьях.`:null,entityType:"user",entityId:currentUserId});
   });

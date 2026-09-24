@@ -1,0 +1,18 @@
+ALTER TABLE clans ADD COLUMN IF NOT EXISTS treasury bigint NOT NULL DEFAULT 0 CHECK(treasury>=0);
+ALTER TABLE clans ADD COLUMN IF NOT EXISTS welcome_text text NOT NULL DEFAULT 'Добро пожаловать в клан!';
+ALTER TABLE clans ADD COLUMN IF NOT EXISTS officer_treasury_access boolean NOT NULL DEFAULT false;
+CREATE TABLE IF NOT EXISTS clan_season_scores (clan_id text NOT NULL REFERENCES clans(id) ON DELETE CASCADE,season_key text NOT NULL,xp bigint NOT NULL DEFAULT 0,closed_at timestamptz,PRIMARY KEY(clan_id,season_key));
+CREATE TABLE IF NOT EXISTS clan_season_contributions (clan_id text NOT NULL REFERENCES clans(id) ON DELETE CASCADE,user_id text NOT NULL REFERENCES users(id) ON DELETE CASCADE,season_key text NOT NULL,xp bigint NOT NULL DEFAULT 0,PRIMARY KEY(clan_id,user_id,season_key));
+CREATE TABLE IF NOT EXISTS clan_season_awards (clan_id text NOT NULL REFERENCES clans(id) ON DELETE CASCADE,user_id text NOT NULL REFERENCES users(id) ON DELETE CASCADE,season_key text NOT NULL,rank integer NOT NULL,coins integer NOT NULL,awarded_at timestamptz NOT NULL DEFAULT now(),PRIMARY KEY(clan_id,user_id,season_key));
+CREATE TABLE IF NOT EXISTS clan_treasury_entries(id text PRIMARY KEY,clan_id text NOT NULL REFERENCES clans(id) ON DELETE CASCADE,user_id text REFERENCES users(id) ON DELETE SET NULL,amount integer NOT NULL CHECK(amount<>0),reason text NOT NULL,idempotency_key text NOT NULL UNIQUE,created_at timestamptz NOT NULL DEFAULT now());
+CREATE INDEX IF NOT EXISTS clan_treasury_date_idx ON clan_treasury_entries(clan_id,created_at DESC);
+CREATE TABLE IF NOT EXISTS clan_upgrades(clan_id text NOT NULL REFERENCES clans(id) ON DELETE CASCADE,upgrade_key text NOT NULL,level integer NOT NULL DEFAULT 0,PRIMARY KEY(clan_id,upgrade_key));
+CREATE TABLE IF NOT EXISTS clan_events(id text PRIMARY KEY,clan_id text NOT NULL REFERENCES clans(id) ON DELETE CASCADE,creator_id text NOT NULL REFERENCES users(id) ON DELETE CASCADE,title text NOT NULL,description text NOT NULL,start_at timestamptz NOT NULL,capacity integer NOT NULL CHECK(capacity BETWEEN 2 AND 50),reward_coins integer NOT NULL DEFAULT 0,completed_at timestamptz,reminded_at timestamptz,created_at timestamptz NOT NULL DEFAULT now());
+CREATE INDEX IF NOT EXISTS clan_events_start_idx ON clan_events(clan_id,start_at);
+CREATE TABLE IF NOT EXISTS clan_event_rsvps(event_id text NOT NULL REFERENCES clan_events(id) ON DELETE CASCADE,user_id text NOT NULL REFERENCES users(id) ON DELETE CASCADE,status text NOT NULL CHECK(status IN('going','maybe','declined')),created_at timestamptz NOT NULL DEFAULT now(),PRIMARY KEY(event_id,user_id));
+CREATE TABLE IF NOT EXISTS clan_announcements(id text PRIMARY KEY,clan_id text NOT NULL REFERENCES clans(id) ON DELETE CASCADE,author_id text NOT NULL REFERENCES users(id) ON DELETE CASCADE,content text NOT NULL,created_at timestamptz NOT NULL DEFAULT now());
+CREATE INDEX IF NOT EXISTS clan_announcements_date_idx ON clan_announcements(clan_id,created_at DESC);
+ALTER TABLE clans ADD COLUMN IF NOT EXISTS custom_roles jsonb NOT NULL DEFAULT '[]'::jsonb;
+ALTER TABLE clans ADD COLUMN IF NOT EXISTS custom_emoji jsonb NOT NULL DEFAULT '[]'::jsonb;
+ALTER TABLE clans ADD COLUMN IF NOT EXISTS banner_theme text NOT NULL DEFAULT 'default';
+ALTER TABLE clan_members ADD COLUMN IF NOT EXISTS custom_role_id text;
