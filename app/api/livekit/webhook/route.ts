@@ -5,6 +5,7 @@ import { TrackSource, WebhookReceiver } from "livekit-server-sdk";
 import { getDatabaseForSpace } from "@/db/topology";
 import { livekitWebhookEvents, voiceStates } from "@/db/schema";
 import { isScreenSource, parseSpaceVoiceRoom } from "@/lib/livekit-voice";
+import { awardVoiceSessionXp } from "@/lib/xp";
 
 function receiver() {
   const key = process.env.LIVEKIT_API_KEY;
@@ -59,7 +60,10 @@ export async function POST(request: Request) {
         },
       });
     } else if (event.event === "participant_left" && participantId) {
-      await tx.delete(voiceStates).where(and(eq(voiceStates.userId, participantId), eq(voiceStates.channelId, parsed.channelId)));
+      const [session] = await tx.delete(voiceStates)
+        .where(and(eq(voiceStates.userId, participantId), eq(voiceStates.channelId, parsed.channelId)))
+        .returning({ joinedAt: voiceStates.joinedAt, lastHeartbeatAt: voiceStates.lastHeartbeatAt });
+      return { handled: true as const, session, participantId };
     } else if ((event.event === "track_published" || event.event === "track_unpublished") && participantId) {
       const source = event.track?.source as TrackSource | undefined;
       if (isScreenSource(source)) {
@@ -75,8 +79,22 @@ export async function POST(request: Request) {
     } else if (event.event === "room_finished") {
       await tx.delete(voiceStates).where(and(eq(voiceStates.channelId, parsed.channelId), eq(voiceStates.breakout, parsed.breakout)));
     }
-    return true;
+    return { handled: true as const, session: null, participantId: null };
   });
 
-  return NextResponse.json({ ok: true, duplicate: !handled });
+  if (!handled) return NextResponse.json({ ok: true, duplicate: true });
+  if (handled.session && handled.participantId) {
+    const confirmedUntil = handled.session.lastHeartbeatAt > handled.session.joinedAt
+      ? handled.session.lastHeartbeatAt
+      : new Date();
+    await awardVoiceSessionXp({
+      userId: handled.participantId,
+      channelId: parsed.channelId,
+      spaceId: parsed.spaceId,
+      joinedAt: handled.session.joinedAt,
+      confirmedUntil,
+    }).catch(() => undefined);
+  }
+
+  return NextResponse.json({ ok: true, duplicate: false });
 }
