@@ -3,7 +3,7 @@ import { randomUUID } from "node:crypto";
 import { and, desc, eq, or } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { getDatabase } from "@/db/client";
-import { friendRequests, friends, notifications, userBlocks, userPrivacySettings, users, xpEvents } from "@/db/schema";
+import { friendRequests, friends, notifications, userBlocks, userPrivacySettings, users } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
 import { levelFromXp } from "@/lib/gamification";
 import { presentationForUsers } from "@/lib/presentation";
@@ -46,7 +46,6 @@ async function acceptRequest(database: ReturnType<typeof getDatabase>, requestId
     const [accepted]=await tx.update(friendRequests).set({ status: "accepted", respondedAt: new Date() }).where(and(eq(friendRequests.id, requestId),eq(friendRequests.status,"pending"))).returning({id:friendRequests.id});
     if(!accepted)return;
     await tx.insert(friends).values([{ userId: currentUserId, friendId }, { userId: friendId, friendId: currentUserId }]).onConflictDoNothing();
-    await tx.insert(xpEvents).values({id:randomUUID(),userId:friendId,source:"invite_joined",amount:0,idempotencyKey:`friend:${friendId}:${requestId}`}).onConflictDoNothing();
     const [actor]=await tx.select({username:users.username}).from(users).where(eq(users.id,currentUserId)).limit(1);
     await tx.insert(notifications).values({id:randomUUID(),userId:friendId,actorId:currentUserId,type:"friend_accepted",title:"Заявка в друзья принята",body:actor?`@${actor.username} теперь у вас в друзьях.`:null,entityType:"user",entityId:currentUserId});
   });
