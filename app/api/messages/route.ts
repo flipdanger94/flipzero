@@ -82,7 +82,7 @@ export async function POST(request: Request) {
   const attachments = normalizeDirectAttachments(body?.attachments);
   if (rawText.length > access.capabilities.directMessageLimit) return NextResponse.json({
     code: "MESSAGE_TOO_LONG",
-    message: `Максимальная длина личного сообщения — ${access.capabilities.directMessageLimit} символов${access.active ? " с SuperFlip." : ". SuperFlip увеличивает лимит до 4000."}`,
+    message: `Максимальная длина личного сообщения — ${access.capabilities.directMessageLimit} символов.`,
     limit: access.capabilities.directMessageLimit,
   }, { status: 400 });
   const text = rawText ? normalizeDirectMessage(rawText, access.capabilities.directMessageLimit) : "";
