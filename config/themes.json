@@ -1,5 +1,23 @@
 [
- {"id":"midnight","label":"Классическая","access":"free","surface":"#101622","accent":"#8f70ff"},
- {"id":"deep-space","label":"Глубокий космос","access":"shop:theme-midnight","surface":"#0c1020","accent":"#6f8bff"},
- {"id":"aurora","label":"Полярное сияние","access":"superflip","surface":"#111a24","accent":"#4dc9b2"}
+  {
+    "id": "midnight",
+    "label": "Классическая",
+    "access": "free",
+    "surface": "#0b1122",
+    "accent": "#8f70ff"
+  },
+  {
+    "id": "deep-space",
+    "label": "Глубокий космос",
+    "access": "shop:theme-midnight",
+    "surface": "#07112a",
+    "accent": "#6f8bff"
+  },
+  {
+    "id": "aurora",
+    "label": "Полярное сияние",
+    "access": "superflip",
+    "surface": "#0b1b17",
+    "accent": "#4dc9b2"
+  }
 ]
