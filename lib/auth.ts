@@ -3,9 +3,9 @@ import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { cookies, headers } from "next/headers";
 import { and, eq, gt } from "drizzle-orm";
 import { getDatabase } from "@/db/client";
-import { sessions, users } from "@/db/schema";
+import { sessions, userProgress, users } from "@/db/schema";
 import { SESSION_COOKIE } from "@/lib/auth-constants";
-import { levelFromXp } from "@/lib/gamification";
+import { levelFromXp, totalXpForLevel } from "@/lib/gamification";
 
 export { SESSION_COOKIE } from "@/lib/auth-constants";
 const SESSION_MAX_AGE = 60 * 60 * 24 * 30;
@@ -28,7 +28,10 @@ export async function deleteSession() {
 export async function getCurrentUser() {
   const token = (await cookies()).get(SESSION_COOKIE)?.value;
   if (!token) return null;
-  const [result] = await getDatabase().select({ id: users.id, email: users.email, username: users.username, displayName: users.displayName, bio: users.bio, avatarUrl: users.avatarUrl, bannerUrl: users.bannerUrl, accentColor: users.accentColor, globalLevel: users.globalLevel, globalXp: users.globalXp, platformRole: users.platformRole, bannedAt: users.bannedAt, onboardingStep: users.onboardingStep, onboardingCompleted: users.onboardingCompleted, totpEnabled: users.totpEnabled }).from(sessions).innerJoin(users, eq(sessions.userId, users.id)).where(and(eq(sessions.tokenHash, hashValue(token)), gt(sessions.expiresAt, new Date()))).limit(1);
+  const [result] = await getDatabase().select({ id: users.id, email: users.email, username: users.username, displayName: users.displayName, bio: users.bio, avatarUrl: users.avatarUrl, bannerUrl: users.bannerUrl, accentColor: users.accentColor, legacyLevel: users.globalLevel, legacyXp: users.globalXp, progressLevel: userProgress.level, progressXp: userProgress.totalXp, platformRole: users.platformRole, bannedAt: users.bannedAt, onboardingStep: users.onboardingStep, onboardingCompleted: users.onboardingCompleted, totpEnabled: users.totpEnabled }).from(sessions).innerJoin(users, eq(sessions.userId, users.id)).leftJoin(userProgress, eq(userProgress.userId, users.id)).where(and(eq(sessions.tokenHash, hashValue(token)), gt(sessions.expiresAt, new Date()))).limit(1);
   if (!result || result.bannedAt) return null;
-  return { ...result, globalLevel: levelFromXp(result.globalXp) };
+  const globalXp = result.progressXp ?? result.legacyXp;
+  const globalLevel = result.progressLevel ?? levelFromXp(globalXp);
+  const { progressXp: _progressXp, progressLevel: _progressLevel, legacyXp: _legacyXp, legacyLevel: _legacyLevel, ...account } = result;
+  return { ...account, globalXp, globalLevel, nextLevelXp: globalLevel >= 100 ? null : totalXpForLevel(globalLevel + 1) };
 }
