@@ -263,6 +263,7 @@ export const channels = pgTable("channels", {
   position: integer("position").default(0).notNull(),
   isNsfw: boolean("is_nsfw").default(false).notNull(),
   slowmodeSeconds: integer("slowmode_seconds").default(0).notNull(),
+  userLimit: integer("user_limit"),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 }, (table) => [index("channels_space_position_idx").on(table.spaceId, table.position)]);
 
