@@ -5,18 +5,18 @@ describe("protected route boundaries", () => {
   it("protects setup and oauth routes", () => {
     expect(PROTECTED_ROUTE_PREFIXES).toContain("/setup");
     expect(PROTECTED_ROUTE_PREFIXES).toContain("/oauth");
-
     expect(isProtectedRoute("/setup")).toBe(true);
     expect(isProtectedRoute("/setup/release-0015")).toBe(true);
     expect(isProtectedRoute("/oauth/authorize")).toBe(true);
     expect(isProtectedRoute("/oauth/install")).toBe(true);
-    it("exempts only the signed LiveKit webhook from browser origin checks", () => {
+  });
+
+  it("exempts only the signed LiveKit webhook from browser origin checks", () => {
     expect(MUTATION_ORIGIN_EXEMPT_PATHS).toEqual(["/api/livekit/webhook"]);
     expect(isMutationOriginExempt("/api/livekit/webhook")).toBe(true);
     expect(isMutationOriginExempt("/api/livekit/webhook/other")).toBe(false);
     expect(isMutationOriginExempt("/api/v1/channels/voice/voice")).toBe(false);
   });
-});
 
   it("does not overmatch similarly named public paths", () => {
     expect(isProtectedRoute("/setups")).toBe(false);
