@@ -540,7 +540,7 @@ function Channel({
     <button className="channel" type="button" aria-label={`${channelKindLabels[kind] ?? "Канал"} ${label}`} title={`${channelKindLabels[kind] ?? "Канал"} · ${label}`} aria-current={active ? "page" : undefined} onClick={() => { if (onSelect) onSelect(); else if (!voice) window.dispatchEvent(new CustomEvent("flipzero:select-channel", { detail: label })); }}>
       <span aria-hidden="true">{icon}</span><strong>{label}</strong>
       {voice && full ? <Lock size={12} className="voice-channel-lock" aria-label="Канал заполнен" /> : null}
-      {voice && normalized.length ? <span className="voice-channel-count" aria-label={typeof userLimit === "number" ? `${normalized.length} из ${userLimit} участников` : `${normalized.length} участников`}>{countLabel}</span> : null}
+      {voice && (normalized.length > 0 || typeof userLimit === "number") ? <span className="voice-channel-count" aria-label={typeof userLimit === "number" ? `${normalized.length} из ${userLimit} участников` : `${normalized.length} участников`}>{countLabel}</span> : null}
       {badge ? <b>{badge}</b> : null}
     </button>
     {onManage ? <button className="channel-manage" aria-label={`Настроить права канала ${label}`} title={`Настроить права канала ${label}`} onClick={onManage}><Settings2 size={14} /></button> : null}
