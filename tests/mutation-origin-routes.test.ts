@@ -62,3 +62,17 @@ describe("Codespaces auth development boundary", () => {
     expect(registerSource).toContain('process.env.NODE_ENV === "production" && !isTrustedMutationRequest(request)');
   });
 });
+
+
+describe("Codespaces auth explicit bypass", () => {
+  it("Codespaces bypass is explicit even if NODE_ENV is production", async () => {
+    const { readFile } = await import("node:fs/promises");
+    const [loginSource, registerSource] = await Promise.all([
+      readFile("app/api/v1/auth/login/route.ts", "utf8"),
+      readFile("app/api/v1/auth/register/route.ts", "utf8"),
+    ]);
+    const guard = 'process.env.CODESPACES !== "true" && process.env.NODE_ENV === "production" && !isTrustedMutationRequest(request)';
+    expect(loginSource).toContain(guard);
+    expect(registerSource).toContain(guard);
+  });
+});
