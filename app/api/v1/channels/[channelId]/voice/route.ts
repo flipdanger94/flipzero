@@ -1,15 +1,15 @@
-import { randomUUID } from "node:crypto";
 import { and, count, eq, sql } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { getDatabase } from "@/db/client";
 import { getDatabaseForSpace } from "@/db/topology";
-import { channels, users, voiceStates, xpEvents } from "@/db/schema";
+import { channels, users, voiceStates } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
 import { getChannelPermissions } from "@/lib/space-permissions";
 import { hasPermission, Permission } from "@/lib/permissions";
 import { isTrustedMutationRequest } from "@/lib/security-controls";
 import { canJoinVoiceChannel } from "@/lib/voice-channel-limit";
 import { VOICE_BREAKOUTS } from "@/lib/livekit-voice";
+import { awardVoiceSessionXp } from "@/lib/xp";
 
 async function accessVoice(channelId: string) {
   const user = await getCurrentUser();
@@ -50,7 +50,18 @@ export async function POST(request: Request, { params }: { params: Promise<{ cha
   const access = await accessVoice(channelId);
   if ("error" in access) return access.error;
   if (new URL(request.url).searchParams.get("leave") === "1") {
-    await access.db.delete(voiceStates).where(and(eq(voiceStates.userId, access.user.id), eq(voiceStates.channelId, channelId)));
+    const [session] = await access.db.delete(voiceStates)
+      .where(and(eq(voiceStates.userId, access.user.id), eq(voiceStates.channelId, channelId)))
+      .returning({ joinedAt: voiceStates.joinedAt, lastHeartbeatAt: voiceStates.lastHeartbeatAt });
+    if (session && Date.now() - session.lastHeartbeatAt.getTime() <= 90_000) {
+      await awardVoiceSessionXp({
+        userId: access.user.id,
+        channelId,
+        spaceId: access.state.spaceId,
+        joinedAt: session.joinedAt,
+        confirmedUntil: session.lastHeartbeatAt,
+      }).catch(() => undefined);
+    }
     return NextResponse.json({ connected: false, beacon: true });
   }
   if (!hasPermission(access.state.permissions, Permission.ConnectVoice)) return NextResponse.json({ code: "FORBIDDEN", message: "Нет права подключаться к голосовому каналу." }, { status: 403 });
@@ -127,21 +138,17 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ c
   const { channelId } = await params;
   const access = await accessVoice(channelId);
   if ("error" in access) return access.error;
-  await access.db.transaction(async (tx) => {
-    const [session] = await tx.delete(voiceStates)
-      .where(and(eq(voiceStates.userId, access.user.id), eq(voiceStates.channelId, channelId)))
-      .returning({ joinedAt: voiceStates.joinedAt });
-    if (session) {
-      const minutes = Math.min(120, Math.floor((Date.now() - session.joinedAt.getTime()) / 60_000));
-      if (minutes > 0) await tx.insert(xpEvents).values({
-        id: randomUUID(),
-        userId: access.user.id,
-        spaceId: access.state.spaceId,
-        source: "voice_minute",
-        amount: minutes,
-        idempotencyKey: `voice:${access.user.id}:${channelId}:${session.joinedAt.toISOString()}`,
-      }).onConflictDoNothing();
-    }
-  });
+  const [session] = await access.db.delete(voiceStates)
+    .where(and(eq(voiceStates.userId, access.user.id), eq(voiceStates.channelId, channelId)))
+    .returning({ joinedAt: voiceStates.joinedAt, lastHeartbeatAt: voiceStates.lastHeartbeatAt });
+  if (session && Date.now() - session.lastHeartbeatAt.getTime() <= 90_000) {
+    await awardVoiceSessionXp({
+      userId: access.user.id,
+      channelId,
+      spaceId: access.state.spaceId,
+      joinedAt: session.joinedAt,
+      confirmedUntil: session.lastHeartbeatAt,
+    }).catch(() => undefined);
+  }
   return NextResponse.json({ connected: false });
 }
