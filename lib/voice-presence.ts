@@ -3,6 +3,9 @@ export type VoicePresence = {
   name: string;
   username?: string | null;
   avatarUrl?: string | null;
+  clanTag?: string | null;
+  clanColor?: string | null;
+  breakout?: "main" | "focus" | "social";
   muted: boolean;
   deafened?: boolean;
   camera: boolean;
@@ -30,6 +33,9 @@ export function normalizeVoicePresence(items: VoicePresence[]): VoicePresence[] 
       name: item.name || previous.name,
       username: item.username ?? previous.username,
       avatarUrl: item.avatarUrl ?? previous.avatarUrl,
+      clanTag: item.clanTag ?? previous.clanTag,
+      clanColor: item.clanColor ?? previous.clanColor,
+      breakout: item.breakout ?? previous.breakout,
       muted: previous.muted && item.muted,
       deafened: Boolean(previous.deafened && item.deafened),
       camera: previous.camera || item.camera,
