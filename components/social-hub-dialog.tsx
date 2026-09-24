@@ -218,7 +218,7 @@ export function SocialHubDialog({ currentUserId, initialTab = "messages", initia
     <aside className="social-nav-rail">
       <div className="social-nav-brand"><small>FLIPZERO SOCIAL</small><strong>Личное</strong></div>
       <label className="social-conversation-search"><Search size={14}/><input value={conversationQuery} onChange={(event)=>setConversationQuery(event.target.value)} placeholder="Поиск диалогов"/></label>
-      <button className="social-new-message" onClick={()=>{setTab("friends");setFriendView("add");setActive(null)}}><MessageSquarePlus size={16}/>Новое сообщение</button>
+      <button className="social-new-message" onClick={()=>{setTab("friends");setFriendView("add");setActive(null)}}><MessageSquarePlus size={16}/>Новое сообщение</button><button className="social-messages-shortcut" onClick={()=>{setTab("messages");setActive(null);setProfileVisible(false)}} aria-label="Открыть диалоги" title="Диалоги"><MessageCircle size={16}/>Сообщения</button>
       <button className={tab==="friends"?"active":""} onClick={()=>{setTab("friends");setFriendView("online")}}><Users size={16}/>Друзья{requests.length?<b>{requests.length}</b>:null}</button>
       <button className={tab==="economy"?"active":""} onClick={()=>setTab("economy")}><Star size={16}/>Квесты и монеты</button>
       <button className={tab==="superflip"?"active premium": "premium"} onClick={()=>setTab("superflip")}><Crown size={16}/>SuperFlip</button>
@@ -226,7 +226,7 @@ export function SocialHubDialog({ currentUserId, initialTab = "messages", initia
       <div className="social-dialog-label"><span>Личные сообщения</span><button onClick={()=>{setTab("friends");setFriendView("add")}} aria-label="Новое сообщение" title="Новое сообщение"><UserRoundPlus size={14}/></button></div>
       <div className="social-dialog-list">{filteredConversations.length?filteredConversations.map((item)=><button key={item.id} className={tab==="messages"&&active?.id===item.id?"active":""} onClick={()=>{setTab("messages");setMessages([]);setNotice("");followLatestRef.current=true;setProfileVisible(true);setActive(item)}}><Avatar person={item.other}/><span><strong className={item.other.cosmetics?.nickname?`nick-${item.other.cosmetics.nickname}`:""}>{item.other.displayName}</strong><ClanTag clan={item.other.clan}/><small>{item.lastMessage?.text??"Новый диалог"}</small></span>{item.unread?<b>{item.unread}</b>:null}</button>):<p>Диалогов пока нет.</p>}</div>
     </aside>
-    <div className="social-main-v2">
+    <div className={`social-main-v2 social-main-${tab}`}>
       <header><div><small>{tab==="messages"?"ЛИЧНЫЕ СООБЩЕНИЯ":tab==="friends"?"КОНТАКТЫ":"SUPERFLIP"}</small><h2>{tab==="messages"?(active?.other.displayName??"Сообщения"):tab==="friends"?"Друзья":"SuperFlip"}</h2></div>{onClose?<button onClick={onClose} aria-label="Закрыть"><X size={19}/></button>:null}</header>
       {!loading&&!loadError&&(tab==="messages"||tab==="friends")?<StoryStrip userId={currentUserId}/>:null}
       {loading?<div className="social-loading"><LoaderCircle className="spin"/> Загрузка…</div>:loadError?<div className="social-empty" role="alert"><strong>Не удалось загрузить Social Hub</strong><span>{loadError}</span><button onClick={()=>{setLoading(true);setLoadError("");void loadInitial()}}>Повторить</button></div>
