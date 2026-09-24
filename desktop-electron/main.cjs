@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
 const { app, BrowserWindow, session, shell, Tray, Menu, nativeImage } = require('electron');
 const path = require('node:path');
 const ORIGIN = 'https://flipzeroapp.vercel.app';
