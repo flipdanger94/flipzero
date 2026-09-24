@@ -50,3 +50,15 @@ describe("mutation origin boundaries", () => {
     expect(responses.map((response) => response?.status)).toEqual([403, 403, 403]);
   });
 });
+
+
+describe("Codespaces auth development boundary", () => {
+  it("documents that auth origin enforcement is production-only", async () => {
+    const [loginSource, registerSource] = await Promise.all([
+      import("node:fs/promises").then(({ readFile }) => readFile("app/api/v1/auth/login/route.ts", "utf8")),
+      import("node:fs/promises").then(({ readFile }) => readFile("app/api/v1/auth/register/route.ts", "utf8")),
+    ]);
+    expect(loginSource).toContain('process.env.NODE_ENV === "production" && !isTrustedMutationRequest(request)');
+    expect(registerSource).toContain('process.env.NODE_ENV === "production" && !isTrustedMutationRequest(request)');
+  });
+});
