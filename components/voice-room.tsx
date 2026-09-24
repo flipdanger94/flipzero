@@ -247,10 +247,11 @@ export function VoiceRoom({
         if (publication.source === Track.Source.ScreenShare || publication.source === Track.Source.ScreenShareAudio) {
           clearStreamPreview(participant.identity);
           remoteVideoRef.current?.querySelectorAll(`[data-participant-id="${participant.identity}"]`).forEach((element) => element.remove());
-          if (selectedStreamId === participant.identity) {
-            setSelectedStreamId("");
+          setSelectedStreamId((current) => {
+            if (current !== participant.identity) return current;
             setFocusMode(false);
-          }
+            return "";
+          });
         }
         refresh();
       });
@@ -298,7 +299,7 @@ export function VoiceRoom({
           element.dataset.source = track.source;
           element.dataset.participantId = participant.identity;
           remoteVideoRef.current?.appendChild(element);
-          if (track.source === Track.Source.ScreenShare && selectedStreamId === participant.identity) attachStreamPreview(participant.identity, track);
+          if (track.source === Track.Source.ScreenShare) attachStreamPreview(participant.identity, track);
           setRemoteVideo(true);
         }
       });
@@ -344,7 +345,7 @@ export function VoiceRoom({
       });
       room.on(RoomEvent.AudioPlaybackStatusChanged, () => setAudioBlocked(!connectedRoom.canPlaybackAudio));
       room.on(RoomEvent.MediaDevicesError, (mediaError) => {
-        setError(mediaError?.message ? `Ошибка устройства: ${mediaError.message}` : "Не удалось получить доступ к микрофону или камере.");
+        setError(`Ошибка устройства: ${String(mediaError || "не удалось получить доступ к микрофону или камере")}`);
       });
       await Promise.race([
         room.connect(data.url, data.token, { websocketTimeout: 10000, peerConnectionTimeout: 10000, maxRetries: 1 }),
@@ -396,6 +397,7 @@ export function VoiceRoom({
       setOutputDeviceId(room.getActiveDevice("audiooutput") ?? preferredOutput ?? speakers[0]?.deviceId ?? "");
       refresh();
       setStatus("connected");
+      if (initialStreamId) focusStream(initialStreamId);
       emitVoiceSession(true);
       playVoiceCue("join");
     } catch (cause) {
