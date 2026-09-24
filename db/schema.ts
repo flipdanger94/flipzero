@@ -297,9 +297,16 @@ export const voiceStates = pgTable("voice_states", {
   selfDeafened: boolean("self_deafened").default(false).notNull(),
   streaming: boolean("streaming").default(false).notNull(),
   speaking: boolean("speaking").default(false).notNull(),
+  breakout: text("breakout").default("main").notNull(),
   joinedAt: timestamp("joined_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
-}, (table) => [index("voice_states_channel_idx").on(table.channelId)]);
+}, (table) => [index("voice_states_channel_idx").on(table.channelId), index("voice_states_updated_idx").on(table.updatedAt)]);
+
+export const livekitWebhookEvents = pgTable("livekit_webhook_events", {
+  id: text("id").primaryKey(),
+  event: text("event").notNull(),
+  receivedAt: timestamp("received_at", { withTimezone: true }).defaultNow().notNull(),
+});
 
 export const channelNotificationSettings = pgTable("channel_notification_settings", {
   userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
