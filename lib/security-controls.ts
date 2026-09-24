@@ -4,8 +4,12 @@ import { compare } from "bcryptjs";
 
 export function isTrustedMutationRequest(request: Request) {
   const fetchSite = request.headers.get("sec-fetch-site");
+
+  // Fetch Metadata is the strongest signal when the browser sends it.
+  // Explicitly reject cross-site mutations, while allowing same-origin,
+  // same-site and browser/user initiated requests.
   if (fetchSite === "cross-site") return false;
-  if (fetchSite === "same-origin") return true;
+  if (fetchSite === "same-origin" || fetchSite === "same-site" || fetchSite === "none") return true;
 
   const origin = request.headers.get("origin");
   if (!origin) return true;
@@ -17,15 +21,20 @@ export function isTrustedMutationRequest(request: Request) {
     const host = request.headers.get("host")?.trim();
     const allowedHosts = new Set([forwardedHost, host, requestUrl.host].filter((value): value is string => Boolean(value)));
 
-    if (!allowedHosts.has(originUrl.host)) return false;
+    if (allowedHosts.has(originUrl.host)) {
+      if (originUrl.protocol === "https:") return true;
+      return originUrl.protocol === requestUrl.protocol;
+    }
 
-    // Reverse proxies such as GitHub Codespaces terminate HTTPS before the
-    // request reaches Next.js, so request.url may be http://localhost while
-    // the browser Origin remains the public https://*.app.github.dev host.
-    // Matching the externally forwarded/Host value keeps the mutation
-    // same-origin without rejecting that proxy setup.
-    if (originUrl.protocol === "https:") return true;
-    return originUrl.protocol === requestUrl.protocol;
+    // GitHub Codespaces terminates TLS and may rewrite Host/request.url to an
+    // internal address before Next.js receives the request. In that runtime,
+    // trust only the public Codespaces HTTPS origin; cross-site browser
+    // requests were already rejected above by Sec-Fetch-Site.
+    if (process.env.CODESPACES === "true" && originUrl.protocol === "https:" && originUrl.hostname.endsWith(".app.github.dev")) {
+      return true;
+    }
+
+    return false;
   } catch {
     return false;
   }
