@@ -670,7 +670,10 @@ export function VoiceRoom({
   useEffect(() => { applyStreamVolume(); }, [selectedStreamId, streamMuted, streamVolume]);
   useEffect(() => {
     if (!initialStreamId || !remoteVideo) return;
-    focusStream(initialStreamId);
+    remoteVideoRef.current?.querySelectorAll<HTMLElement>("[data-participant-id]").forEach((element) => {
+      element.hidden = element.dataset.participantId !== initialStreamId;
+    });
+    remoteVideoRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
   }, [initialStreamId, remoteVideo]);
   async function toggleFullscreen() {
     const root = voiceRootRef.current;
