@@ -2,7 +2,7 @@
 import { ClanTag } from "./clan-tag";
 
 import { type PointerEvent as ReactPointerEvent, useEffect, useRef, useState } from "react";
-import { Bell, BookOpen, Check, ChevronDown, Columns3, Compass, Copy, Hash, Headphones, HelpCircle, Home as HomeIcon, LoaderCircle, Menu, MessageCircle, MessagesSquare, Mic, MicOff, MonitorUp, PhoneOff, Plus, Radio, Search, Settings2, Share2, ShieldCheck, Swords, Trash2, UserRound, Users, Video, Volume2, X } from "lucide-react";
+import { Bell, BookOpen, Check, ChevronDown, Columns3, Compass, Copy, Hash, Headphones, HelpCircle, Home as HomeIcon, LoaderCircle, Menu, MessageCircle, MessagesSquare, Mic, MicOff, MonitorUp, PhoneOff, Plus, Radio, Search, Settings2, Share2, ShieldCheck, Signal, Swords, Trash2, UserRound, Users, Video, Volume2, X } from "lucide-react";
 import { CreateSpaceDialog } from "@/components/create-space-dialog";
 import { MediaImage } from "@/components/media-image";
 import { CreateChannelDialog, type CreatedChannel } from "@/components/create-channel-dialog";
