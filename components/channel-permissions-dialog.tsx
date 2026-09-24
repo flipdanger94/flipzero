@@ -39,7 +39,7 @@ export function ChannelPermissionsDialog({
 }) {
   const dialogRef = useModalA11y(onClose);
   const isVoice = ["voice", "stage"].includes(channel.kind);
-  const [view, setView] = useState<"overview" | "permissions">("overview");
+  const [view, setView] = useState<"overview" | "permissions">(isVoice ? "overview" : "permissions");
   const [roles, setRoles] = useState<Role[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
   const [items, setItems] = useState<Override[]>([]);
