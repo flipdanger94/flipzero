@@ -462,6 +462,14 @@ export const moderationFlags = pgTable("moderation_flags", {
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 }, (table) => [uniqueIndex("moderation_flags_message_unique").on(table.messageId), index("moderation_flags_space_status_idx").on(table.spaceId, table.status, table.createdAt)]);
 
+export const userProgress = pgTable("user_progress", {
+  userId: text("user_id").primaryKey().references(() => users.id, { onDelete: "cascade" }),
+  totalXp: bigint("total_xp", { mode: "number" }).default(0).notNull(),
+  level: integer("level").default(1).notNull(),
+  xpUpdatedAt: timestamp("xp_updated_at", { withTimezone: true }).defaultNow().notNull(),
+  lastLevelUpAt: timestamp("last_level_up_at", { withTimezone: true }),
+}, (table) => [index("user_progress_leaderboard_idx").on(table.totalXp, table.xpUpdatedAt)]);
+
 export const xpEvents = pgTable("xp_events", {
   id: text("id").primaryKey(),
   userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
@@ -469,8 +477,14 @@ export const xpEvents = pgTable("xp_events", {
   source: text("source").notNull(),
   amount: integer("amount").notNull(),
   idempotencyKey: text("idempotency_key").notNull(),
+  dedupeKey: text("dedupe_key").notNull(),
+  meta: jsonb("meta").$type<Record<string, unknown>>().default({}).notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-}, (table) => [uniqueIndex("xp_events_idempotency_unique").on(table.idempotencyKey), index("xp_events_user_created_idx").on(table.userId, table.createdAt)]);
+}, (table) => [
+  uniqueIndex("xp_events_idempotency_unique").on(table.idempotencyKey),
+  uniqueIndex("xp_events_user_source_dedupe_unique").on(table.userId, table.source, table.dedupeKey),
+  index("xp_events_user_created_idx").on(table.userId, table.createdAt),
+]);
 
 export const pathProgress = pgTable("path_progress", {
   userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
