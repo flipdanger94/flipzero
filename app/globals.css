@@ -84,3 +84,49 @@
 .chat-image-attachment{display:block;width:min(100%,420px);margin-top:8px}.chat-image-attachment img{display:block;max-width:100%;max-height:360px;object-fit:contain;border-radius:12px}
 .chat-file-attachment{display:flex;align-items:center;gap:8px;width:min(100%,420px);margin-top:8px;padding:10px;border:1px solid #424a65;border-radius:10px;background:#11192a;color:#d8dcef;text-decoration:none}
 .clan-announcement-chat{height:min(68dvh,620px);min-height:360px}.clan-announcement-chat .clan-announcement-list{min-height:0;overflow-y:auto}
+
+
+/* Fix shared chat composer sizing across legacy desktop layouts */
+.chat-panel > .channel-chat-layout{
+  grid-row:2 / -1;
+  grid-column:1 / -1;
+  width:100%;
+  height:100%;
+  min-width:0;
+  min-height:0;
+}
+.direct-layout > section > .direct-chat-layout{
+  grid-row:1 / -1;
+  grid-column:1 / -1;
+  width:100%;
+  height:100%;
+  min-width:0;
+  min-height:0;
+}
+.chat-layout.clan-chat{
+  display:flex;
+  flex-direction:column;
+  width:100%;
+  height:100%;
+  min-width:0;
+  min-height:0;
+}
+.chat-layout-composer,
+.channel-chat-layout .composer-wrap,
+.direct-chat-layout .direct-composer,
+.clan-chat .clan-composer,
+.chat-composer-shell,
+.chat-composer-row{
+  width:100%;
+  max-width:none;
+  min-width:0;
+  box-sizing:border-box;
+}
+.channel-chat-layout .composer-wrap,
+.direct-chat-layout .direct-composer,
+.clan-chat .clan-composer{
+  margin:0;
+  border:0;
+}
+.chat-composer-shell{align-self:stretch}
+.chat-composer-row textarea{width:100%}
