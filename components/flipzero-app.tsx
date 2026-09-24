@@ -1,7 +1,7 @@
 "use client";
 import { ClanTag } from "./clan-tag";
 
-import { useEffect, useRef, useState } from "react";
+import { type PointerEvent as ReactPointerEvent, useEffect, useRef, useState } from "react";
 import { Bell, BookOpen, Check, ChevronDown, Columns3, Compass, Copy, Hash, Headphones, HelpCircle, Home as HomeIcon, LoaderCircle, Menu, MessageCircle, MessagesSquare, Mic, MicOff, MonitorUp, Plus, Radio, Search, Settings2, Share2, ShieldCheck, Swords, Trash2, UserRound, Users, Video, Volume2, X } from "lucide-react";
 import { CreateSpaceDialog } from "@/components/create-space-dialog";
 import { MediaImage } from "@/components/media-image";
@@ -511,7 +511,7 @@ function Channel({
   function openContext(participant: VoicePresence, x: number, y: number) {
     setContext({ participant, x: Math.min(x, window.innerWidth - 250), y: Math.min(y, window.innerHeight - 250) });
   }
-  function beginLongPress(participant: VoicePresence, event: React.PointerEvent) {
+  function beginLongPress(participant: VoicePresence, event: ReactPointerEvent) {
     if (longPressRef.current) window.clearTimeout(longPressRef.current);
     const { clientX, clientY } = event;
     longPressRef.current = window.setTimeout(() => openContext(participant, clientX, clientY), 480);
