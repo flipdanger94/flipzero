@@ -1,8 +1,8 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { AccessToken, RoomServiceClient } from "livekit-server-sdk";
 import { NextResponse } from "next/server";
 import { getDatabase } from "@/db/client";
-import { channels, members } from "@/db/schema";
+import { channels, clanMembers, clans, members } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
 import { isTrustedMutationRequest } from "@/lib/security-controls";
 import { getChannelPermissions } from "@/lib/space-permissions";
@@ -25,7 +25,7 @@ export async function POST(
       members,
       and(eq(members.spaceId, channels.spaceId), eq(members.userId, user.id)),
     )
-    .where(and(eq(channels.id, channelId), eq(channels.kind, "voice")))
+    .where(and(eq(channels.id, channelId), inArray(channels.kind, ["voice", "stage"])))
     .limit(1);
   if (!channel)
     return NextResponse.json(
@@ -59,11 +59,26 @@ export async function POST(
   } catch {
     return NextResponse.json({ code: "VOICE_SERVICE_UNAVAILABLE", message: "Голосовой сервер временно недоступен." }, { status: 503 });
   }
+  const database = getDatabase();
+  const [clan] = await database.select({ tag: clans.tag, color: clans.tagColor, icon: clans.tagIcon })
+    .from(clanMembers)
+    .innerJoin(clans, eq(clans.id, clanMembers.clanId))
+    .where(eq(clanMembers.userId, user.id))
+    .limit(1);
   const accessToken = new AccessToken(apiKey, apiSecret, {
     identity: user.id,
     name: user.displayName,
     ttl: "2h",
-    metadata: JSON.stringify({ username: user.username, channelId }),
+    metadata: JSON.stringify({
+      username: user.username,
+      channelId,
+      breakout,
+      avatarUrl: user.avatarUrl,
+      accentColor: user.accentColor,
+      clanTag: clan?.tag ?? null,
+      clanColor: clan?.color ?? null,
+      clanIcon: clan?.icon ?? null,
+    }),
   });
   const publishSources = publishSourcesForPermissions(access.permissions);
   accessToken.addGrant({
@@ -72,6 +87,7 @@ export async function POST(
     canPublish: publishSources.length > 0,
     canPublishSources: publishSources,
     canSubscribe: true,
+    canUpdateOwnMetadata: true,
   });
   return NextResponse.json({ token: await accessToken.toJwt(), url, room });
 }
