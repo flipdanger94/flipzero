@@ -272,9 +272,16 @@ export default function Home({ initialSpaceId, initialChannelId }: { initialSpac
   useEffect(() => {
     if (!activeSpaceId) return;
     let cancelled = false;
+    let etag = "";
     const refresh = async () => {
-      const response = await fetch(`/api/v1/spaces/${encodeURIComponent(activeSpaceId)}/voice-presence`, { cache: "no-store" }).catch(() => null);
-      if (!response?.ok || cancelled) return;
+      if (document.visibilityState !== "visible") return;
+      const response = await fetch(`/api/v1/spaces/${encodeURIComponent(activeSpaceId)}/voice-presence`, {
+        cache: "no-store",
+        headers: etag ? { "if-none-match": etag } : undefined,
+      }).catch(() => null);
+      if (response?.status === 304 || !response) return;
+      etag = response.headers.get("etag") ?? etag;
+      if (!response.ok || cancelled) return;
       const data = await response.json();
       if (!cancelled) {
         const next: Record<string, VoicePresence[]> = {};
@@ -295,8 +302,10 @@ export default function Home({ initialSpaceId, initialChannelId }: { initialSpac
       }
     };
     void refresh();
-    const interval = window.setInterval(refresh, 1000);
-    return () => { cancelled = true; window.clearInterval(interval); };
+    const interval = window.setInterval(refresh, 3_000);
+    const onVisibility = () => { if (document.visibilityState === "visible") void refresh(); };
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => { cancelled = true; window.clearInterval(interval); document.removeEventListener("visibilitychange", onVisibility); };
   }, [activeSpaceId]);
   const activeRouteChannel = activeSpace?.channels.find((channel) => channel.name === activeChannel) ?? null;
   const activeApiChannel = activeSpace?.channels.find((channel) => channel.name === activeChannel && ["text", "forum", "announcement"].includes(channel.kind)) ?? null;
