@@ -135,6 +135,28 @@ export function VoiceRoom({
       roomRef.current?.localParticipant.getTrackPublication(source)?.track;
     if (track && container) container.appendChild(track.attach());
   }
+  function emitVoiceSession(connected: boolean, nextQuality = quality) {
+    window.dispatchEvent(new CustomEvent("flipzero:voice-session", { detail: {
+      connected, channelId, channelName, spaceName, quality: qualityLabels[nextQuality] ?? "Проверка",
+    } }));
+  }
+  function playVoiceCue(kind: "join" | "leave") {
+    try {
+      if (localStorage.getItem("flipzero:voice-sounds") === "off") return;
+      const AudioContextCtor = window.AudioContext || (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+      if (!AudioContextCtor) return;
+      const context = new AudioContextCtor();
+      const oscillator = context.createOscillator();
+      const gain = context.createGain();
+      oscillator.frequency.value = kind === "join" ? 520 : 300;
+      gain.gain.setValueAtTime(0.08, context.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, context.currentTime + 0.18);
+      oscillator.connect(gain).connect(context.destination);
+      oscillator.start();
+      oscillator.stop(context.currentTime + 0.18);
+      oscillator.onended = () => void context.close();
+    } catch {}
+  }
 
   async function join() {
     if (status !== "idle") return;
