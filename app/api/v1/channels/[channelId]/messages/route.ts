@@ -11,6 +11,8 @@ import { dispatchDeveloperEvent } from "@/lib/developer-webhooks";
 import { assessMessageSafety } from "@/lib/trust-safety";
 import { getChannelPermissions, hasPermission, SpacePermission } from "@/lib/space-permissions";
 import { isTrustedMutationRequest } from "@/lib/security-controls";
+import { normalizeDirectAttachments } from "@/lib/direct-message";
+import { getSuperFlipCapabilities } from "@/lib/superflip";
 
 const untrusted = () => NextResponse.json({ code: "UNTRUSTED_ORIGIN", message: "Запрос отклонён. Обновите страницу и попробуйте снова." }, { status: 403 });
 
@@ -27,6 +29,7 @@ async function accessChannel(channelId: string) {
 
 export async function GET(request: Request, { params }: { params: Promise<{ channelId: string }> }) {
   const { channelId } = await params; const access = await accessChannel(channelId); if ("error" in access) return access.error;
+  const superflip = await getSuperFlipCapabilities(access.user.id);
   const url = new URL(request.url); const query = url.searchParams.get("q")?.trim(); const pinned = url.searchParams.get("pinned") === "1"; const threadRootId = url.searchParams.get("threadRootId");
   const before = url.searchParams.get("before");
   const [beforeDate,beforeId]=before?.split("|")??[];
@@ -48,6 +51,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ chan
       canReact: access.owner || hasPermission(access.permissions, SpacePermission.AddReactions),
       canAttach: access.owner || hasPermission(access.permissions, SpacePermission.AttachFiles),
     },
+    messageLimit: superflip.capabilities.directMessageLimit,
   });
 }
 
@@ -56,7 +60,11 @@ export async function POST(request: Request, { params }: { params: Promise<{ cha
   const { channelId } = await params; const access = await accessChannel(channelId); if ("error" in access) return access.error; const body = await request.json().catch(() => null);
   if (body?.action === "react") { if (!access.owner && !hasPermission(access.permissions, SpacePermission.AddReactions)) return NextResponse.json({ code: "FORBIDDEN", message: "Нет права добавлять реакции." }, { status: 403 }); const emoji = String(body.emoji ?? "").slice(0, 16); const messageId = String(body.messageId ?? ""); if (!emoji || !messageId) return NextResponse.json({ message: "Реакция не указана." }, { status: 400 }); const [target] = await access.database.select({ id: messages.id }).from(messages).where(and(eq(messages.id, messageId), eq(messages.channelId, channelId), isNull(messages.deletedAt))).limit(1); if (!target) return NextResponse.json({ code: "NOT_FOUND", message: "Сообщение не найдено в этом канале." }, { status: 404 }); const existing = await access.database.select().from(reactions).where(and(eq(reactions.messageId, messageId), eq(reactions.userId, access.user.id), eq(reactions.emoji, emoji))).limit(1); if (existing.length) await access.database.delete(reactions).where(and(eq(reactions.messageId, messageId), eq(reactions.userId, access.user.id), eq(reactions.emoji, emoji))); else await access.database.insert(reactions).values({ messageId, userId: access.user.id, emoji }); return NextResponse.json({ active: !existing.length }); }
   if (!access.owner && !hasPermission(access.permissions, SpacePermission.SEND_MESSAGES)) return NextResponse.json({ code: "FORBIDDEN", message: "Нет права отправлять сообщения." }, { status: 403 });
-  const content = typeof body?.content === "string" ? body.content.trim().slice(0, 4000) : ""; const attachments = Array.isArray(body?.attachments) ? body.attachments.filter((item: unknown) => { if (!item || typeof item !== "object") return false; const attachment = item as Record<string, unknown>; return attachment.type === "voice" && typeof attachment.url === "string" && attachment.url.startsWith("data:audio/") && attachment.url.length <= 3_000_000 && typeof attachment.duration === "number" && attachment.duration > 0 && attachment.duration <= 65; }).slice(0, 1) : [];
+  const superflip = await getSuperFlipCapabilities(access.user.id);
+  const rawContent = typeof body?.content === "string" ? body.content.trim() : "";
+  if (rawContent.length > superflip.capabilities.directMessageLimit) return NextResponse.json({ code: "MESSAGE_TOO_LONG", message: `Максимальная длина сообщения — ${superflip.capabilities.directMessageLimit} символов.`, limit: superflip.capabilities.directMessageLimit }, { status: 400 });
+  const content = rawContent;
+  const attachments = normalizeDirectAttachments(body?.attachments);
   if (attachments.length && !access.owner && !hasPermission(access.permissions, SpacePermission.AttachFiles)) return NextResponse.json({ code: "FORBIDDEN", message: "Нет права прикреплять файлы." }, { status: 403 });
   if (access.channel.kind === "announcement" && access.channel.ownerId !== access.user.id) return NextResponse.json({ code: "READ_ONLY", message: "Публиковать объявления может только владелец." }, { status: 403 });
   if (!content && !attachments.length) return NextResponse.json({ code: "EMPTY_MESSAGE", message: "Сообщение пустое." }, { status: 400 });
