@@ -186,14 +186,14 @@ export function ChannelPermissionsDialog({
           <div className={`channel-limit-controls ${userLimit === null ? "is-disabled" : ""}`}>
             <label className="channel-limit-slider">
               <span><b>∞</b><b>99</b></span>
-              <input type="range" min="0" max="99" value={userLimit ?? 0} onChange={(event) => {
+              <input type="range" min="0" max="99" value={userLimit ?? 0} disabled={userLimit === null} onChange={(event) => {
                 const value = Number(event.target.value);
                 setLimit(value === 0 ? null : Math.max(1, Math.min(99, Math.trunc(value))));
               }}/>
             </label>
             <label className="channel-limit-number">
               <span>Лимит</span>
-              <input type="number" inputMode="numeric" min="1" max="99" step="1" placeholder="∞" value={limitInput} onChange={(event) => {
+              <input type="number" inputMode="numeric" min="1" max="99" step="1" placeholder="∞" value={limitInput} disabled={userLimit === null} onChange={(event) => {
                 const raw = event.target.value;
                 setLimitInput(raw);
                 if (!raw) { setUserLimit(null); setSaved(false); return; }
