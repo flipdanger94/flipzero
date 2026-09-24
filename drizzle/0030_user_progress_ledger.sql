@@ -11,26 +11,34 @@ CREATE TABLE IF NOT EXISTS user_progress (
 CREATE INDEX IF NOT EXISTS user_progress_leaderboard_idx
   ON user_progress(total_xp DESC, xp_updated_at ASC);
 
-DO $$ BEGIN
-  IF EXISTS (
-    SELECT 1 FROM information_schema.columns
-    WHERE table_schema='public' AND table_name='xp_events' AND column_name='idempotency_key'
-  ) AND NOT EXISTS (
-    SELECT 1 FROM information_schema.columns
-    WHERE table_schema='public' AND table_name='xp_events' AND column_name='dedupe_key'
-  ) THEN
-    ALTER TABLE xp_events RENAME COLUMN idempotency_key TO dedupe_key;
-  END IF;
-END $$;
-
 ALTER TABLE xp_events
-  ADD COLUMN IF NOT EXISTS dedupe_key text,
+  ADD COLUMN IF NOT EXISTS dedupe_key text NOT NULL DEFAULT '',
   ADD COLUMN IF NOT EXISTS meta jsonb NOT NULL DEFAULT '{}'::jsonb;
 
 UPDATE xp_events
-SET dedupe_key = COALESCE(dedupe_key, id)
-WHERE dedupe_key IS NULL;
-ALTER TABLE xp_events ALTER COLUMN dedupe_key SET NOT NULL;
+SET dedupe_key = idempotency_key
+WHERE dedupe_key = '';
+
+CREATE OR REPLACE FUNCTION sync_xp_event_dedupe_key()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  IF NEW.dedupe_key IS NULL OR NEW.dedupe_key = '' THEN
+    NEW.dedupe_key := NEW.idempotency_key;
+  END IF;
+  IF NEW.idempotency_key IS NULL OR NEW.idempotency_key = '' THEN
+    NEW.idempotency_key := NEW.dedupe_key;
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS xp_events_sync_dedupe_key ON xp_events;
+CREATE TRIGGER xp_events_sync_dedupe_key
+BEFORE INSERT OR UPDATE OF idempotency_key, dedupe_key ON xp_events
+FOR EACH ROW
+EXECUTE FUNCTION sync_xp_event_dedupe_key();
 
 CREATE TABLE IF NOT EXISTS xp_events_duplicates_archive (
   archived_at timestamptz NOT NULL DEFAULT now(),
@@ -39,6 +47,7 @@ CREATE TABLE IF NOT EXISTS xp_events_duplicates_archive (
   space_id text,
   source text NOT NULL,
   amount integer NOT NULL,
+  idempotency_key text NOT NULL,
   dedupe_key text NOT NULL,
   meta jsonb NOT NULL DEFAULT '{}'::jsonb,
   created_at timestamptz NOT NULL
@@ -58,8 +67,8 @@ duplicates AS (
   JOIN ranked r ON r.id = e.id
   WHERE r.rn > 1
 )
-INSERT INTO xp_events_duplicates_archive(id,user_id,space_id,source,amount,dedupe_key,meta,created_at)
-SELECT id,user_id,space_id,source,amount,dedupe_key,meta,created_at
+INSERT INTO xp_events_duplicates_archive(id,user_id,space_id,source,amount,idempotency_key,dedupe_key,meta,created_at)
+SELECT id,user_id,space_id,source,amount,idempotency_key,dedupe_key,meta,created_at
 FROM duplicates
 ON CONFLICT (id) DO NOTHING;
 
@@ -101,13 +110,14 @@ needs_adjustment AS (
   LEFT JOIN event_sums s ON s.user_id=u.id
   WHERE GREATEST(u.global_xp,0) > COALESCE(s.event_xp,0)
 )
-INSERT INTO xp_events(id,user_id,space_id,source,amount,dedupe_key,meta,created_at)
+INSERT INTO xp_events(id,user_id,space_id,source,amount,idempotency_key,dedupe_key,meta,created_at)
 SELECT
   'legacy-adjustment-' || user_id,
   user_id,
   NULL,
   'legacy_adjustment',
   (legacy_xp-event_xp)::integer,
+  'legacy:' || user_id || ':backfill',
   'legacy:' || user_id || ':backfill',
   jsonb_build_object('reason','user_progress backfill','legacyXp',legacy_xp,'ledgerXp',event_xp),
   now()
