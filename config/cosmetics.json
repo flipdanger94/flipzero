@@ -1,9 +1,132 @@
 [
-  {"id":"frame-nebula","title":"Рамка «Туманность»","description":"Космическое сияние вокруг аватара","category":"avatar_frame","rarity":"rare","price":140,"preview":"nebula","superflipOnly":false},
-  {"id":"frame-solar","title":"Рамка «Солнце»","description":"Золотой контур аватара","category":"avatar_frame","rarity":"epic","price":360,"preview":"solar","superflipOnly":false},
-  {"id":"nick-violet","title":"Ник «Пульсар»","description":"Фиолетовый градиент имени","category":"nickname","rarity":"rare","price":180,"preview":"violet","superflipOnly":false},
-  {"id":"banner-orbit","title":"Баннер «Орбита»","description":"Движущиеся световые орбиты","category":"banner","rarity":"epic","price":420,"preview":"orbit","superflipOnly":true},
-  {"id":"effect-comet","title":"Эффект «Комета»","description":"Акцент для ваших сообщений","category":"message_effect","rarity":"epic","price":320,"preview":"comet","superflipOnly":false},
-  {"id":"theme-midnight","title":"Тема «Ночная станция»","description":"Тёмный акцент интерфейса","category":"theme","rarity":"rare","price":250,"preview":"midnight","superflipOnly":false},
-  {"id":"badge-starlight","title":"Значок «Звёздный свет»","description":"Значок рядом с профилем","category":"badge","rarity":"legendary","price":500,"preview":"✦","superflipOnly":true}
+  {
+    "id": "frame-nebula",
+    "title": "Рамка «Туманность»",
+    "description": "Космическое сияние вокруг аватара",
+    "category": "avatar_frame",
+    "rarity": "rare",
+    "price": 140,
+    "preview": "nebula",
+    "superflipOnly": false
+  },
+  {
+    "id": "frame-solar",
+    "title": "Рамка «Солнце»",
+    "description": "Золотой контур аватара",
+    "category": "avatar_frame",
+    "rarity": "epic",
+    "price": 360,
+    "preview": "solar",
+    "superflipOnly": false
+  },
+  {
+    "id": "nick-violet",
+    "title": "Ник «Пульсар»",
+    "description": "Фиолетовый градиент имени",
+    "category": "nickname",
+    "rarity": "rare",
+    "price": 180,
+    "preview": "violet",
+    "superflipOnly": false
+  },
+  {
+    "id": "banner-orbit",
+    "title": "Баннер «Орбита»",
+    "description": "Движущиеся световые орбиты",
+    "category": "banner",
+    "rarity": "epic",
+    "price": 420,
+    "preview": "orbit",
+    "superflipOnly": true
+  },
+  {
+    "id": "effect-comet",
+    "title": "Эффект «Комета»",
+    "description": "Акцент для ваших сообщений",
+    "category": "message_effect",
+    "rarity": "epic",
+    "price": 320,
+    "preview": "comet",
+    "superflipOnly": false
+  },
+  {
+    "id": "theme-midnight",
+    "title": "Тема «Ночная станция»",
+    "description": "Тёмный акцент интерфейса",
+    "category": "theme",
+    "rarity": "rare",
+    "price": 250,
+    "preview": "midnight",
+    "superflipOnly": false
+  },
+  {
+    "id": "badge-starlight",
+    "title": "Значок «Звёздный свет»",
+    "description": "Значок рядом с профилем",
+    "category": "badge",
+    "rarity": "legendary",
+    "price": 500,
+    "preview": "✦",
+    "superflipOnly": true
+  },
+  {
+    "id": "frame-glow",
+    "title": "Рамка «Сияние»",
+    "description": "Мягкое сияние аватара",
+    "category": "avatar_frame",
+    "rarity": "common",
+    "price": 70,
+    "preview": "glow",
+    "superflipOnly": false
+  },
+  {
+    "id": "banner-dawn",
+    "title": "Баннер «Рассвет»",
+    "description": "Светлый космический градиент",
+    "category": "banner",
+    "rarity": "common",
+    "price": 90,
+    "preview": "dawn",
+    "superflipOnly": false
+  },
+  {
+    "id": "nick-aurora",
+    "title": "Ник «Аврора»",
+    "description": "Переливающийся градиент",
+    "category": "nickname",
+    "rarity": "epic",
+    "price": 370,
+    "preview": "aurora",
+    "superflipOnly": false
+  },
+  {
+    "id": "effect-spark",
+    "title": "Эффект «Искра»",
+    "description": "Мягкий акцент сообщений",
+    "category": "message_effect",
+    "rarity": "common",
+    "price": 70,
+    "preview": "spark",
+    "superflipOnly": false
+  },
+  {
+    "id": "badge-orbit",
+    "title": "Значок «Орбита»",
+    "description": "Пульсирующий знак",
+    "category": "badge",
+    "rarity": "rare",
+    "price": 160,
+    "preview": "orbit-badge",
+    "superflipOnly": false
+  },
+  {
+    "id": "theme-nebula",
+    "title": "Тема «Туманность»",
+    "description": "Фиолетовое оформление",
+    "category": "theme",
+    "rarity": "common",
+    "price": 100,
+    "preview": "nebula-theme",
+    "superflipOnly": false
+  }
 ]

@@ -3,7 +3,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Mic, MicOff, PhoneOff, Users } from "lucide-react";
 import { Room, RoomEvent, Track } from "livekit-client";
 type VoiceRoom={id:string;creatorId:string;expiresAt:string};
-export function TemporaryVoice({contextType,contextId,inviteUserId}:{contextType:"direct"|"clan"|"server";contextId:string;inviteUserId?:string}){
+export function TemporaryVoice({contextType,contextId,inviteUserId}:{contextType:"direct"|"clan";contextId:string;inviteUserId?:string}){
  const [rooms,setRooms]=useState<VoiceRoom[]>([]),[active,setActive]=useState(""),[muted,setMuted]=useState(false),[names,setNames]=useState<string[]>([]),[error,setError]=useState(""),[busy,setBusy]=useState(false);const roomRef=useRef<Room|null>(null),audio=useRef<HTMLDivElement>(null);
  const refresh=useCallback(async()=>{if(!contextId)return;const query=new URLSearchParams({contextType,contextId});const response=await fetch(`/api/v1/temporary-voice?${query}`,{cache:"no-store"});if(response.ok)setRooms((await response.json()).rooms??[])},[contextType,contextId]);
  useEffect(()=>{void refresh();const timer=window.setInterval(()=>void refresh(),20000);return()=>window.clearInterval(timer)},[refresh]);
