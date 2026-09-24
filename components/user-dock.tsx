@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import {
-  Check, ChevronUp, Headphones, Mic, MicOff, Settings, SlidersHorizontal, Volume2, VolumeX,
+  Check, ChevronUp, Headphones, Mic, MicOff, PhoneOff, Settings, Signal, SlidersHorizontal, Volume2, VolumeX,
 } from "lucide-react";
 import { MediaImage } from "./media-image";
 
@@ -39,6 +39,16 @@ export function UserDock({
   const [prefs,setPrefs]=useState<AudioPrefs>(()=>readPrefs());
   const [muted,setMuted]=useState(false);
   const [deafened,setDeafened]=useState(false);
+  const [voiceSession,setVoiceSession]=useState<{connected:boolean;channelName:string;spaceName?:string;quality?:string}|null>(null);
+  useEffect(()=>{
+    const handler=(event:Event)=>{
+      const detail=(event as CustomEvent<{connected?:boolean;channelName?:string;spaceName?:string;quality?:string}>).detail;
+      if(!detail?.connected){setVoiceSession(null);return}
+      setVoiceSession({connected:true,channelName:detail.channelName??"Голосовой канал",spaceName:detail.spaceName,quality:detail.quality});
+    };
+    window.addEventListener("flipzero:voice-session",handler);
+    return()=>window.removeEventListener("flipzero:voice-session",handler);
+  },[]);
   useEffect(()=>{
     if(!menu)return;
     let cancelled=false;
@@ -66,7 +76,12 @@ export function UserDock({
   function toggleMic(){const next=!muted;setMuted(next);emit({type:"toggle-mic",muted:next})}
   function toggleDeafen(){const next=!deafened;setDeafened(next);emit({type:"toggle-output",deafened:next})}
 
-  return <div ref={rootRef} className="user-dock">
+  return <div ref={rootRef} className={`user-dock ${voiceSession?.connected?"has-voice-session":""}`}>
+    {voiceSession?.connected?<section className="dock-voice-session" aria-label="Текущее голосовое соединение">
+      <div className="dock-voice-status"><Signal size={16}/><span><strong>Голосовая связь подключена</strong><small>{voiceSession.channelName}{voiceSession.spaceName?` · ${voiceSession.spaceName}`:""}</small></span></div>
+      <span className="dock-voice-quality">{voiceSession.quality??"Проверка"}</span>
+      <button type="button" className="dock-voice-disconnect" aria-label="Отключиться от голосового канала" title="Отключиться" onClick={()=>emit({type:"leave"})}><PhoneOff size={16}/></button>
+    </section>:null}
     <button className="dock-profile" type="button" onClick={onOpenProfile} aria-label="Открыть свой профиль" title="Открыть профиль">
       <span className="avatar avatar-coral">{user?.avatarUrl?<MediaImage src={user.avatarUrl}/>:user?.displayName.split(/\s+/).map((part)=>part[0]).join("").slice(0,2).toLocaleUpperCase("ru")??"FZ"}<span className="presence"/></span>
       <span className="dock-copy"><strong>{user?.displayName??"Профиль"}</strong><small>Уровень {user?.globalLevel??1}</small></span>
