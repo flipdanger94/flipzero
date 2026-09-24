@@ -2459,3 +2459,14 @@ html[data-motion="off"] *::after {
     top:auto!important;
   }
 }
+
+@media(max-width:767px){
+  .voice-tile-watch{opacity:1!important;left:50%!important;right:auto!important;bottom:50%!important;transform:translate(-50%,50%)!important;min-width:112px!important}
+  .voice-tile-footer{min-height:42px!important;padding:15px 8px 7px!important}
+  .voice-tile-footer strong{font-size:.61rem!important}
+  .voice-tile-stream-preview video{object-fit:cover!important}
+  .channel-settings-tabs{margin-top:8px!important;overflow-x:auto!important}
+  .channel-overview-section{padding:14px!important}
+  .channel-limit-controls{grid-template-columns:1fr 92px!important;gap:10px!important}
+  .channel-overview-savebar{position:sticky!important;bottom:0!important;z-index:8!important}
+}
