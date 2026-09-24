@@ -3,7 +3,8 @@ import { SESSION_COOKIE } from "@/lib/auth-constants";
 import { isProtectedRoute, loginPathFor } from "@/lib/route-access";
 
 export function proxy(request: NextRequest) {
-  if (request.nextUrl.pathname.startsWith("/api/") && !["GET", "HEAD", "OPTIONS"].includes(request.method)) {
+  const livekitWebhook = request.nextUrl.pathname === "/api/livekit/webhook";
+  if (request.nextUrl.pathname.startsWith("/api/") && !livekitWebhook && !["GET", "HEAD", "OPTIONS"].includes(request.method)) {
     const fetchSite = request.headers.get("sec-fetch-site");
     const origin = request.headers.get("origin");
 
