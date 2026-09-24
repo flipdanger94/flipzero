@@ -272,9 +272,16 @@ export default function Home({ initialSpaceId, initialChannelId }: { initialSpac
   useEffect(() => {
     if (!activeSpaceId) return;
     let cancelled = false;
+    let etag = "";
     const refresh = async () => {
-      const response = await fetch(`/api/v1/spaces/${encodeURIComponent(activeSpaceId)}/voice-presence`, { cache: "no-store" }).catch(() => null);
-      if (!response?.ok || cancelled) return;
+      if (document.visibilityState !== "visible") return;
+      const response = await fetch(`/api/v1/spaces/${encodeURIComponent(activeSpaceId)}/voice-presence`, {
+        cache: "no-store",
+        headers: etag ? { "if-none-match": etag } : undefined,
+      }).catch(() => null);
+      if (response?.status === 304 || !response) return;
+      etag = response.headers.get("etag") ?? etag;
+      if (!response.ok || cancelled) return;
       const data = await response.json();
       if (!cancelled) {
         const next: Record<string, VoicePresence[]> = {};
@@ -295,8 +302,10 @@ export default function Home({ initialSpaceId, initialChannelId }: { initialSpac
       }
     };
     void refresh();
-    const interval = window.setInterval(refresh, 1000);
-    return () => { cancelled = true; window.clearInterval(interval); };
+    const interval = window.setInterval(refresh, 3_000);
+    const onVisibility = () => { if (document.visibilityState === "visible") void refresh(); };
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => { cancelled = true; window.clearInterval(interval); document.removeEventListener("visibilitychange", onVisibility); };
   }, [activeSpaceId]);
   const activeRouteChannel = activeSpace?.channels.find((channel) => channel.name === activeChannel) ?? null;
   const activeApiChannel = activeSpace?.channels.find((channel) => channel.name === activeChannel && ["text", "forum", "announcement"].includes(channel.kind)) ?? null;
@@ -485,7 +494,7 @@ export default function Home({ initialSpaceId, initialChannelId }: { initialSpac
 
       <aside className="member-panel">
         <div className="real-member-list">
-          {membersLoading ? <div className="members-loading">Загрузка участников…</div> : memberGroups.length ? <>{memberGroups.map((group) => <section className="member-section member-role-group" key={group.key}><h2><span style={group.color ? { color: group.color } : undefined}>{group.label.toLocaleUpperCase("ru")} — {group.members.length}</span></h2>{group.members.map((member) => <button className={`member ${member.online ? "is-online" : "is-offline"}`} key={member.userId} type="button" aria-label={`Открыть профиль ${member.nickname || member.displayName} — ${member.online ? "в сети" : "не в сети"}`} title={`Открыть профиль ${member.nickname || member.displayName}`} onClick={() => openExclusiveOverlay(() => setSelectedMember(member))}><span className="mini-avatar avatar-coral">{member.avatarUrl ? <MediaImage src={member.avatarUrl} /> : (member.displayName || member.username || "?").slice(0, 2).toLocaleUpperCase("ru")}<i /></span><span><strong>{member.nickname || member.displayName}</strong><ClanTag clan={member.clan}/><small>@{member.username || "участник"} · {member.online ? "в сети" : "не в сети"}</small></span></button>)}</section>)}{membersCursor ? <button className="members-load-more" onClick={() => void loadMoreMembers()} disabled={membersLoadingMore}>{membersLoadingMore ? <><LoaderCircle className="spin" size={14} /> Загружаем…</> : "Показать ещё"}</button> : null}</> : <div className="members-loading">В этом пространстве пока нет участников.</div>}
+          {membersLoading ? <div className="members-loading">Загрузка участников…</div> : memberGroups.length ? <>{memberGroups.map((group) => <section className="member-section member-role-group" key={group.key}><h2><span style={group.color ? { color: group.color } : undefined}>{group.label.toLocaleUpperCase("ru")} — {group.members.length}</span></h2>{group.members.map((member) => <button className={`member ${member.online ? "is-online" : "is-offline"}`} key={member.userId} type="button" aria-label={`Открыть профиль ${member.nickname || member.displayName} — ${member.online ? "в сети" : "не в сети"}`} title={`Открыть профиль ${member.nickname || member.displayName}`} onClick={() => openExclusiveOverlay(() => setSelectedMember(member))}><span className="mini-avatar avatar-coral">{member.avatarUrl ? <MediaImage src={member.avatarUrl} /> : (member.displayName || member.username || "?").slice(0, 2).toLocaleUpperCase("ru")}<i /></span><span><strong>{member.nickname || member.displayName}</strong><ClanTag clan={member.clan}/><small>@{member.username || "участник"} · {member.online ? "в сети" : "не в сети"}</small>{Object.values(voicePresence).some((items)=>items.some((participant)=>participant.id===member.userId))?<span className="member-voice-indicator" title="Сейчас в голосовом канале"><Mic size={12}/> в голосе</span>:null}</span></button>)}</section>)}{membersCursor ? <button className="members-load-more" onClick={() => void loadMoreMembers()} disabled={membersLoadingMore}>{membersLoadingMore ? <><LoaderCircle className="spin" size={14} /> Загружаем…</> : "Показать ещё"}</button> : null}</> : <div className="members-loading">В этом пространстве пока нет участников.</div>}
         </div>
       </aside>
       <button className="mobile-drawer-backdrop" aria-label="Закрыть меню каналов" onClick={() => setMobileChannelsOpen(false)} />

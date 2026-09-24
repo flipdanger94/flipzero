@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isProtectedRoute, loginPathFor, PROTECTED_ROUTE_PREFIXES } from "../lib/route-access";
+import { isOriginExemptMutationRoute, isProtectedRoute, loginPathFor, ORIGIN_EXEMPT_MUTATION_ROUTES, PROTECTED_ROUTE_PREFIXES } from "../lib/route-access";
 
 describe("protected route boundaries", () => {
   it("protects setup and oauth routes", () => {
@@ -24,5 +24,11 @@ describe("protected route boundaries", () => {
     expect(loginPathFor("/oauth/authorize", "?client_id=abc&scope=identify")).toBe(
       "/login?next=%2Foauth%2Fauthorize%3Fclient_id%3Dabc%26scope%3Didentify",
     );
+  });
+
+  it("exempts only the signed LiveKit webhook from browser origin checks", () => {
+    expect(ORIGIN_EXEMPT_MUTATION_ROUTES).toEqual(["/api/livekit/webhook"]);
+    expect(isOriginExemptMutationRoute("/api/livekit/webhook")).toBe(true);
+    expect(isOriginExemptMutationRoute("/api/v1/channels/c1/voice")).toBe(false);
   });
 });
