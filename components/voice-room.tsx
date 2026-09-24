@@ -101,6 +101,7 @@ export function VoiceRoom({
   const joinRef = useRef<() => Promise<void>>(async () => {});
   const outputVolumeRef = useRef(1);
   const voiceRootRef = useRef<HTMLDivElement | null>(null);
+  const swipeStartRef = useRef<number | null>(null);
 
   useEffect(
     () => () => {
@@ -619,6 +620,9 @@ export function VoiceRoom({
     });
     requestAnimationFrame(() => remoteVideoRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }));
   }
+  function minimizeStream() {
+    setFocusMode(false);
+  }
   function clearFocus() {
     setFocusMode(false);
     setSelectedStreamId("");
@@ -668,7 +672,7 @@ export function VoiceRoom({
   );
 
   return (
-    <div ref={voiceRootRef} className={`voice-room voice-room-connected ${focusMode ? "is-focus" : ""} ${showingVideo ? "has-video" : ""}`}>
+    <div ref={voiceRootRef} className={`voice-room voice-room-connected ${focusMode ? "is-focus" : ""} ${selectedStreamId && !focusMode ? "has-mini-stream" : ""} ${showingVideo ? "has-video" : ""}`}>
       <div ref={audioRef} className="remote-audio"/>
       <header className="voice-room-topbar">
         <div><small>ГОЛОСОВОЙ КАНАЛ</small><strong>{channelName}</strong>{spaceName ? <span>{spaceName}</span> : null}</div>
@@ -679,7 +683,7 @@ export function VoiceRoom({
       </header>
 
       <main className="voice-stage-layout">
-        <section className="voice-stage-main" aria-label="Сцена голосового канала">
+        <section className="voice-stage-main" aria-label="Сцена голосового канала" onTouchStart={(event)=>{swipeStartRef.current=event.touches[0]?.clientY??null}} onTouchEnd={(event)=>{const start=swipeStartRef.current;const end=event.changedTouches[0]?.clientY;if(focusMode&&start!==null&&typeof end==="number"&&end-start>80)minimizeStream();swipeStartRef.current=null}}>
           {showingVideo ? <div className={`video-grid ${focusMode ? "focus-stream" : ""} ${camera && !sharing && !remoteVideo ? "camera-only" : ""}`}>
             <div ref={remoteVideoRef} className="remote-video"/>
             <div ref={localScreenRef} className={`local-screen ${sharing ? "visible" : ""}`}/>
@@ -692,9 +696,11 @@ export function VoiceRoom({
             <button type="button" onClick={()=>setStreamMuted((value)=>!value)} aria-label={streamMuted ? "Включить звук стрима" : "Выключить звук стрима"}>{streamMuted?<VolumeX size={17}/>:<Volume2 size={17}/>}</button>
             <button type="button" onClick={()=>void openPictureInPicture()} aria-label="Картинка в картинке"><MonitorUp size={17}/></button>
             <button type="button" onClick={()=>void toggleFullscreen()} aria-label="Полноэкранный режим"><Maximize2 size={17}/></button>
-            <button type="button" onClick={clearFocus} aria-label="Свернуть стрим"><Minimize2 size={17}/></button>
+            <button type="button" onClick={minimizeStream} aria-label="Свернуть стрим"><Minimize2 size={17}/></button>
+            <button type="button" onClick={clearFocus} aria-label="Закрыть просмотр стрима">×</button>
           </div> : null}
 
+          {selectedStreamId && !focusMode ? <div className="voice-mini-stream-controls" aria-label="Мини-плеер стрима"><button type="button" onClick={()=>setFocusMode(true)} aria-label="Развернуть стрим"><Maximize2 size={16}/></button><button type="button" onClick={clearFocus} aria-label="Закрыть стрим">×</button></div>:null}
           <div className="voice-tile-grid" role="list" aria-label="Участники">
             {normalizedPresence.map((participant)=><article key={participant.id} role="listitem" className={`voice-tile ${participant.speaking ? "speaking" : ""} ${participant.streaming || participant.sharing ? "is-streaming" : ""}`}>
               <div className="voice-tile-avatar">{participant.avatarUrl?<MediaImage src={participant.avatarUrl}/>:participant.name.slice(0,2).toLocaleUpperCase("ru")}</div>
