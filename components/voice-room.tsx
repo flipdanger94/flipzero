@@ -885,9 +885,9 @@ export function VoiceRoom({
     const timer = window.setTimeout(() => focusStream(initialStreamId), 0);
     return () => window.clearTimeout(timer);
   }, [initialStreamId, connected]);
-  async function toggleFullscreen() {
-    const target = selectedStreamId
-      ? voiceRootRef.current?.querySelector<HTMLElement>(`[data-participant-tile-id="${CSS.escape(selectedStreamId)}"]`)
+  async function toggleFullscreen(participantId = selectedStreamId) {
+    const target = participantId
+      ? voiceRootRef.current?.querySelector<HTMLElement>(`[data-participant-tile-id="${CSS.escape(participantId)}"]`)
       : voiceRootRef.current;
     if (!target) return;
     try {
@@ -926,7 +926,7 @@ export function VoiceRoom({
         <section className="voice-stage-main" aria-label="Сцена голосового канала" onTouchStart={(event)=>{swipeStartRef.current=event.touches[0]?.clientY??null}} onTouchEnd={(event)=>{const start=swipeStartRef.current;const end=event.changedTouches[0]?.clientY;if(focusMode&&start!==null&&typeof end==="number"&&end-start>80)clearFocus();swipeStartRef.current=null}}>
           {normalizedPresence.length === 0 ? <div className="voice-stage-empty voice-stage-empty-visible" role="status"><Users size={28}/><strong>В канале пока никого нет</strong><span>Участники появятся здесь после подключения.</span></div> : null}
           <div className="voice-tile-grid" role="list" aria-label="Участники" data-participant-count={normalizedPresence.length} style={{"--voice-grid-columns":gridLayout.columns,"--voice-grid-rows":gridLayout.rows} as CSSProperties}>
-            {visibleParticipants.map((participant)=><article key={participant.id} role="listitem" data-participant-tile-id={participant.id} className={`voice-tile ${participant.speaking ? "speaking" : ""} ${participant.streaming || participant.sharing ? "is-streaming" : ""} ${participant.camera ? "has-camera" : ""} ${selectedStreamId===participant.id ? "is-stream-selected" : ""} ${focusMode&&selectedStreamId===participant.id ? "is-media-focus" : ""}`} onDoubleClick={participant.streaming || participant.sharing ? ()=>{if(selectedStreamId!==participant.id)focusStream(participant.id);window.setTimeout(()=>void toggleFullscreen(),0)} : undefined}>
+            {visibleParticipants.map((participant)=><article key={participant.id} role="listitem" data-participant-tile-id={participant.id} className={`voice-tile ${participant.speaking ? "speaking" : ""} ${participant.streaming || participant.sharing ? "is-streaming" : ""} ${participant.camera ? "has-camera" : ""} ${selectedStreamId===participant.id ? "is-stream-selected" : ""} ${focusMode&&selectedStreamId===participant.id ? "is-media-focus" : ""}`} onDoubleClick={participant.streaming || participant.sharing ? ()=>{if(selectedStreamId!==participant.id)focusStream(participant.id);window.setTimeout(()=>void toggleFullscreen(participant.id),0)} : undefined}>
               <div className="voice-tile-media" aria-hidden="true">
                 <div className="voice-tile-camera" data-voice-media-id={participant.id} data-voice-media-source="camera"/>
                 <div className="voice-tile-screen" data-voice-media-id={participant.id} data-voice-media-source="screen"/>
