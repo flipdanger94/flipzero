@@ -636,17 +636,48 @@ export const questClaims=pgTable("quest_claims",{
   questKey:text("quest_key").notNull(),periodKey:text("period_key").notNull(),createdAt:timestamp("created_at",{withTimezone:true}).defaultNow().notNull(),
 },table=>[uniqueIndex("quest_claim_unique").on(table.userId,table.questKey,table.periodKey)]);
 export const cosmeticItems=pgTable("cosmetic_items",{
-  id:text("id").primaryKey(),title:text("title").notNull(),description:text("description").default("").notNull(),category:text("category").notNull(),rarity:text("rarity").notNull(),
-  price:integer("price").notNull(),preview:text("preview").notNull(),superflipOnly:boolean("superflip_only").default(false).notNull(),
+  id:text("id").primaryKey(),
+  slug:text("slug").notNull(),
+  title:text("title").notNull(),
+  description:text("description").default("").notNull(),
+  category:text("category").notNull(),
+  type:text("type").notNull(),
+  slot:text("slot").notNull(),
+  rarity:text("rarity").notNull(),
+  price:integer("price").notNull(),
+  priceMoneyCents:integer("price_money_cents"),
+  preview:text("preview").notNull(),
+  previewImage:text("preview_image"),
+  previewAnimation:text("preview_animation"),
+  superflipOnly:boolean("superflip_only").default(false).notNull(),
+  isBundle:boolean("is_bundle").default(false).notNull(),
+  isAnimated:boolean("is_animated").default(false).notNull(),
+  isActive:boolean("is_active").default(true).notNull(),
   availableUntil:timestamp("available_until",{withTimezone:true}),
-});
+  createdAt:timestamp("created_at",{withTimezone:true}).defaultNow().notNull(),
+  updatedAt:timestamp("updated_at",{withTimezone:true}).defaultNow().notNull(),
+},table=>[
+  uniqueIndex("cosmetic_items_slug_unique").on(table.slug),
+  index("cosmetic_items_active_category_idx").on(table.isActive,table.category,table.rarity),
+]);
 export const cosmeticInventory=pgTable("cosmetic_inventory",{
-  userId:text("user_id").notNull().references(()=>users.id,{onDelete:"cascade"}),itemId:text("item_id").notNull().references(()=>cosmeticItems.id,{onDelete:"cascade"}),
+  userId:text("user_id").notNull().references(()=>users.id,{onDelete:"cascade"}),
+  itemId:text("item_id").notNull().references(()=>cosmeticItems.id,{onDelete:"cascade"}),
+  source:text("source").default("purchase").notNull(),
   acquiredAt:timestamp("acquired_at",{withTimezone:true}).defaultNow().notNull(),
-},table=>[primaryKey({columns:[table.userId,table.itemId]})]);
+},table=>[
+  primaryKey({columns:[table.userId,table.itemId]}),
+  index("cosmetic_inventory_user_acquired_idx").on(table.userId,table.acquiredAt),
+]);
 export const cosmeticEquipped=pgTable("cosmetic_equipped",{
-  userId:text("user_id").notNull().references(()=>users.id,{onDelete:"cascade"}),category:text("category").notNull(),itemId:text("item_id").notNull().references(()=>cosmeticItems.id,{onDelete:"cascade"}),
-},table=>[primaryKey({columns:[table.userId,table.category]})]);
+  userId:text("user_id").notNull().references(()=>users.id,{onDelete:"cascade"}),
+  slot:text("slot").notNull(),
+  itemId:text("item_id").notNull().references(()=>cosmeticItems.id,{onDelete:"cascade"}),
+},table=>[primaryKey({columns:[table.userId,table.slot]})]);
+export const cosmeticBundleEntries=pgTable("cosmetic_bundle_entries",{
+  bundleId:text("bundle_id").notNull().references(()=>cosmeticItems.id,{onDelete:"restrict"}),
+  itemId:text("item_id").notNull().references(()=>cosmeticItems.id,{onDelete:"restrict"}),
+},table=>[primaryKey({columns:[table.bundleId,table.itemId]})]);
 
 export const clanSeasonScores=pgTable("clan_season_scores",{
  clanId:text("clan_id").notNull().references(()=>clans.id,{onDelete:"cascade"}),seasonKey:text("season_key").notNull(),xp:bigint("xp",{mode:"number"}).default(0).notNull(),closedAt:timestamp("closed_at",{withTimezone:true}),
