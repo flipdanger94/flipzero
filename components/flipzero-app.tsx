@@ -115,7 +115,9 @@ export default function Home({ initialSpaceId, initialChannelId }: { initialSpac
   const [showAccountSettings, setShowAccountSettings] = useState(false);
   const [accountSettingsSection, setAccountSettingsSection] = useState<AccountSettingsSection>("profile");
   const [platformView, setPlatformView] = useState<"social" | "admin" | "clans" | null>(null);
+  const [clanMounted,setClanMounted]=useState(false);
   function openPlatformView(view:"social"|"admin"|"clans", replace=false){
+    if(view==="clans")setClanMounted(true);
     setPlatformView(view);setMobileChannelsOpen(false);
     const query=view==="social"?"?view=personal":view==="admin"?"?view=admin":"?view=clans";
     const next=`/app${query}`;
@@ -126,14 +128,14 @@ export default function Home({ initialSpaceId, initialChannelId }: { initialSpac
       if(window.location.pathname.startsWith("/channels/")){setPlatformView(null);return}
       if(window.location.pathname!=="/app")return;
       const params=new URLSearchParams(window.location.search);
-      if(params.get("clan"))setPlatformView("clans");
+      if(params.get("clan")){setClanMounted(true);setPlatformView("clans")}
       else if(params.get("view")==="personal")setPlatformView("social");
       else if(params.get("view")==="admin")setPlatformView("admin");
-      else if(params.get("view")==="clans")setPlatformView("clans");
+      else if(params.get("view")==="clans"){setClanMounted(true);setPlatformView("clans")}
     };
     sync();window.addEventListener("popstate",sync);return()=>window.removeEventListener("popstate",sync);
   },[]);
-  useEffect(()=>{const open=(event:Event)=>{const id=(event as CustomEvent<string>).detail;setPlatformView("clans");window.history.replaceState(null,"",`/app?clan=${encodeURIComponent(id)}`);window.dispatchEvent(new CustomEvent("flipzero:clan-selected",{detail:id}));};window.addEventListener("flipzero:open-clan",open);return()=>window.removeEventListener("flipzero:open-clan",open)},[]);
+  useEffect(()=>{const open=(event:Event)=>{const id=(event as CustomEvent<string>).detail;setClanMounted(true);setPlatformView("clans");window.history.replaceState(null,"",`/app?clan=${encodeURIComponent(id)}`);window.dispatchEvent(new CustomEvent("flipzero:clan-selected",{detail:id}));};window.addEventListener("flipzero:open-clan",open);return()=>window.removeEventListener("flipzero:open-clan",open)},[]);
   const [socialRoute, setSocialRoute] = useState<{ tab: "messages" | "friends" | "superflip"; userId: string | null; nonce: number }>({ tab: "messages", userId: null, nonce: 0 });
   const [mobileChannelsOpen, setMobileChannelsOpen] = useState(false);
   const [channelLinkCopied, setChannelLinkCopied] = useState(false);
@@ -487,7 +489,11 @@ export default function Home({ initialSpaceId, initialChannelId }: { initialSpac
         <div className="rail-bottom"><button className={`rail-action ${platformView==="clans"?"active":""}`} aria-label="Кланы" title="Кланы" onClick={()=>openPlatformView("clans")}><Swords size={20}/></button><button className="rail-action" aria-label="Состояние системы" title="Состояние системы" onClick={() => openExclusiveOverlay(() => setShowSystemStatus(true))}><HelpCircle size={20} /></button></div>
       </nav>
 
-      {user && platformView ? <section className="platform-workspace" aria-label={platformView === "social" ? "Личное пространство" : platformView === "clans" ? "Кланы" : "Панель администратора"}>{platformView === "social" ? <SocialHubDialog key={`${socialRoute.tab}:${socialRoute.userId ?? ""}:${socialRoute.nonce}`} currentUserId={user.id} embedded initialTab={socialRoute.tab} initialUserId={socialRoute.userId} isAdmin={user.platformRole === "admin"} onOpenAdmin={() => openPlatformView("admin")} /> : platformView === "clans" ? <ClanHub currentUserId={user.id} onOpenDirect={(userId)=>{setSocialRoute(route=>({tab:"messages",userId,nonce:route.nonce+1}));openPlatformView("social")}}/> : user.platformRole === "admin" ? <AdminDialog embedded /> : null}</section> : null}
+      {user && (platformView || clanMounted) ? <section className={`platform-workspace ${platformView?"":"platform-workspace-background"}`} aria-label={platformView === "social" ? "Личное пространство" : platformView === "clans" ? "Кланы" : platformView === "admin" ? "Панель администратора" : "Фоновая голосовая сессия"}>
+        {platformView === "social" ? <SocialHubDialog key={`${socialRoute.tab}:${socialRoute.userId ?? ""}:${socialRoute.nonce}`} currentUserId={user.id} embedded initialTab={socialRoute.tab} initialUserId={socialRoute.userId} isAdmin={user.platformRole === "admin"} onOpenAdmin={() => openPlatformView("admin")} /> : null}
+        {clanMounted ? <div className={platformView==="clans"?"platform-pane-active":"platform-pane-hidden"}><ClanHub currentUserId={user.id} onOpenDirect={(userId)=>{setSocialRoute(route=>({tab:"messages",userId,nonce:route.nonce+1}));openPlatformView("social")}}/></div> : null}
+        {platformView === "admin" && user.platformRole === "admin" ? <AdminDialog embedded /> : null}
+      </section> : null}
 
       <aside className={`channel-panel ${activeSpace ? "has-server-banner" : ""}`}>
         <button className="mobile-drawer-close" aria-label="Закрыть список каналов" onClick={() => setMobileChannelsOpen(false)}><X size={19} /></button>
