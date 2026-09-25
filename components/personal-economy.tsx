@@ -212,16 +212,16 @@ export function PersonalEconomy({onOpenSuperFlip}:{onOpenSuperFlip?:()=>void}={}
 
   function actionFor(item:StoreItem){
     if(item.isBundle){
-      if(item.superflipOnly&&!superflipActive&&item.state==="not_owned")return <button onClick={()=>onOpenSuperFlip?onOpenSuperFlip():window.location.assign("/superflip")}>Нужен SuperFlip</button>;
+      if(item.superflipOnly&&!superflipActive&&item.state==="not_owned")return <button onClick={()=>onOpenSuperFlip?onOpenSuperFlip():window.location.assign("/superflip")}><AppIcon name="superflip" size={14}/>Нужен SuperFlip</button>;
       return <button disabled={!!busy||item.state!=="not_owned"} onClick={()=>void purchase(item)}>
-        {busy===item.id?"Покупаем…":item.state!=="not_owned"?"Набор куплен":`Купить · ${item.priceOrbs} монет`}
+        {busy===item.id?"Покупаем…":item.state!=="not_owned"?"Набор куплен":<><AppIcon name="buy" size={14}/>Купить · {item.priceOrbs} монет</>}
       </button>;
     }
-    if(item.state==="equipped")return <button className="secondary" disabled={!!busy} onClick={()=>void unequip(item)}>{busy===item.id?"Снимаем…":"Снять"}</button>;
-    if(item.state==="owned")return <button disabled={!!busy} onClick={()=>void equip(item)}>{busy===item.id?"Надеваем…":"Надеть"}</button>;
+    if(item.state==="equipped")return <button className="secondary" disabled={!!busy} onClick={()=>void unequip(item)}>{busy===item.id?"Снимаем…":<><AppIcon name="unequip" size={14}/>Снять</>}</button>;
+    if(item.state==="owned")return <button disabled={!!busy} onClick={()=>void equip(item)}>{busy===item.id?"Надеваем…":<><AppIcon name="equip" size={14}/>Надеть</>}</button>;
     if(item.superflipOnly&&!superflipActive)return <button onClick={()=>onOpenSuperFlip?onOpenSuperFlip():window.location.assign("/superflip")}>Нужен SuperFlip</button>;
     return <button disabled={!!busy||balance<item.priceOrbs} onClick={()=>void purchase(item)}>
-      {busy===item.id?"Покупаем…":balance<item.priceOrbs?`Не хватает ${item.priceOrbs-balance}`:`Купить · ${item.priceOrbs} монет`}
+      {busy===item.id?"Покупаем…":balance<item.priceOrbs?`Не хватает ${item.priceOrbs-balance}`:<><AppIcon name="buy" size={14}/>Купить · {item.priceOrbs} монет</>}
     </button>;
   }
 
@@ -307,7 +307,7 @@ export function PersonalEconomy({onOpenSuperFlip}:{onOpenSuperFlip?:()=>void}={}
         <div className="inventory-grid">{filteredInventory.map(item=><article key={item.id} className={`inventory-card rarity-${item.rarity}`}>
           <div className="store-item-visual"><CosmeticArt live item={item}/><ItemBadges item={item}/></div>
           <div><small>{slotLabels[item.slot]??categoryLabels[item.category]??item.category}</small><strong>{item.title}</strong><p>Получено {new Date(item.acquiredAt).toLocaleDateString("ru-RU")}</p></div>
-          <div className="store-card-actions inventory-actions"><button className="preview" onClick={()=>setPreview(item)}><AppIcon name="preview" size={15}/>Просмотр</button><button className="preview" onClick={()=>{setTab("store");setCategory(item.category);setQuery(item.title);window.setTimeout(()=>document.querySelector(".store-catalog")?.scrollIntoView({behavior:"smooth"}),0)}}><AppIcon name="store" size={15}/>В магазин</button>{item.isBundle?<button disabled>Набор</button>:item.state==="equipped"?<button className="secondary" onClick={()=>void unequip(item)} disabled={!!busy}>Снять</button>:<button onClick={()=>void equip(item)} disabled={!!busy}>Надеть</button>}</div>
+          <div className="store-card-actions inventory-actions"><button className="preview" onClick={()=>setPreview(item)}><AppIcon name="preview" size={15}/>Просмотр</button><button className="preview" onClick={()=>{setTab("store");setCategory(item.category);setQuery(item.title);window.setTimeout(()=>document.querySelector(".store-catalog")?.scrollIntoView({behavior:"smooth"}),0)}}><AppIcon name="store" size={15}/>В магазин</button>{item.isBundle?<button disabled>Набор</button>:item.state==="equipped"?<button className="secondary" onClick={()=>void unequip(item)} disabled={!!busy}><AppIcon name="unequip" size={14}/>Снять</button>:<button onClick={()=>void equip(item)} disabled={!!busy}><AppIcon name="equip" size={14}/>Надеть</button>}</div>
         </article>)}</div>
         {!filteredInventory.length?<div className="store-empty"><AppIcon name="inventory" size={30}/><strong>В этом разделе пока пусто</strong><p>Откройте магазин и добавьте первые предметы в коллекцию.</p><button onClick={()=>setTab("store")}>Открыть магазин</button></div>:null}
       </section>
