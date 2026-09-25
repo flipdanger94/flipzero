@@ -26,6 +26,20 @@ const releases: Record<string, { number: string; title: string; description: str
   "release-0017": { number: "0017", title: "Восстановление пароля", description: "Добавляет одноразовые ссылки сброса пароля и ограничения частоты запросов." },
   "release-0018": { number: "0018", title: "Поддержка SuperUp", description: "Добавляет распределение поддержки пространств для участников с SuperFlip." },
   "release-0019": { number: "0019", title: "Звуковая панель", description: "Добавляет звуковые клипы пространства." },
+  "release-0020": { number: "0020", title: "Кланы", description: "Создаёт кланы, участников, заявки и клановые сообщения." },
+  "release-0021": { number: "0021", title: "Прогресс кланов", description: "Добавляет XP-вклад участников и прогресс клана." },
+  "release-0022": { number: "0022", title: "История XP кланов", description: "Добавляет служебный backfill истории кланового XP." },
+  "release-0023": { number: "0023", title: "Экономика и магазин", description: "Создаёт кошельки, транзакции и магазин." },
+  "release-0024": { number: "0024", title: "Клановые сезоны и казна", description: "Добавляет сезоны, казну, события и governance кланов." },
+  "release-0025": { number: "0025", title: "Профили и истории", description: "Добавляет социальные профили и stories." },
+  "release-0026": { number: "0026", title: "Темы и тихие часы", description: "Добавляет пользовательские настройки, темы и DND." },
+  "release-0027": { number: "0027", title: "Очистка временного voice", description: "Удаляет устаревшие временные голосовые комнаты и приглашения." },
+  "release-0028": { number: "0028", title: "Voice speaking", description: "Добавляет флаг speaking в voice state." },
+  "release-0029": { number: "0029", title: "Лимит voice-канала", description: "Добавляет ограничение числа участников голосового канала." },
+  "release-0030": { number: "0030", title: "LiveKit voice webhooks", description: "Добавляет webhook-журнал LiveKit, breakout и heartbeat для voice presence." },
+  "release-0031": { number: "0031", title: "XP ledger", description: "Создаёт user_progress, дедупликацию XP и выполняет backfill legacy XP." },
+  "release-0032": { number: "0032", title: "Пользовательские темы", description: "Создаёт таблицу управляемых тем приложения." },
+  "release-0033": { number: "0033", title: "Сессии личных звонков", description: "Добавляет жизненный цикл входящих и исходящих direct calls." },
 
 };
 
