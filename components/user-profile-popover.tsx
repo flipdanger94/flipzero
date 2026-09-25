@@ -1,10 +1,7 @@
 "use client";
 
 import { type CSSProperties, type FormEvent, useEffect, useRef, useState } from "react";
-import {
-  Ban, Check, Copy, Ellipsis, Flag, LoaderCircle, MessageCircle, Phone, ShieldCheck,
-  UserMinus, UserPlus, Video, VolumeX, X,
-} from "lucide-react";
+import { AppIcon } from "./app-icon";
 import { MediaImage } from "./media-image";
 import { ClanTag, type ClanTagData } from "./clan-tag";
 import { DirectCallOverlay } from "./direct-call-overlay";
@@ -136,18 +133,18 @@ export function UserProfilePopover({
   const p=profile?.id===userId?profile:null;
   return <div className="fz-user-profile-layer" role="presentation" onMouseDown={(event)=>{if(event.target===event.currentTarget&&!full&&!reporting)onClose()}}>
     <section ref={miniRef} className={`fz-mini-profile effect-${p?.cosmetics?.profile_effect??"none"}`} style={{...position,"--profile-accent":"var(--accent,#8f70ff)"} as CSSProperties} role="dialog" aria-label={`Профиль ${displayName}`}>
-      {!p?<div className="fz-mini-profile-state">{error?<><ShieldCheck/><strong>Профиль недоступен</strong><small>{error}</small></>:<><LoaderCircle className="spin"/><span>Загрузка профиля…</span></>}</div>:<>
+      {!p?<div className="fz-mini-profile-state">{error?<><AppIcon name="check"/><strong>Профиль недоступен</strong><small>{error}</small></>:<><AppIcon name="loading" className="spin"/><span>Загрузка профиля…</span></>}</div>:<>
         <div className={`fz-mini-banner cosmetic-${p.cosmetics?.banner??"none"}`} style={p.bannerUrl?{backgroundImage:`linear-gradient(180deg,transparent,rgba(7,12,25,.5)),url("${p.bannerUrl}")`}:undefined}>
-          <button className="fz-mini-kebab" type="button" aria-label="Дополнительные действия" title="Дополнительные действия" aria-expanded={menu} onClick={()=>setMenu(value=>!value)}><Ellipsis size={19}/></button>
+          <button className="fz-mini-kebab" type="button" aria-label="Дополнительные действия" title="Дополнительные действия" aria-expanded={menu} onClick={()=>setMenu(value=>!value)}><AppIcon name="more" size={19}/></button>
         </div>
         <div className="fz-mini-body">
           <div className={`fz-mini-avatar frame-${p.cosmetics?.avatar_frame??"none"}`}>{p.avatarUrl?<MediaImage src={p.avatarUrl}/>:p.displayName.slice(0,2).toLocaleUpperCase("ru")}<i className={p.presence==="online"?"online":""}/></div>
           <div className="fz-mini-identity"><div className="fz-mini-name-row"><strong>{p.displayName}</strong><ClanTag clan={p.clan} variant="inline"/></div><span>@{p.username}</span><small>Уровень {p.globalLevel} · {p.presence==="online"?"в сети":"не в сети"}</small></div>
           {!p.isOwnProfile?<div className="fz-profile-icon-actions">
-            <button type="button" onClick={message} aria-label="Написать сообщение" title="Написать сообщение"><MessageCircle size={17}/></button>
-            <button type="button" onClick={()=>setCallMode("voice")} aria-label="Голосовой звонок" title="Голосовой звонок"><Phone size={17}/></button>
-            <button type="button" onClick={()=>setCallMode("video")} aria-label="Видеозвонок" title="Видеозвонок"><Video size={17}/></button>
-            <button type="button" onClick={()=>void friendAction()} aria-label={p.friendshipStatus==="friends"?"Удалить из друзей":"Добавить в друзья"} title={p.friendshipStatus==="friends"?"Удалить из друзей":p.friendshipStatus==="outgoing"?"Заявка отправлена":"Добавить в друзья"} disabled={busy||p.friendshipStatus==="outgoing"}>{p.friendshipStatus==="friends"?<UserMinus size={17}/>:p.friendshipStatus==="outgoing"?<Check size={17}/>:<UserPlus size={17}/>}</button>
+            <button type="button" onClick={message} aria-label="Написать сообщение" title="Написать сообщение"><AppIcon name="messages" size={17}/></button>
+            <button type="button" onClick={()=>setCallMode("voice")} aria-label="Голосовой звонок" title="Голосовой звонок"><AppIcon name="call" size={17}/></button>
+            <button type="button" onClick={()=>setCallMode("video")} aria-label="Видеозвонок" title="Видеозвонок"><AppIcon name="video" size={17}/></button>
+            <button type="button" onClick={()=>void friendAction()} aria-label={p.friendshipStatus==="friends"?"Удалить из друзей":"Добавить в друзья"} title={p.friendshipStatus==="friends"?"Удалить из друзей":p.friendshipStatus==="outgoing"?"Заявка отправлена":"Добавить в друзья"} disabled={busy||p.friendshipStatus==="outgoing"}>{p.friendshipStatus==="friends"?<AppIcon name="user-remove" size={17}/>:p.friendshipStatus==="outgoing"?<AppIcon name="check" size={17}/>:<AppIcon name="friends" size={17}/>}</button>
           </div>:null}
           <div className="fz-mini-section"><small>ОБО МНЕ</small><p>{p.bio||"Пользователь пока ничего о себе не рассказал."}</p>{p.profileStatus?<p>{p.customStatusEmoji} {p.profileStatus}</p>:null}{p.profileGames?.length?<p>🎮 {p.profileGames.slice(0,2).join(" · ")}</p>:null}</div>
           <div className="fz-mini-xp"><span><b>{p.globalXp} XP</b><small>{p.globalLevel>=100?"Максимальный уровень":`До уровня ${p.globalLevel+1}: ${p.xpToNextLevel} XP`}</small></span><i><b style={{width:`${p.globalLevel>=100?100:Math.max(0,Math.min(100,((p.globalXp-p.currentLevelXp)/Math.max(1,p.nextLevelXp-p.currentLevelXp))*100))}%`}}/></i></div><div className="fz-mini-badges"><span>LVL {p.globalLevel}</span>{p.cosmetics?.badge?<span className={`store-profile-badge badge-${p.cosmetics.badge}`} title="Косметический значок" aria-label="Косметический значок">✦</span>:null}{p.badges?.map(badge=><span key={badge.id} title={badge.name} aria-label={badge.name}>{badge.icon} {badge.name}</span>)}{p.isFriend?<span>ДРУГ</span>:null}{p.presence==="online"?<span>ONLINE</span>:null}</div>
@@ -156,24 +153,24 @@ export function UserProfilePopover({
         </div>
         {menu?<div className="fz-profile-menu" role="menu">
           <button role="menuitem" onClick={()=>{setMenu(false);setFull(true)}}>Полный профиль</button>
-          {!p.isOwnProfile?<><button role="menuitem" onClick={toggleIgnore}><VolumeX size={15}/>{ignored?"Не игнорировать":"Игнорировать"}</button>
-          {p.isFriend?<button role="menuitem" onClick={()=>void friendAction()}><UserMinus size={15}/>Удалить из друзей</button>:null}
+          {!p.isOwnProfile?<><button role="menuitem" onClick={toggleIgnore}><AppIcon name="audio-off" size={15}/>{ignored?"Не игнорировать":"Игнорировать"}</button>
+          {p.isFriend?<button role="menuitem" onClick={()=>void friendAction()}><AppIcon name="user-remove" size={15}/>Удалить из друзей</button>:null}
           <i/>
-          <button role="menuitem" className="danger" onClick={()=>void block()}><Ban size={15}/>Заблокировать</button>
-          <button role="menuitem" className="danger" onClick={()=>setReporting(true)}><Flag size={15}/>Пожаловаться</button>
+          <button role="menuitem" className="danger" onClick={()=>void block()}><AppIcon name="block" size={15}/>Заблокировать</button>
+          <button role="menuitem" className="danger" onClick={()=>setReporting(true)}><AppIcon name="report" size={15}/>Пожаловаться</button>
           <i/></>:null}
-          <button role="menuitem" onClick={()=>void copyId()}><Copy size={15}/>Копировать ID</button>
+          <button role="menuitem" onClick={()=>void copyId()}><AppIcon name="copy" size={15}/>Копировать ID</button>
         </div>:null}
       </>}
     </section>
 
     {p&&full?<div className="fz-full-profile-backdrop" role="presentation" onMouseDown={(event)=>{if(event.target===event.currentTarget)setFull(false)}}><section ref={fullRef} tabIndex={-1} className={`fz-full-profile effect-${p.cosmetics?.profile_effect??"none"}`} role="dialog" aria-modal="true" aria-label={`Полный профиль ${p.displayName}`} style={{"--profile-accent":"var(--accent,#8f70ff)"} as CSSProperties}>
-      <button className="fz-full-close" type="button" onClick={()=>setFull(false)} aria-label="Закрыть полный профиль"><X size={20}/></button>
+      <button className="fz-full-close" type="button" onClick={()=>setFull(false)} aria-label="Закрыть полный профиль"><AppIcon name="close" size={20}/></button>
       <aside>
         <div className={`fz-full-banner cosmetic-${p.cosmetics?.banner??"none"}`} style={p.bannerUrl?{backgroundImage:`linear-gradient(180deg,transparent,#08101e),url("${p.bannerUrl}")`}:undefined}/>
         <div className={`fz-full-avatar frame-${p.cosmetics?.avatar_frame??"none"}`}>{p.avatarUrl?<MediaImage src={p.avatarUrl}/>:p.displayName.slice(0,2)}<i className={p.presence==="online"?"online":""}/></div>
         <div className="fz-full-name-row"><h2 className={p.cosmetics?.nickname?`nick-${p.cosmetics.nickname}`:""}>{p.displayName}</h2>{p.cosmetics?.badge?<span className={`store-profile-badge badge-${p.cosmetics.badge}`} title="Косметический значок">✦</span>:null}</div>{p.clan?<ClanTag clan={p.clan} variant="full" className="fz-full-clan-details"/>:null}<p>@{p.username}</p><small>Уровень {p.globalLevel} · {p.presence==="online"?"в сети":"не в сети"}</small>
-        {!p.isOwnProfile?<div className="fz-profile-icon-actions fz-full-actions"><button onClick={message} aria-label="Написать сообщение" title="Написать сообщение"><MessageCircle/></button><button onClick={()=>setCallMode("voice")} aria-label="Голосовой звонок" title="Голосовой звонок"><Phone/></button><button onClick={()=>setCallMode("video")} aria-label="Видеозвонок" title="Видеозвонок"><Video/></button><button onClick={()=>void friendAction()} aria-label={p.friendshipStatus==="friends"?"Удалить из друзей":"Добавить в друзья"} title={p.friendshipStatus==="friends"?"Удалить из друзей":p.friendshipStatus==="outgoing"?"Заявка отправлена":"Добавить в друзья"} disabled={busy||p.friendshipStatus==="outgoing"}>{p.friendshipStatus==="friends"?<UserMinus/>:p.friendshipStatus==="outgoing"?<Check/>:<UserPlus/>}</button></div>:null}
+        {!p.isOwnProfile?<div className="fz-profile-icon-actions fz-full-actions"><button onClick={message} aria-label="Написать сообщение" title="Написать сообщение"><AppIcon name="messages"/></button><button onClick={()=>setCallMode("voice")} aria-label="Голосовой звонок" title="Голосовой звонок"><AppIcon name="call"/></button><button onClick={()=>setCallMode("video")} aria-label="Видеозвонок" title="Видеозвонок"><AppIcon name="video"/></button><button onClick={()=>void friendAction()} aria-label={p.friendshipStatus==="friends"?"Удалить из друзей":"Добавить в друзья"} title={p.friendshipStatus==="friends"?"Удалить из друзей":p.friendshipStatus==="outgoing"?"Заявка отправлена":"Добавить в друзья"} disabled={busy||p.friendshipStatus==="outgoing"}>{p.friendshipStatus==="friends"?<AppIcon name="user-remove"/>:p.friendshipStatus==="outgoing"?<AppIcon name="check"/>:<AppIcon name="friends"/>}</button></div>:null}
         <section><h3>О пользователе</h3><p>{p.bio||"Описание не заполнено."}</p>{p.profileStatus?<span>{p.profileStatus}</span>:null}</section>
         <div className="fz-full-stats"><span><b>{p.stats.messages}</b><small>сообщений</small></span><span><b>{p.stats.friends}</b><small>друзей</small></span><span><b>{p.stats.servers}</b><small>серверов</small></span></div>
       </aside>
