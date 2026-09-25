@@ -39,6 +39,16 @@ describe("voice client reliability contract", () => {
     expect(theme).toContain(".voice-room-connected.is-focus .voice-tile:not(.is-media-focus){display:none}");
   });
 
+  it("does not repeat connected-room metrics in a second header", async () => {
+    const [source, theme] = await Promise.all([
+      readFile("components/voice-room.tsx", "utf8"),
+      readFile("app/product-theme.css", "utf8"),
+    ]);
+    expect(source).not.toContain('className="voice-room-topbar"');
+    expect(source).not.toContain('className="voice-room-health"');
+    expect(theme).toContain("grid-template-rows:minmax(0,1fr) auto");
+  });
+
   it("offers camera preflight and screen quality settings", async () => {
     const source = await readFile("components/voice-room.tsx", "utf8");
     expect(source).toContain("ПРЕДПРОСМОТР КАМЕРЫ");

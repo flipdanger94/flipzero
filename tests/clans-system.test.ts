@@ -35,6 +35,20 @@ describe("clan system migration and server boundaries", () => {
     expect(events).toContain("getClanRole(user.id,clanId)");
   });
 
+  it("presents the clan leaderboard as responsive cards with an own-clan badge", async () => {
+    const [hub, styles] = await Promise.all([
+      readFile("components/clan-hub.tsx", "utf8"),
+      readFile("app/clans.css", "utf8"),
+    ]);
+    expect(hub).toContain("clan-rank-card");
+    expect(hub).toContain("Ваш клан");
+    expect(hub).toContain("clan-rank-avatar");
+    expect(hub).toContain("clan-rank-short-hint");
+    expect(styles).toContain(".clan-rank-card:hover");
+    expect(styles).toContain(".clan-rank-toolbar");
+    expect(styles).toContain(".clan-rank-pages");
+  });
+
   it("keeps developer platform reachable after replacing the rail icon", async () => {
     const settings = await readFile("components/account-settings-dialog.tsx", "utf8");
     const shell = await readFile("components/flipzero-app.tsx", "utf8");

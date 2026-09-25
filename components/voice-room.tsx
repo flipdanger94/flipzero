@@ -920,14 +920,6 @@ export function VoiceRoom({
   return (
     <div ref={voiceRootRef} className={`voice-room voice-room-connected ${focusMode ? "is-focus" : ""} ${selectedStreamId && !focusMode ? "has-mini-stream" : ""}`}>
       <div ref={audioRef} className="remote-audio"/>
-      <header className="voice-room-topbar">
-        <div><small>ГОЛОСОВОЙ КАНАЛ</small><strong>{channelName}</strong>{spaceName ? <span>{spaceName}</span> : null}</div>
-        <div className="voice-room-health">
-          <span className={`quality quality-${quality}`}><Signal size={14}/>{status === "reconnecting" ? "Переподключение…" : qualityLabels[quality]}</span>
-          <span><Users size={14}/>{normalizedPresence.length}</span>
-        </div>
-      </header>
-
       <main className="voice-stage-layout">
         <section className="voice-stage-main" aria-label="Сцена голосового канала" onTouchStart={(event)=>{swipeStartRef.current=event.touches[0]?.clientY??null}} onTouchEnd={(event)=>{const start=swipeStartRef.current;const end=event.changedTouches[0]?.clientY;if(focusMode&&start!==null&&typeof end==="number"&&end-start>80)clearFocus();swipeStartRef.current=null}}>
           {normalizedPresence.length === 0 ? <div className="voice-stage-empty voice-stage-empty-visible" role="status"><Users size={28}/><strong>В канале пока никого нет</strong><span>Участники появятся здесь после подключения.</span></div> : null}
