@@ -3,7 +3,8 @@
 import { type FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useModalA11y } from "@/hooks/use-modal-a11y";
-import { AtSign, Bell, Check, Code2, Crown, Gem, Headphones, KeyRound, LoaderCircle, LogOut, Mic, Palette, RefreshCw, ShieldCheck, UserRound, Volume2, X, UserX } from "lucide-react";
+import { AtSign, Bell, Check, Code2, Gem, Headphones, KeyRound, LoaderCircle, LogOut, Mic, RefreshCw, ShieldCheck, UserRound, Volume2, UserX } from "lucide-react";
+import { AppIcon } from "./app-icon";
 import { BrandMark } from "./brand-mark";
 import { ImageUpload } from "./image-upload";
 import { SecurityCenter } from "./security-center";
@@ -112,11 +113,11 @@ export function AccountSettingsDialog({ user, initialSection = "profile", onClos
         <button type="button" className={section === "notifications" ? "active" : ""} onClick={() => openSection("notifications")}><Bell size={18} /> Уведомления</button>
         <small className="account-nav-label account-nav-group">НАСТРОЙКИ ПРИЛОЖЕНИЯ</small>
         <button type="button" className={section === "voice" ? "active" : ""} onClick={() => openSection("voice")}><Headphones size={18} /> Голос и видео</button>
-        <button type="button" className={section === "appearance" ? "active" : ""} onClick={() => openSection("appearance")}><Palette size={18} /> Внешний вид</button>
+        <button type="button" className={section === "appearance" ? "active" : ""} onClick={() => openSection("appearance")}><AppIcon name="appearance" size={18}/> Внешний вид</button>
         <small className="account-nav-label account-nav-group">ИНСТРУМЕНТЫ</small>
         <a className="account-nav-link" href="/developers/console"><Code2 size={18}/>Платформа разработчиков</a>
         <small className="account-nav-label account-nav-group">FLIPZERO</small>
-        <button type="button" className={`account-premium-nav ${section === "superflip" ? "active" : ""}`} onClick={() => openSection("superflip")}><Crown size={18} /> SuperFlip</button>
+        <button type="button" className={`account-premium-nav ${section === "superflip" ? "active" : ""}`} onClick={() => openSection("superflip")}><AppIcon name="superflip" size={18}/> SuperFlip</button>
         <button type="button" className={`account-superup-nav ${section === "superup" ? "active" : ""}`} onClick={() => openSection("superup")}><Gem size={18} /> SuperUp</button>
         <div className="account-nav-spacer" />
         <button type="button" className="account-logout" onClick={signOut} disabled={busy}><LogOut size={18} /> Выйти из аккаунта</button>
@@ -125,7 +126,7 @@ export function AccountSettingsDialog({ user, initialSection = "profile", onClos
 
       <div className="account-settings-main"><div className="account-settings-content">
         <button className="account-settings-mobile-back" type="button" onClick={()=>setMobileSectionOpen(false)} aria-label="Назад к разделам">← <span>Настройки</span></button>
-        <button className="account-settings-close" onClick={onClose} aria-label="Закрыть настройки"><X size={20} /></button>
+        <button className="account-settings-close" onClick={onClose} aria-label="Закрыть настройки"><AppIcon name="close" size={20}/></button>
         {section === "profile" ? <>
           <div className="account-settings-heading"><span>ПРОФИЛЬ</span><h2 id="account-settings-title">Мой профиль</h2><p>Так вас видят другие участники FlipZero.</p></div>
           <div className="account-profile-preview"><div className="account-profile-banner" style={media.bannerUrl ? { backgroundImage: `url(${media.bannerUrl})` } : undefined} /><div className="account-profile-details"><span className="account-profile-avatar">{media.avatarUrl ? <MediaImage src={media.avatarUrl} sizes="88px" /> : initials}</span><strong>{user.displayName}</strong><small>@{user.username} · уровень {user.globalLevel}</small><p>{user.bio || "Расскажите немного о себе."}</p></div></div>
@@ -248,7 +249,7 @@ function SuperFlipSettings() {
   const [status, setStatus] = useState<{ active?: boolean; waitlisted?: boolean; expiresAt?: string | null; history?: HistoryItem[] } | null>(null);
   useEffect(() => { void fetch("/api/superflip/status").then((response) => response.json()).then(setStatus).catch(() => setStatus({})); }, []);
   async function waitlist() { const response = await fetch("/api/superflip/purchase", { method: "POST" }); if (response.ok) setStatus((current) => ({ ...current, waitlisted: true })); }
-  return <><SettingsHeading kicker="SUPERFLIP" title="Раскройте возможности FlipZero" description="Премиум-профиль, увеличенные загрузки и расширенные возможности общения." /><div className="premium-hero"><Crown size={38} /><div><strong>{status?.active ? "SuperFlip активен" : "SuperFlip — скоро"}</strong><span>{status?.active && status.expiresAt ? `Доступ до ${new Date(status.expiresAt).toLocaleDateString("ru-RU")}` : status?.active ? "Доступ без ограничения срока" : "Стоимость объявим перед запуском"}</span></div></div><div className="premium-settings-grid"><span>Профиль до 500 символов</span><span>Баннер до 16 МБ</span><span>Сообщения до 4000 символов</span><span>Анимированные медиа</span></div>{status?.active ? <button className="account-primary" disabled>SuperFlip подключён</button> : <button className="account-primary" onClick={() => void waitlist()} disabled={status?.waitlisted}>{status?.waitlisted ? "Вы в листе ожидания" : "Сообщить о запуске"}</button>}<div className="blocked-users-settings"><h3><Crown size={18}/> История SuperFlip</h3><p>Здесь сохраняются выдачи, сроки и причины подарков.</p>{status?.history?.length ? status.history.map((item)=><article key={item.id}><div><strong>{item.source==="gift"?"Подарок SuperFlip":"SuperFlip"}</strong><small>{new Date(item.grantedAt).toLocaleString("ru-RU")} · {item.revokedAt ? "отозван" : item.expiresAt ? `до ${new Date(item.expiresAt).toLocaleDateString("ru-RU")}` : "навсегда"}</small><small>{item.reason || "Причина не указана."}</small></div></article>) : <small>История пока пуста.</small>}</div></>;
+  return <><SettingsHeading kicker="SUPERFLIP" title="Раскройте возможности FlipZero" description="Премиум-профиль, увеличенные загрузки и расширенные возможности общения." /><div className="premium-hero"><AppIcon name="superflip" size={38}/><div><strong>{status?.active ? "SuperFlip активен" : "SuperFlip — скоро"}</strong><span>{status?.active && status.expiresAt ? `Доступ до ${new Date(status.expiresAt).toLocaleDateString("ru-RU")}` : status?.active ? "Доступ без ограничения срока" : "Стоимость объявим перед запуском"}</span></div></div><div className="premium-settings-grid"><span>Профиль до 500 символов</span><span>Баннер до 16 МБ</span><span>Сообщения до 4000 символов</span><span>Анимированные медиа</span></div>{status?.active ? <button className="account-primary" disabled>SuperFlip подключён</button> : <button className="account-primary" onClick={() => void waitlist()} disabled={status?.waitlisted}>{status?.waitlisted ? "Вы в листе ожидания" : "Сообщить о запуске"}</button>}<div className="blocked-users-settings"><h3><AppIcon name="superflip" size={18}/> История SuperFlip</h3><p>Здесь сохраняются выдачи, сроки и причины подарков.</p>{status?.history?.length ? status.history.map((item)=><article key={item.id}><div><strong>{item.source==="gift"?"Подарок SuperFlip":"SuperFlip"}</strong><small>{new Date(item.grantedAt).toLocaleString("ru-RU")} · {item.revokedAt ? "отозван" : item.expiresAt ? `до ${new Date(item.expiresAt).toLocaleDateString("ru-RU")}` : "навсегда"}</small><small>{item.reason || "Причина не указана."}</small></div></article>) : <small>История пока пуста.</small>}</div></>;
 }
 
 function SuperUpSettings() {
