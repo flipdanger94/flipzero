@@ -7,6 +7,7 @@ function applyPreview(value:Pref,themes:Theme[]){
  const theme=themes.find(item=>item.id===value.theme);if(!theme)return;
  const root=document.documentElement;
  root.dataset.theme=value.theme;
+ root.style.setProperty("--accent-color",theme.accent);
  root.style.setProperty("--accent",theme.accent);
  root.style.setProperty("--pink",theme.accent);
  root.style.setProperty("--theme-surface",theme.surface);
