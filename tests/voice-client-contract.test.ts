@@ -37,6 +37,9 @@ describe("voice client reliability contract", () => {
     expect(source).not.toContain('className="remote-video"');
     expect(theme).toContain(".voice-room-side{display:none!important}");
     expect(theme).toContain(".voice-room-connected.is-focus .voice-tile:not(.is-media-focus){display:none}");
+    expect(source).toContain("target.requestFullscreen()");
+    expect(source).toContain("toggleFullscreen(participant.id)");
+    expect(theme).toContain(".voice-tile:fullscreen");
   });
 
   it("does not repeat connected-room metrics in a second header", async () => {

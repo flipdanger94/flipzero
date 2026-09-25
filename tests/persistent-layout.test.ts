@@ -57,6 +57,7 @@ describe("persistent application shell contract", () => {
     expect(runtime).toContain(".app-shell.platform-view-active>.space-rail");
     expect(runtime).toContain("left:76px;bottom:0;width:272px");
     expect(runtime).toContain("grid-template-columns:minmax(96px,1fr) 50px 50px 38px");
+    expect(runtime).toContain("width:272px");
   });
 
   it("uses second-level desktop navigation for admin and clans", async () => {
@@ -66,7 +67,7 @@ describe("persistent application shell contract", () => {
     ]);
 
     expect(admin).toContain('className="admin-body"');
-    expect(platformCss).toContain("grid-template-columns: 248px minmax(0, 1fr)");
+    expect(platformCss).toContain("grid-template-columns: 272px minmax(0, 1fr)");
     expect(platformCss).toContain(".platform-pane-active .clan-member-view > .clan-tabs");
   });
 });

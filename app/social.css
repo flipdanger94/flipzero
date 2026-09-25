@@ -71,7 +71,7 @@
 
 
 /* Social Hub v2 */
-.social-hub-v2{display:grid!important;grid-template-columns:250px minmax(0,1fr)!important;grid-template-rows:1fr!important;min-height:0!important;overflow:hidden!important;background:#07101f!important}
+.social-hub-v2{display:grid!important;grid-template-columns:272px minmax(0,1fr)!important;grid-template-rows:1fr!important;min-height:0!important;overflow:hidden!important;background:#07101f!important}
 .social-hub-v2>.social-nav-rail{grid-column:1;grid-row:1;min-height:0;display:flex;flex-direction:column;padding:14px 10px;border-right:1px solid rgba(128,139,177,.14);background:linear-gradient(180deg,#091221,#070e1b);overflow:hidden}
 .social-nav-brand{padding:4px 7px 10px}.social-nav-brand small,.social-nav-brand strong{display:block}.social-nav-brand small{color:#6f7a98;font-size:.48rem;letter-spacing:.13em}.social-nav-brand strong{margin-top:4px;color:#eef2ff;font-size:.82rem}
 .social-conversation-search{height:36px;display:flex;align-items:center;gap:7px;margin:4px 2px 9px;padding:0 9px;border:1px solid #303c5c;border-radius:8px;background:#050b16;color:#66738f}.social-conversation-search input{min-width:0;width:100%;border:0;outline:0;background:transparent;color:#e9edff;font-size:.58rem}

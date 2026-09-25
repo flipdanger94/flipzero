@@ -61,7 +61,7 @@
     flex: 1;
     min-height: 0;
     display: grid;
-    grid-template-columns: 248px minmax(0, 1fr);
+    grid-template-columns: 272px minmax(0, 1fr);
     overflow: hidden;
   }
 
@@ -107,7 +107,7 @@
 
   .platform-pane-active .clan-member-view {
     display: grid;
-    grid-template-columns: 248px minmax(0, 1fr);
+    grid-template-columns: 272px minmax(0, 1fr);
     grid-template-rows: 176px minmax(0, 1fr);
   }
 

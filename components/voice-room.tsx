@@ -885,12 +885,14 @@ export function VoiceRoom({
     const timer = window.setTimeout(() => focusStream(initialStreamId), 0);
     return () => window.clearTimeout(timer);
   }, [initialStreamId, connected]);
-  async function toggleFullscreen() {
-    const root = voiceRootRef.current;
-    if (!root) return;
+  async function toggleFullscreen(participantId = selectedStreamId) {
+    const target = participantId
+      ? voiceRootRef.current?.querySelector<HTMLElement>(`[data-participant-tile-id="${CSS.escape(participantId)}"]`)
+      : voiceRootRef.current;
+    if (!target) return;
     try {
       if (document.fullscreenElement) await document.exitFullscreen();
-      else await root.requestFullscreen();
+      else await target.requestFullscreen();
     } catch { setError("Полноэкранный режим недоступен в этом браузере."); }
   }
   async function openPictureInPicture() {
@@ -924,7 +926,7 @@ export function VoiceRoom({
         <section className="voice-stage-main" aria-label="Сцена голосового канала" onTouchStart={(event)=>{swipeStartRef.current=event.touches[0]?.clientY??null}} onTouchEnd={(event)=>{const start=swipeStartRef.current;const end=event.changedTouches[0]?.clientY;if(focusMode&&start!==null&&typeof end==="number"&&end-start>80)clearFocus();swipeStartRef.current=null}}>
           {normalizedPresence.length === 0 ? <div className="voice-stage-empty voice-stage-empty-visible" role="status"><Users size={28}/><strong>В канале пока никого нет</strong><span>Участники появятся здесь после подключения.</span></div> : null}
           <div className="voice-tile-grid" role="list" aria-label="Участники" data-participant-count={normalizedPresence.length} style={{"--voice-grid-columns":gridLayout.columns,"--voice-grid-rows":gridLayout.rows} as CSSProperties}>
-            {visibleParticipants.map((participant)=><article key={participant.id} role="listitem" data-participant-tile-id={participant.id} className={`voice-tile ${participant.speaking ? "speaking" : ""} ${participant.streaming || participant.sharing ? "is-streaming" : ""} ${participant.camera ? "has-camera" : ""} ${selectedStreamId===participant.id ? "is-stream-selected" : ""} ${focusMode&&selectedStreamId===participant.id ? "is-media-focus" : ""}`}>
+            {visibleParticipants.map((participant)=><article key={participant.id} role="listitem" data-participant-tile-id={participant.id} className={`voice-tile ${participant.speaking ? "speaking" : ""} ${participant.streaming || participant.sharing ? "is-streaming" : ""} ${participant.camera ? "has-camera" : ""} ${selectedStreamId===participant.id ? "is-stream-selected" : ""} ${focusMode&&selectedStreamId===participant.id ? "is-media-focus" : ""}`} onDoubleClick={participant.streaming || participant.sharing ? ()=>{if(selectedStreamId!==participant.id)focusStream(participant.id);window.setTimeout(()=>void toggleFullscreen(participant.id),0)} : undefined}>
               <div className="voice-tile-media" aria-hidden="true">
                 <div className="voice-tile-camera" data-voice-media-id={participant.id} data-voice-media-source="camera"/>
                 <div className="voice-tile-screen" data-voice-media-id={participant.id} data-voice-media-source="screen"/>
@@ -935,7 +937,7 @@ export function VoiceRoom({
                 <label aria-label="Громкость стрима"><Volume2 size={14}/><input type="range" min="0" max="100" value={streamVolume} onChange={(event)=>setStreamVolume(Number(event.target.value))}/></label>
                 <button type="button" onClick={()=>setStreamMuted((value)=>!value)} aria-label={streamMuted ? "Включить звук стрима" : "Выключить звук стрима"}>{streamMuted?<VolumeX size={16}/>:<Volume2 size={16}/>}</button>
                 <button type="button" onClick={()=>void openPictureInPicture()} aria-label="Картинка в картинке"><MonitorUp size={16}/></button>
-                <button type="button" onClick={()=>void toggleFullscreen()} aria-label="Полноэкранный режим"><Maximize2 size={16}/></button>
+                <button type="button" onClick={()=>void toggleFullscreen()} aria-label="Развернуть стрим на весь экран" title="На весь экран"><Maximize2 size={16}/></button>
                 <button type="button" onClick={clearFocus} aria-label={`Закрыть стрим ${participant.name}`}>×</button>
               </div> : <button type="button" className="voice-tile-watch" onClick={()=>focusStream(participant.id)} aria-label={`Смотреть стрим ${participant.name}`}>Смотреть стрим</button> : null}
             </article>)}
