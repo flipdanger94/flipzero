@@ -503,6 +503,7 @@ export function VoiceRoom({
     deafenedRef.current = next;
     audioRef.current?.querySelectorAll("audio").forEach((audio) => { audio.muted = next; });
     setDeafened(next);
+    window.dispatchEvent(new CustomEvent("flipzero:voice-state",{detail:{deafened:next}}));
     void fetch(`/api/v1/channels/${channelId}/voice`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ selfDeafened: next }) });
   }
   async function enableAudio() {
@@ -617,6 +618,7 @@ export function VoiceRoom({
         setDeviceId(room.getActiveDevice("audioinput") ?? preferredInput ?? microphones[0]?.deviceId ?? "");
       }
       setMuted(next);
+      window.dispatchEvent(new CustomEvent("flipzero:voice-state",{detail:{muted:next}}));
       void fetch(`/api/v1/channels/${channelId}/voice`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ selfMuted: next }) });
       setError("");
     } catch { setError("Не удалось включить микрофон. Разрешите доступ в настройках браузера."); }
