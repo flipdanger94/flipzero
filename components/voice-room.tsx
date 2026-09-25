@@ -96,6 +96,7 @@ export function VoiceRoom({
   const breakout = "main";
   const resolvedTokenUrl = tokenUrl ?? `/api/v1/channels/${channelId}/voice-token`;
   const resolvedStateUrl = stateUrl === undefined ? `/api/v1/channels/${channelId}/voice` : stateUrl;
+  const resolvedLeaveUrl = stateUrl === undefined ? `/api/v1/channels/${channelId}/voice?leave=1` : stateUrl ? `${stateUrl}?leave=1` : null;
   const [soundboard, setSoundboard] = useState(false);
   const [soundPlaying, setSoundPlaying] = useState(false);
   const screenSupported = typeof navigator === "undefined" || Boolean(navigator.mediaDevices?.getDisplayMedia);
@@ -413,7 +414,7 @@ export function VoiceRoom({
           return;
         }
         setStatus("reconnecting");
-        setError(`Переподключение… попытка ${retry} из 3`);
+        setError(`Переподключение… Попытка ${retry} из 3`);
         if (reconnectTimerRef.current) window.clearTimeout(reconnectTimerRef.current);
         reconnectTimerRef.current = window.setTimeout(() => {
           setStatus("idle");
@@ -820,7 +821,7 @@ export function VoiceRoom({
     onPresenceChange?.([]);
   }
 
-  const normalizedPresence = normalizeVoicePresence(presence ?? localPresence);
+  const normalizedPresence = normalizeVoicePresence(presence?.length ? presence : localPresence);
   const streamingParticipants = normalizedPresence.filter((participant) => participant.streaming || participant.sharing);
   const compactMode=typeof document!=="undefined"&&document.documentElement.dataset.compact==="on";
   const gridLayout=voiceGridLayout(normalizedPresence.length,compactMode);
@@ -878,14 +879,14 @@ export function VoiceRoom({
     const timer = window.setInterval(heartbeat, 45_000);
     const pagehide = () => {
       const payload = new Blob([JSON.stringify({ leave: true })], { type: "application/json" });
-      if (resolvedStateUrl) navigator.sendBeacon?.(`${resolvedStateUrl}?leave=1`, payload);
+      if (resolvedLeaveUrl) navigator.sendBeacon?.(resolvedLeaveUrl, payload);
     };
     window.addEventListener("pagehide", pagehide);
     return () => {
       window.clearInterval(timer);
       window.removeEventListener("pagehide", pagehide);
     };
-  }, [connected, channelId, resolvedStateUrl]);
+  }, [connected, channelId, resolvedLeaveUrl, resolvedStateUrl]);
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       const target = event.target as HTMLElement | null;
@@ -965,7 +966,8 @@ export function VoiceRoom({
           </div> : null}
 
           {selectedStreamId && !focusMode ? <div className="voice-mini-stream-controls" aria-label="Мини-плеер стрима"><button type="button" onClick={()=>setFocusMode(true)} aria-label="Развернуть стрим"><Maximize2 size={16}/></button><button type="button" onClick={clearFocus} aria-label="Закрыть стрим">×</button></div>:null}
-          <div className="voice-tile-grid" role="list" aria-label="Участники" style={{"--voice-grid-columns":gridLayout.columns} as CSSProperties}>
+          {normalizedPresence.length === 0 ? <div className="voice-stage-empty voice-stage-empty-visible" role="status"><Users size={28}/><strong>В канале пока никого нет</strong><span>Участники появятся здесь после подключения.</span></div> : null}
+          <div className="voice-tile-grid" role="list" aria-label="Участники" data-participant-count={normalizedPresence.length} style={{"--voice-grid-columns":gridLayout.columns,"--voice-grid-rows":gridLayout.rows} as CSSProperties}>
             {visibleParticipants.map((participant)=><article key={participant.id} role="listitem" className={`voice-tile ${participant.speaking ? "speaking" : ""} ${participant.streaming || participant.sharing ? "is-streaming" : ""}`}>
               {participant.streaming || participant.sharing ? <div className="voice-tile-stream-preview" data-stream-preview-id={participant.id} aria-hidden="true" /> : null}
               <div className="voice-tile-avatar">{participant.avatarUrl?<MediaImage src={participant.avatarUrl}/>:participant.name.slice(0,2).toLocaleUpperCase("ru")}</div>

@@ -43,8 +43,7 @@ export function UserDock({
   const [prefs,setPrefs]=useState<AudioPrefs>(()=>readPrefs());
   const [muted,setMuted]=useState(false);
   const [deafened,setDeafened]=useState(false);
-  const [voiceSession,setVoiceSession]=useState<{connected:boolean;channelName:string;spaceName?:string;quality?:string}|null>(externalVoiceSession??null);
-  useEffect(()=>{if(externalVoiceSession!==undefined)setVoiceSession(externalVoiceSession)},[externalVoiceSession]);
+  const [eventVoiceSession,setEventVoiceSession]=useState<{connected:boolean;channelName:string;spaceName?:string;quality?:string}|null>(null);
   useEffect(()=>{
     const stateHandler=(event:Event)=>{
       const detail=(event as CustomEvent<{muted?:boolean;deafened?:boolean}>).detail;
@@ -57,8 +56,8 @@ export function UserDock({
   useEffect(()=>{
     const handler=(event:Event)=>{
       const detail=(event as CustomEvent<{connected?:boolean;channelName?:string;spaceName?:string;quality?:string}>).detail;
-      if(!detail?.connected){setVoiceSession(null);return}
-      setVoiceSession({connected:true,channelName:detail.channelName??"Голосовой канал",spaceName:detail.spaceName,quality:detail.quality});
+      if(!detail?.connected){setEventVoiceSession(null);return}
+      setEventVoiceSession({connected:true,channelName:detail.channelName??"Голосовой канал",spaceName:detail.spaceName,quality:detail.quality});
     };
     window.addEventListener("flipzero:voice-session",handler);
     return()=>window.removeEventListener("flipzero:voice-session",handler);
@@ -89,6 +88,7 @@ export function UserDock({
   function changeProfile(inputProfile:AudioPrefs["inputProfile"]){const next={...prefs,inputProfile};updatePrefs(next);emit({type:"input-profile",profile:inputProfile});}
   function toggleMic(){const next=!muted;setMuted(next);emit({type:"toggle-mic",muted:next})}
   function toggleDeafen(){const next=!deafened;setDeafened(next);emit({type:"toggle-output",deafened:next})}
+  const voiceSession=externalVoiceSession===undefined?eventVoiceSession:externalVoiceSession;
 
   return <div ref={rootRef} className={`user-dock ${voiceSession?.connected?"has-voice-session":""} ${className}`.trim()}>
     {voiceSession?.connected?<section className="dock-voice-session" aria-label="Текущее голосовое соединение">

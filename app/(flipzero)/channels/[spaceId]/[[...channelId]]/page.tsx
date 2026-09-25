@@ -1,6 +1,5 @@
 import { and, asc, eq } from "drizzle-orm";
 import { notFound, redirect } from "next/navigation";
-import FlipZeroApp from "@/components/flipzero-app";
 import { getDatabase } from "@/db/client";
 import { channels, members, spaces } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
@@ -26,5 +25,5 @@ export default async function ChannelPage({ params }: { params: Promise<{ spaceI
     redirect(`/communities/${encodeURIComponent(space.slug)}${target}`);
   }
 
-  return <FlipZeroApp initialSpaceId={spaceId} initialChannelId={channelId?.[0]} />;
+  return null;
 }
