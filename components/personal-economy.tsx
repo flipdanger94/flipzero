@@ -217,6 +217,7 @@ export function PersonalEconomy(){
 
   const featuredBundles=storeItems.filter(item=>item.isBundle).slice(0,2);
   const equippedItems=Object.entries(inventory.equipped).map(([slot,itemId])=>({slot,item:inventory.items.find(item=>item.id===itemId)??null}));
+  const previewItem=preview?(storeItems.find(item=>item.id===preview.id)??inventory.items.find(item=>item.id===preview.id)??preview):null;
 
   function actionFor(item:StoreItem){
     if(item.isBundle){
@@ -326,18 +327,18 @@ export function PersonalEconomy(){
 
     {!loading&&tab==="history"?<div className="personal-ledger">{ledger.length?ledger.map(entry=><article key={entry.id}><span><strong>{entry.reason}</strong><small>{new Date(entry.createdAt).toLocaleString("ru-RU")}</small></span><b className={entry.amount>0?"positive":""}>{entry.amount>0?"+":""}{entry.amount} Orbs</b></article>):<div className="store-empty"><Coins size={28}/><strong>Операций пока нет</strong><p>Выполните квест или купите первый предмет.</p></div>}</div>:null}
 
-    {preview?<div className="store-preview-backdrop" role="presentation" onClick={()=>setPreview(null)}>
-      <section className="store-preview-dialog" role="dialog" aria-modal="true" aria-label={`Предпросмотр: ${preview.title}`} onClick={event=>event.stopPropagation()}>
+    {previewItem?<div className="store-preview-backdrop" role="presentation" onClick={()=>setPreview(null)}>
+      <section className="store-preview-dialog" role="dialog" aria-modal="true" aria-label={`Предпросмотр: ${previewItem.title}`} onClick={event=>event.stopPropagation()}>
         <button className="store-preview-close" onClick={()=>setPreview(null)} aria-label="Закрыть"><X/></button>
         <div className="store-preview-stage">
-          <div className={`store-preview-profile cosmetic-${preview.preview}`}>
+          <div className={`store-preview-profile cosmetic-${previewItem.preview}`}>
             <div className="store-preview-banner" style={identity?.bannerUrl?{backgroundImage:`url("${identity.bannerUrl}")`}:undefined}/>
             <div className="store-preview-avatar">{identity?.avatarUrl?<img src={identity.avatarUrl} alt=""/>:(identity?.displayName??"FZ").slice(0,2)}</div>
-            <CosmeticArt live item={preview}/>
+            <CosmeticArt live item={previewItem}/>
             <strong>{identity?.displayName??"Ваш профиль"}</strong><span>@flipzero</span>
           </div>
         </div>
-        <div className="store-preview-copy"><ItemBadges item={preview}/><small>{rarityLabels[preview.rarity]??preview.rarity}</small><h3>{preview.title}</h3><p>{preview.description}</p><div className="store-preview-price">{preview.priceOrbs} Orbs</div><div className="store-card-actions">{actionFor(preview)}</div></div>
+        <div className="store-preview-copy"><ItemBadges item={previewItem}/><small>{rarityLabels[previewItem.rarity]??previewItem.rarity}</small><h3>{previewItem.title}</h3><p>{previewItem.description}</p><div className="store-preview-price">{previewItem.priceOrbs} Orbs</div><div className="store-card-actions">{actionFor(previewItem)}</div></div>
       </section>
     </div>:null}
   </div>;
