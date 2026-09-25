@@ -32,6 +32,20 @@ describe("persistent application shell contract", () => {
     expect(shell).toContain("participant.streaming || participant.sharing");
   });
 
+  it("keeps an active voice room mounted while text channels are browsed", async () => {
+    const [shell, productCss] = await Promise.all([
+      readFile("components/flipzero-app.tsx", "utf8"),
+      readFile("app/product-theme.css", "utf8"),
+    ]);
+
+    expect(shell).toContain("const voiceHostChannel = activeVoiceChannel ?? connectedVoiceChannel");
+    expect(shell).toContain("voice-room-host-background");
+    expect(shell).toContain('["voice", "stage"].includes(channel.kind) ? openVoiceChannel(channel) : selectChannel');
+    expect(productCss).toContain("grid-template-columns:minmax(0,1fr) auto auto");
+    expect(productCss).toContain(".video-grid>.remote-video:empty");
+    expect(productCss).toContain(".video-grid>.local-screen:not(.visible)");
+  });
+
   it("uses second-level desktop navigation for admin and clans", async () => {
     const [admin, platformCss] = await Promise.all([
       readFile("components/admin-dialog.tsx", "utf8"),
