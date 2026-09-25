@@ -105,21 +105,16 @@
     height: 100%;
   }
 
-  .platform-pane-active .clan-member-view {
+  .platform-pane-active .clan-section-layout {
+    flex: 1;
+    min-width: 0;
+    min-height: 0;
     display: grid;
     grid-template-columns: 272px minmax(0, 1fr);
-    grid-template-rows: 176px minmax(0, 1fr);
+    overflow: hidden;
   }
 
-  .platform-pane-active .clan-member-view > .clan-hero {
-    grid-column: 1 / -1;
-    grid-row: 1;
-    min-width: 0;
-  }
-
-  .platform-pane-active .clan-member-view > .clan-tabs {
-    grid-column: 1;
-    grid-row: 2;
+  .platform-pane-active .clan-section-nav {
     min-width: 0;
     min-height: 0;
     display: flex;
@@ -130,31 +125,72 @@
     overflow-x: hidden;
     padding: 12px 10px 92px;
     border-right: 1px solid var(--border);
-    border-bottom: 0;
     background: var(--panel);
   }
 
-  .platform-pane-active .clan-member-view > .clan-tabs button {
-    min-height: 40px;
+  .platform-pane-active .clan-section-nav > span {
+    padding: 4px 10px 8px;
+    color: var(--muted);
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: .12em;
+  }
+
+  .platform-pane-active .clan-section-nav button {
+    min-height: 42px;
     flex: 0 0 auto;
     justify-content: flex-start;
     border: 0;
     border-left: 2px solid transparent;
     border-radius: 8px;
+    background: transparent;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    gap: 8px;
     padding: 0 10px;
+    text-align: left;
   }
 
-  .platform-pane-active .clan-member-view > .clan-tabs button.active {
+  .platform-pane-active .clan-section-nav button:hover {
+    background: color-mix(in srgb, var(--raised) 72%, transparent);
+    color: var(--text);
+  }
+
+  .platform-pane-active .clan-section-nav button.active {
     border-left-color: var(--accent);
-    border-bottom-color: transparent;
+    color: var(--text);
     background: color-mix(in srgb, var(--accent) 12%, transparent);
   }
 
-  .platform-pane-active .clan-member-view > :not(.clan-hero):not(.clan-tabs) {
-    grid-column: 2;
-    grid-row: 2;
+  .platform-pane-active .clan-section-nav button b {
+    margin-left: auto;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--accent) 24%, transparent);
+    color: var(--text);
+    display: grid;
+    place-items: center;
+    font-size: 10px;
+  }
+
+  .platform-pane-active .clan-section-content {
     min-width: 0;
     min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .platform-pane-active .clan-member-view {
+    width: 100%;
+    height: 100%;
+    min-width: 0;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
   }
 }
 
