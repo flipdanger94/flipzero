@@ -40,10 +40,13 @@ export function VoiceRoom({
   channelId,
   channelName,
   autoJoin = false,
-  presence = [],
+  presence,
   initialStreamId = "",
   spaceName = "",
   onPresenceChange,
+  tokenUrl,
+  stateUrl,
+  tokenRequestBody,
 }: {
   channelId: string;
   channelName: string;
@@ -52,8 +55,12 @@ export function VoiceRoom({
   initialStreamId?: string;
   spaceName?: string;
   onPresenceChange?: (participants: VoicePresence[]) => void;
+  tokenUrl?: string;
+  stateUrl?: string | null;
+  tokenRequestBody?: Record<string, unknown>;
 }) {
   const [status, setStatus] = useState<VoiceStatus>("idle");
+  const [localPresence, setLocalPresence] = useState<VoicePresence[]>([]);
   const [voiceAvailable, setVoiceAvailable] = useState<boolean | null>(null);
   const [voiceMessage, setVoiceMessage] = useState("");
   const [voiceChecked, setVoiceChecked] = useState(false);
@@ -83,6 +90,8 @@ export function VoiceRoom({
   const [outputDeviceId, setOutputDeviceId] = useState("");
   const [settings, setSettings] = useState(false);
   const breakout = "main";
+  const resolvedTokenUrl = tokenUrl ?? `/api/v1/channels/${channelId}/voice-token`;
+  const resolvedStateUrl = stateUrl === undefined ? `/api/v1/channels/${channelId}/voice` : stateUrl;
   const [soundboard, setSoundboard] = useState(false);
   const [soundPlaying, setSoundPlaying] = useState(false);
   const screenSupported = typeof navigator === "undefined" || Boolean(navigator.mediaDevices?.getDisplayMedia);
@@ -212,13 +221,15 @@ export function VoiceRoom({
     let room: Room | null = null;
     let connectTimeout: number | undefined;
     try {
-      const presenceResponse = await fetch(`/api/v1/channels/${channelId}/voice`, { method: "POST" });
-      const presenceData = await presenceResponse.json().catch(() => null);
-      if (!presenceResponse.ok) { setError(presenceData?.message ?? "Нет доступа к голосовому каналу."); setStatus("idle"); return; }
-      const response = await fetch(`/api/v1/channels/${channelId}/voice-token`, {
+      if (resolvedStateUrl) {
+        const presenceResponse = await fetch(resolvedStateUrl, { method: "POST" });
+        const presenceData = await presenceResponse.json().catch(() => null);
+        if (!presenceResponse.ok) { setError(presenceData?.message ?? "Нет доступа к голосовому каналу."); setStatus("idle"); return; }
+      }
+      const response = await fetch(resolvedTokenUrl, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ breakout }),
+        body: JSON.stringify(tokenRequestBody ?? { breakout }),
         signal: AbortSignal.timeout(15000),
       });
       const data = await response.json();
@@ -230,16 +241,24 @@ export function VoiceRoom({
       const refresh = () => {
         const participants = [connectedRoom.localParticipant, ...connectedRoom.remoteParticipants.values()];
         setParticipantCount(participants.length);
-        onPresenceChange?.(normalizeVoicePresence(participants.map((participant) => ({
-          id: participant.identity,
-          name: participant.name || participant.identity,
-          muted: !participant.isMicrophoneEnabled,
-          deafened: false,
-          camera: participant.isCameraEnabled,
-          sharing: participant.isScreenShareEnabled,
-          streaming: participant.isScreenShareEnabled,
-          speaking: participant.isSpeaking,
-        }))));
+        const nextPresence = normalizeVoicePresence(participants.map((participant) => {
+          let metadata: Record<string, unknown> = {};
+          try { metadata = participant.metadata ? JSON.parse(participant.metadata) as Record<string, unknown> : {}; } catch { metadata = {}; }
+          return {
+            id: participant.identity,
+            name: participant.name || participant.identity,
+            avatarUrl: typeof metadata.avatarUrl === "string" ? metadata.avatarUrl : null,
+            clanTag: typeof metadata.clanTag === "string" ? metadata.clanTag : null,
+            muted: !participant.isMicrophoneEnabled,
+            deafened: participant.attributes?.deafened === "true" || participant.attributes?.selfDeafened === "true",
+            camera: participant.isCameraEnabled,
+            sharing: participant.isScreenShareEnabled,
+            streaming: participant.isScreenShareEnabled,
+            speaking: participant.isSpeaking,
+          };
+        }));
+        setLocalPresence(nextPresence);
+        onPresenceChange?.(nextPresence);
       };
       room.on(RoomEvent.ParticipantConnected, refresh);
       room.on(RoomEvent.ParticipantDisconnected, refresh);
@@ -252,7 +271,7 @@ export function VoiceRoom({
           speakingRef.current = localSpeaking;
           if (speakingTimerRef.current) window.clearTimeout(speakingTimerRef.current);
           speakingTimerRef.current = window.setTimeout(() => {
-            void fetch(`/api/v1/channels/${channelId}/voice`, {
+            if (resolvedStateUrl) void fetch(resolvedStateUrl, {
               method: "PATCH",
               headers: { "content-type": "application/json" },
               body: JSON.stringify({ speaking: speakingRef.current }),
@@ -372,8 +391,9 @@ export function VoiceRoom({
         setSharing(false);
         setRemoteVideo(false);
         setActiveSpeaker("");
+        setLocalPresence([]);
         onPresenceChange?.([]);
-        void fetch(`/api/v1/channels/${channelId}/voice`, { method: "DELETE" }).catch(() => undefined);
+        if (resolvedStateUrl) void fetch(resolvedStateUrl, { method: "DELETE" }).catch(() => undefined);
         if (intentionalLeaveRef.current) {
           setStatus("idle");
           emitVoiceSession(false);
@@ -457,7 +477,7 @@ export function VoiceRoom({
       playVoiceCue("join");
     } catch (cause) {
       if (room) void room.disconnect();
-      void fetch(`/api/v1/channels/${channelId}/voice`, { method: "DELETE" });
+      if (resolvedStateUrl) void fetch(resolvedStateUrl, { method: "DELETE" });
       if (roomRef.current === room) roomRef.current = null;
       if (attempt !== joinAttemptRef.current) return;
       setStatus("idle");
@@ -539,7 +559,7 @@ export function VoiceRoom({
     audioRef.current?.querySelectorAll("audio").forEach((audio) => { audio.muted = next; });
     setDeafened(next);
     window.dispatchEvent(new CustomEvent("flipzero:voice-state",{detail:{deafened:next}}));
-    void fetch(`/api/v1/channels/${channelId}/voice`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ selfDeafened: next }) });
+    if (resolvedStateUrl) void fetch(resolvedStateUrl, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ selfDeafened: next }) });
   }
   async function enableAudio() {
     const room = roomRef.current;
@@ -654,7 +674,7 @@ export function VoiceRoom({
       }
       setMuted(next);
       window.dispatchEvent(new CustomEvent("flipzero:voice-state",{detail:{muted:next}}));
-      void fetch(`/api/v1/channels/${channelId}/voice`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ selfMuted: next }) });
+      if (resolvedStateUrl) void fetch(resolvedStateUrl, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ selfMuted: next }) });
       setError("");
     } catch { setError("Не удалось включить микрофон. Разрешите доступ в настройках браузера."); }
   }
@@ -753,7 +773,7 @@ export function VoiceRoom({
         await room.localParticipant.setScreenShareEnabled(false);
       }
       setSharing(next);
-      void fetch(`/api/v1/channels/${channelId}/voice`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ streaming: next }) });
+      if (resolvedStateUrl) void fetch(resolvedStateUrl, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ streaming: next }) });
       if (next) attachLocal(Track.Source.ScreenShare, localScreenRef.current);
       else clearMedia(localScreenRef.current);
       setError("");
@@ -769,7 +789,7 @@ export function VoiceRoom({
     const room = roomRef.current;
     roomRef.current = null;
     void room?.disconnect();
-    void fetch(`/api/v1/channels/${channelId}/voice`, { method: "DELETE" });
+    if (resolvedStateUrl) void fetch(resolvedStateUrl, { method: "DELETE" });
     emitVoiceSession(false);
     playVoiceCue("leave");
     [audioRef, remoteVideoRef, localCameraRef, localScreenRef].forEach((ref) =>
@@ -792,10 +812,11 @@ export function VoiceRoom({
     setConsentPanel(false);
     setIncomingConsent(null);
     setConsents({});
+    setLocalPresence([]);
     onPresenceChange?.([]);
   }
 
-  const normalizedPresence = normalizeVoicePresence(presence);
+  const normalizedPresence = normalizeVoicePresence(presence ?? localPresence);
   const streamingParticipants = normalizedPresence.filter((participant) => participant.streaming || participant.sharing);
   const compactMode=typeof document!=="undefined"&&document.documentElement.dataset.compact==="on";
   const gridLayout=voiceGridLayout(normalizedPresence.length,compactMode);
@@ -842,7 +863,7 @@ export function VoiceRoom({
     if (!connected) return;
     const heartbeat = () => {
       if (document.visibilityState !== "visible") return;
-      void fetch(`/api/v1/channels/${channelId}/voice`, {
+      if (resolvedStateUrl) void fetch(resolvedStateUrl, {
         method: "PATCH",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ heartbeat: true }),
@@ -853,14 +874,14 @@ export function VoiceRoom({
     const timer = window.setInterval(heartbeat, 45_000);
     const pagehide = () => {
       const payload = new Blob([JSON.stringify({ leave: true })], { type: "application/json" });
-      navigator.sendBeacon?.(`/api/v1/channels/${channelId}/voice?leave=1`, payload);
+      if (resolvedStateUrl) navigator.sendBeacon?.(`${resolvedStateUrl}?leave=1`, payload);
     };
     window.addEventListener("pagehide", pagehide);
     return () => {
       window.clearInterval(timer);
       window.removeEventListener("pagehide", pagehide);
     };
-  }, [connected, channelId]);
+  }, [connected, channelId, resolvedStateUrl]);
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       const target = event.target as HTMLElement | null;
