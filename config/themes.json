@@ -15,7 +15,7 @@
   {
     "id": "deep-space",
     "label": "Глубокий космос",
-    "access": "shop:theme-midnight",
+    "access": "shop:theme-nebula",
     "surface": "#0c1020",
     "panel": "#12172a",
     "deep": "#060816",
