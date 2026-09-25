@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { AppIcon } from "./app-icon";
+import { AppIcon, type AppIconName } from "./app-icon";
 import { CosmeticArt } from "./cosmetic-art";
 import { MediaImage } from "./media-image";
 
@@ -39,6 +39,7 @@ const categoryLabels:Record<string,string>={
   bundle:"Наборы",
 };
 const rarityLabels:Record<string,string>={common:"Обычный",rare:"Редкий",epic:"Эпический",legendary:"Легендарный",limited:"Лимитированный"};
+const slotIcons:Record<string,AppIconName>={avatar_decoration:"avatar-decoration",profile_effect:"profile-effect",profile_banner:"banner",nameplate:"nameplate",chat_style:"chat-style",badge:"badge",app_theme:"theme"};
 
 function withEquippedState<T extends StoreItem>(items:T[],equipped:Record<string,string>){
   const equippedIds=new Set(Object.values(equipped));
@@ -290,7 +291,7 @@ export function PersonalEconomy({onOpenSuperFlip}:{onOpenSuperFlip?:()=>void}={}
         <div className="equipped-slots">{(inventory.slots.length?inventory.slots:Object.keys(slotLabels)).filter(slot=>slot!=="bundle").map(slot=>{
           const current=equippedItems.find(entry=>entry.slot===slot)?.item??null;
           return <article key={slot} className={current?"filled":""}>
-            <div className="equipped-slot-head"><span>{slotLabels[slot]??slot}</span>{current?<b>Надето</b>:null}</div>
+            <div className="equipped-slot-head"><span><AppIcon name={slotIcons[slot]??"inventory"} size={15}/>{slotLabels[slot]??slot}</span>{current?<b>Надето</b>:null}</div>
             {current?<><CosmeticArt live item={current}/><strong>{current.title}</strong><button onClick={()=>void unequip(current)} disabled={!!busy}>Снять</button></>:<><div className="equipped-placeholder"><AppIcon name="animated" size={24}/></div><strong>Слот свободен</strong><button onClick={()=>{setInventorySlot(slot);document.querySelector(".inventory-all")?.scrollIntoView({behavior:"smooth"})}}>Выбрать предмет</button></>}
           </article>;
         })}</div>
