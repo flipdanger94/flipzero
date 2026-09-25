@@ -161,6 +161,7 @@ export function PersonalEconomy(){
     try{
       const data=await post("/api/inventory/equip",{itemId:item.id});
       if(data.inventory)setInventory({...data.inventory,items:withEquippedState(data.inventory.items,data.inventory.equipped)});
+      if(item.slot==="app_theme")window.dispatchEvent(new Event("flipzero:preferences-updated"));
       await refresh();
     }catch(reason){
       setInventory(previous);
@@ -179,6 +180,7 @@ export function PersonalEconomy(){
     try{
       const data=await post("/api/inventory/unequip",{slot:item.slot});
       if(data.inventory)setInventory({...data.inventory,items:withEquippedState(data.inventory.items,data.inventory.equipped)});
+      if(item.slot==="app_theme")window.dispatchEvent(new Event("flipzero:preferences-updated"));
       await refresh();
     }catch(reason){
       setInventory(previous);
