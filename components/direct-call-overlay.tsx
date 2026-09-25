@@ -19,6 +19,7 @@ export function DirectCallOverlay({ person, video, onClose, connection }: { pers
   const audioRef = useRef<HTMLDivElement | null>(null);
   const callIdRef = useRef<string | null>(connection?.callId ?? null);
   const roleRef = useRef<"caller"|"receiver">(connection?.role ?? "caller");
+  const hasRemoteRef = useRef(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -38,8 +39,8 @@ export function DirectCallOverlay({ person, video, onClose, connection }: { pers
       }
     });
     room.on(RoomEvent.TrackUnsubscribed, (track) => track.detach().forEach((element) => element.remove()));
-    room.on(RoomEvent.ParticipantConnected, () => setStatus("На связи"));
-    room.on(RoomEvent.ParticipantDisconnected, () => setStatus("Собеседник вышел"));
+    room.on(RoomEvent.ParticipantConnected, () => { hasRemoteRef.current=true; setStatus("На связи"); });
+    room.on(RoomEvent.ParticipantDisconnected, () => { hasRemoteRef.current=false; setStatus("Собеседник вышел"); });
     room.on(RoomEvent.LocalTrackPublished, (publication) => { if (publication.source === Track.Source.Camera) attachLocal(); });
     room.on(RoomEvent.Disconnected, () => setStatus("Звонок завершён"));
 
@@ -69,7 +70,8 @@ export function DirectCallOverlay({ person, video, onClose, connection }: { pers
         await room.localParticipant.setMicrophoneEnabled(true);
         if (video) await room.localParticipant.setCameraEnabled(true);
         if (cancelled) return;
-        setStatus(room.remoteParticipants.size ? "На связи" : (roleRef.current==="caller" ? "Звоним…" : "Ожидаем соединения…"));
+        hasRemoteRef.current=room.remoteParticipants.size>0;
+        setStatus(hasRemoteRef.current ? "На связи" : (roleRef.current==="caller" ? "Звоним…" : "Ожидаем соединения…"));
         attachLocal();
       } catch (reason) {
         if (!cancelled) setError(reason instanceof Error ? reason.message : "Не удалось начать звонок.");
@@ -80,7 +82,7 @@ export function DirectCallOverlay({ person, video, onClose, connection }: { pers
       cancelled = true;
       const callId=callIdRef.current;
       if(callId){
-        const action=roleRef.current==="caller"&&status!=="На связи"?"cancel":"end";
+        const action=roleRef.current==="caller"&&!hasRemoteRef.current?"cancel":"end";
         void fetch("/api/v1/direct-calls/incoming",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({callId,action}),keepalive:true}).catch(()=>undefined);
       }
       void room.disconnect();
@@ -108,7 +110,7 @@ export function DirectCallOverlay({ person, video, onClose, connection }: { pers
   async function closeCall(){
     const callId=callIdRef.current;
     if(callId){
-      const action=roleRef.current==="caller"&&status!=="На связи"?"cancel":"end";
+      const action=roleRef.current==="caller"&&!hasRemoteRef.current?"cancel":"end";
       await fetch("/api/v1/direct-calls/incoming",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({callId,action})}).catch(()=>undefined);
     }
     onClose();
