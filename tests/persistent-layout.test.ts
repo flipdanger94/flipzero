@@ -59,6 +59,18 @@ describe("persistent application shell contract", () => {
     expect(runtime).toContain("grid-template-columns:minmax(96px,1fr) 50px 50px 38px");
   });
 
+  it("aligns personal, admin, and clan sidebars with the shared account dock", async () => {
+    const [social, platform, runtime] = await Promise.all([
+      readFile("app/social.css", "utf8"),
+      readFile("app/platform-shell.css", "utf8"),
+      readFile("app/runtime-theme.css", "utf8"),
+    ]);
+
+    expect(social).toContain("grid-template-columns:272px minmax(0,1fr)");
+    expect(platform.match(/grid-template-columns: 272px minmax\(0, 1fr\)/g)?.length).toBeGreaterThanOrEqual(2);
+    expect(runtime).toContain("left:76px;bottom:0;width:272px");
+  });
+
   it("uses second-level desktop navigation for admin and clans", async () => {
     const [admin, platformCss] = await Promise.all([
       readFile("components/admin-dialog.tsx", "utf8"),
