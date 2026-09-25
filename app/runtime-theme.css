@@ -172,3 +172,11 @@
 .voice-screen-options .voice-screen-audio{grid-column:1/-1;grid-template-columns:20px 1fr;align-items:center;min-height:38px}
 .voice-screen-options .voice-screen-audio input{width:18px;height:18px;accent-color:var(--accent)}
 @media(max-width:520px){.voice-screen-options>div{grid-template-columns:1fr}.voice-screen-options .voice-screen-audio{grid-column:1}}
+
+
+.clan-voice-tab{min-width:0;min-height:0;flex:1;display:flex;overflow:hidden;border-top:1px solid var(--border)}
+.clan-voice-tab>.voice-room{flex:1;min-width:0;min-height:0}
+@media(max-width:767px){
+  .clan-voice-tab{height:100%;min-height:0}
+  .clan-voice-tab .voice-bottom-controls{padding-bottom:max(8px,env(safe-area-inset-bottom))!important}
+}
