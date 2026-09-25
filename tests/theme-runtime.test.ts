@@ -33,8 +33,10 @@ describe("runtime appearance themes",()=>{
       readFile("components/user-profile-popover.tsx","utf8"),
     ]);
     expect(provider).toContain('const accentColor=theme.accent');
+    expect(provider).toContain('setProperty("--accent-color",accentColor)');
     expect(provider).toContain('setProperty("--accent",accentColor)');
     expect(settings).toContain("applyPreview(value,themes)");
+    expect(settings).toContain('setProperty("--accent-color",theme.accent)');
     expect(settings).toContain('setProperty("--accent",theme.accent)');
     expect(settings).not.toContain('type="color"');
     expect(settings).not.toContain("HEX цвета");
