@@ -135,7 +135,7 @@ export function UserProfilePopover({
   const position:CSSProperties|undefined=anchor&&typeof window!=="undefined"?{left:Math.max(12,Math.min(anchor.x,window.innerWidth-360)),top:Math.max(12,Math.min(anchor.y,window.innerHeight-520))}:undefined;
   const p=profile?.id===userId?profile:null;
   return <div className="fz-user-profile-layer" role="presentation" onMouseDown={(event)=>{if(event.target===event.currentTarget&&!full&&!reporting)onClose()}}>
-    <section ref={miniRef} className={`fz-mini-profile effect-${p?.cosmetics?.profile_effect??"none"}`} style={{...position,"--profile-accent":p?.accentColor??"#7c5cff"} as CSSProperties} role="dialog" aria-label={`Профиль ${displayName}`}>
+    <section ref={miniRef} className={`fz-mini-profile effect-${p?.cosmetics?.profile_effect??"none"}`} style={{...position,"--profile-accent":"var(--accent,#8f70ff)"} as CSSProperties} role="dialog" aria-label={`Профиль ${displayName}`}>
       {!p?<div className="fz-mini-profile-state">{error?<><ShieldCheck/><strong>Профиль недоступен</strong><small>{error}</small></>:<><LoaderCircle className="spin"/><span>Загрузка профиля…</span></>}</div>:<>
         <div className={`fz-mini-banner cosmetic-${p.cosmetics?.banner??"none"}`} style={p.bannerUrl?{backgroundImage:`linear-gradient(180deg,transparent,rgba(7,12,25,.5)),url("${p.bannerUrl}")`}:undefined}>
           <button className="fz-mini-kebab" type="button" aria-label="Дополнительные действия" title="Дополнительные действия" aria-expanded={menu} onClick={()=>setMenu(value=>!value)}><Ellipsis size={19}/></button>
@@ -167,7 +167,7 @@ export function UserProfilePopover({
       </>}
     </section>
 
-    {p&&full?<div className="fz-full-profile-backdrop" role="presentation" onMouseDown={(event)=>{if(event.target===event.currentTarget)setFull(false)}}><section ref={fullRef} tabIndex={-1} className={`fz-full-profile effect-${p.cosmetics?.profile_effect??"none"}`} role="dialog" aria-modal="true" aria-label={`Полный профиль ${p.displayName}`} style={{"--profile-accent":p.accentColor} as CSSProperties}>
+    {p&&full?<div className="fz-full-profile-backdrop" role="presentation" onMouseDown={(event)=>{if(event.target===event.currentTarget)setFull(false)}}><section ref={fullRef} tabIndex={-1} className={`fz-full-profile effect-${p.cosmetics?.profile_effect??"none"}`} role="dialog" aria-modal="true" aria-label={`Полный профиль ${p.displayName}`} style={{"--profile-accent":"var(--accent,#8f70ff)"} as CSSProperties}>
       <button className="fz-full-close" type="button" onClick={()=>setFull(false)} aria-label="Закрыть полный профиль"><X size={20}/></button>
       <aside>
         <div className={`fz-full-banner cosmetic-${p.cosmetics?.banner??"none"}`} style={p.bannerUrl?{backgroundImage:`linear-gradient(180deg,transparent,#08101e),url("${p.bannerUrl}")`}:undefined}/>
