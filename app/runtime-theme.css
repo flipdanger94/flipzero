@@ -132,3 +132,5 @@
   .mobile-tab-bar{overflow:hidden}
   .mobile-tab-bar button{min-width:0!important}
 }
+
+.fz-mini-xp,.fz-profile-xp-progress{display:grid;gap:6px;margin:10px 0}.fz-mini-xp>span,.fz-profile-xp-progress>span{display:flex;justify-content:space-between;gap:10px;align-items:center}.fz-mini-xp small,.fz-profile-xp-progress span{color:var(--muted);font-size:11px}.fz-mini-xp b,.fz-profile-xp-progress span b{color:var(--text);font-size:11px}.fz-mini-xp>i,.fz-profile-xp-progress>i{height:7px;border-radius:999px;overflow:hidden;background:color-mix(in srgb,var(--raised) 78%,#000 22%)}.fz-mini-xp>i>b,.fz-profile-xp-progress>i>b{display:block;height:100%;border-radius:inherit;background:var(--accent);transition:width .2s ease}
