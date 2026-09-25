@@ -219,11 +219,14 @@ export default function Home({ initialSpaceId, initialChannelId }: { initialSpac
       setUser(profile.user ? { ...profile.user, ...(adminAccess.admin ? { platformRole: "admin" as const } : {}) } : null);
       const loadedSpaces = (spaceData.spaces ?? []) as ApiSpace[];
       setUserSpaces(loadedSpaces);
-      const requestedSpace = loadedSpaces.find((space) => space.id === initialSpaceId) ?? loadedSpaces[0] ?? null;
-      const requestedChannel = requestedSpace?.channels.find((channel) => channel.id === initialChannelId) ?? requestedSpace?.channels.find((channel) => channel.kind === "text") ?? requestedSpace?.channels[0] ?? null;
+      const routeMatch = window.location.pathname.match(/^\/channels\/([^/]+)(?:\/([^/]+))?$/);
+      const routeSpaceId = initialSpaceId ?? (routeMatch?.[1] ? decodeURIComponent(routeMatch[1]) : undefined);
+      const routeChannelId = initialChannelId ?? (routeMatch?.[2] ? decodeURIComponent(routeMatch[2]) : undefined);
+      const requestedSpace = loadedSpaces.find((space) => space.id === routeSpaceId) ?? loadedSpaces[0] ?? null;
+      const requestedChannel = requestedSpace?.channels.find((channel) => channel.id === routeChannelId) ?? requestedSpace?.channels.find((channel) => channel.kind === "text") ?? requestedSpace?.channels[0] ?? null;
       setActiveSpaceId(requestedSpace?.id ?? null);
       if (requestedChannel) setActiveChannel(requestedChannel.name);
-      if (!initialSpaceId && requestedSpace && requestedChannel) window.history.replaceState({}, "", `/channels/${requestedSpace.id}/${requestedChannel.id}`);
+      if (!routeSpaceId && window.location.pathname === "/app" && !window.location.search && requestedSpace && requestedChannel) window.history.replaceState({}, "", `/channels/${requestedSpace.id}/${requestedChannel.id}`);
       setSpacesLoading(false);
     }).catch(() => { if (!cancelled) setSpacesLoading(false); });
     return () => { cancelled = true; };
@@ -233,10 +236,12 @@ export default function Home({ initialSpaceId, initialChannelId }: { initialSpac
 
   useEffect(() => {
     const syncRoute = () => {
-      const match = window.location.pathname.match(/^\/channels\/([^/]+)\/([^/]+)$/);
+      const match = window.location.pathname.match(/^\/channels\/([^/]+)(?:\/([^/]+))?$/);
       if (!match) return;
       const space = userSpaces.find((item) => item.id === decodeURIComponent(match[1]));
-      const channel = space?.channels.find((item) => item.id === decodeURIComponent(match[2]));
+      const channel = match[2]
+        ? space?.channels.find((item) => item.id === decodeURIComponent(match[2]))
+        : space?.channels.find((item) => item.kind === "text") ?? space?.channels[0];
       if (space && channel) { setActiveSpaceId(space.id); setActiveChannel(channel.name); }
     };
     window.addEventListener("popstate", syncRoute);
@@ -478,7 +483,7 @@ export default function Home({ initialSpaceId, initialChannelId }: { initialSpac
   }
 
   return (
-    <><main className={`app-shell ${showMembers && activeSpace ? "" : "members-hidden"} ${mobileChannelsOpen ? "mobile-channels-open" : ""} ${platformView ? "platform-view-active" : ""}`}>
+    <><main className={`app-shell ${showMembers && activeSpace ? "" : "members-hidden"} ${mobileChannelsOpen ? "mobile-channels-open" : ""} ${platformView ? "platform-view-active" : ""} ${voiceSession?.connected ? "has-voice-session" : ""}`}>
       <nav className="space-rail" aria-label="Сообщества">
         <button className={`rail-action home-action brand-symbol-wrap ${platformView === "social" ? "active" : ""}`} aria-label="Личные сообщения и друзья" title="Личные сообщения" onClick={() => openPlatformView("social")}><BrandMark size={45} /></button>
         {user?.platformRole === "admin" ? <button className={`rail-action platform-admin-rail ${platformView === "admin" ? "active" : ""}`} aria-label="Панель администратора" title="Панель администратора" onClick={() => openPlatformView("admin")}><ShieldCheck size={21} /></button> : null}
@@ -506,7 +511,6 @@ export default function Home({ initialSpaceId, initialChannelId }: { initialSpac
         <div className="channel-scroll">
           {activeSpace ? <>{activeSpace.categories.map((category) => <ChannelGroup key={category.id} title={category.name.toLocaleUpperCase("ru")} onAdd={activeSpace.ownerId === user?.id ? () => setCreateChannelTarget({ kind: "text", parentId: category.id }) : undefined} onDelete={activeSpace.ownerId === user?.id ? () => setCategoryToDelete(category) : undefined}>{activeSpace.channels.filter((channel) => channel.parentId === category.id).map((channel) => <Channel key={channel.id} active={activeChannel === channel.name} icon={channelIcon(channel)} kind={channel.kind} label={channel.name} voice={["voice", "stage"].includes(channel.kind)} participants={voicePresence[channel.id]} userLimit={channel.userLimit} onSelect={() => openVoiceChannel(channel)} onViewStream={(participantId) => openVoiceChannel(channel, participantId)} onOpenProfile={(participant) => setVoiceProfile({ id: participant.id, name: participant.name })} onManage={activeSpace.ownerId === user?.id || user?.platformRole === "admin" || Boolean(voiceManage[channel.id]) ? () => setPermissionsChannel(channel) : undefined} onDelete={activeSpace.ownerId === user?.id ? () => setPendingAction({ kind: "channel", name: channel.name, id: channel.id }) : undefined} />)}</ChannelGroup>)}{activeSpace.channels.some((channel) => !channel.parentId) ? <ChannelGroup title="БЕЗ КАТЕГОРИИ" onAdd={activeSpace.ownerId === user?.id ? () => setCreateChannelTarget({ kind: "text", parentId: null }) : undefined}>{activeSpace.channels.filter((channel) => !channel.parentId).map((channel) => <Channel key={channel.id} active={activeChannel === channel.name} icon={channelIcon(channel)} kind={channel.kind} label={channel.name} voice={["voice", "stage"].includes(channel.kind)} participants={voicePresence[channel.id]} userLimit={channel.userLimit} onSelect={() => openVoiceChannel(channel)} onViewStream={(participantId) => openVoiceChannel(channel, participantId)} onOpenProfile={(participant) => setVoiceProfile({ id: participant.id, name: participant.name })} onManage={activeSpace.ownerId === user?.id || user?.platformRole === "admin" || Boolean(voiceManage[channel.id]) ? () => setPermissionsChannel(channel) : undefined} onDelete={activeSpace.ownerId === user?.id ? () => setPendingAction({ kind: "channel", name: channel.name, id: channel.id }) : undefined} />)}</ChannelGroup> : null}{activeSpace.ownerId === user?.id ? <button className="category-add" onClick={() => openExclusiveOverlay(() => setShowCreateCategory(true))}><Plus size={14} /> Новая категория</button> : null}</> : <div className="space-empty"><strong>Здесь пока пусто</strong><span>Создайте первое пространство, чтобы открыть каналы и роли.</span><button onClick={() => openExclusiveOverlay(() => setShowCreateSpace(true))}>Создать пространство</button></div>}
         </div>
-        <UserDock user={user} externalVoiceSession={voiceSession} onOpenProfile={()=>setDockProfileOpen(true)} onOpenSettings={()=>{setAccountSettingsSection("profile");setMobileChannelsOpen(false);openExclusiveOverlay(()=>setShowAccountSettings(true))}} onOpenVoiceSettings={()=>{setAccountSettingsSection("voice");setMobileChannelsOpen(false);openExclusiveOverlay(()=>setShowAccountSettings(true))}} />
       </aside>
 
       <section className="chat-panel">
@@ -522,7 +526,7 @@ export default function Home({ initialSpaceId, initialChannelId }: { initialSpac
           {membersLoading ? <div className="members-loading">Загрузка участников…</div> : memberGroups.length ? <>{memberGroups.map((group) => <section className="member-section member-role-group" key={group.key}><h2><span style={group.color ? { color: group.color } : undefined}>{group.label.toLocaleUpperCase("ru")} — {group.members.length}</span></h2>{group.members.map((member) => <button className={`member ${member.online ? "is-online" : "is-offline"}`} key={member.userId} type="button" aria-label={`Открыть профиль ${member.nickname || member.displayName} — ${member.online ? "в сети" : "не в сети"}`} title={`Открыть профиль ${member.nickname || member.displayName}`} onClick={() => openExclusiveOverlay(() => setSelectedMember(member))}><span className="mini-avatar avatar-coral">{member.avatarUrl ? <MediaImage src={member.avatarUrl} /> : (member.displayName || member.username || "?").slice(0, 2).toLocaleUpperCase("ru")}<i /></span><span><strong>{member.nickname || member.displayName}</strong><ClanTag clan={member.clan}/><small>@{member.username || "участник"} · {member.online ? "в сети" : "не в сети"}</small>{Object.values(voicePresence).some((items)=>items.some((participant)=>participant.id===member.userId))?<span className="member-voice-indicator" title="Сейчас в голосовом канале"><Mic size={12}/> в голосе</span>:null}</span></button>)}</section>)}{membersCursor ? <button className="members-load-more" onClick={() => void loadMoreMembers()} disabled={membersLoadingMore}>{membersLoadingMore ? <><LoaderCircle className="spin" size={14} /> Загружаем…</> : "Показать ещё"}</button> : null}</> : <div className="members-loading">В этом пространстве пока нет участников.</div>}
         </div>
       </aside>
-      {user&&platformView?<div className="global-user-dock"><UserDock className="global-user-dock-inner" user={user} externalVoiceSession={voiceSession} onOpenProfile={()=>setDockProfileOpen(true)} onOpenSettings={()=>{setAccountSettingsSection("profile");openExclusiveOverlay(()=>setShowAccountSettings(true))}} onOpenVoiceSettings={()=>{setAccountSettingsSection("voice");openExclusiveOverlay(()=>setShowAccountSettings(true))}}/></div>:null}
+      {user?<div className="global-user-dock"><UserDock className="global-user-dock-inner" user={user} externalVoiceSession={voiceSession} onOpenProfile={()=>setDockProfileOpen(true)} onOpenSettings={()=>{setAccountSettingsSection("profile");setMobileChannelsOpen(false);openExclusiveOverlay(()=>setShowAccountSettings(true))}} onOpenVoiceSettings={()=>{setAccountSettingsSection("voice");setMobileChannelsOpen(false);openExclusiveOverlay(()=>setShowAccountSettings(true))}}/></div>:null}
       <button className="mobile-drawer-backdrop" aria-label="Закрыть меню каналов" onClick={() => setMobileChannelsOpen(false)} />
       {voiceSession?.connected ? <div className="mobile-voice-session" role="status"><button type="button" onClick={() => {
         if(voiceSession.sessionKind==="clan"&&voiceSession.sessionTargetId){
