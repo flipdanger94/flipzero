@@ -13,6 +13,7 @@ import {
   ChevronLeft,
   ChevronRight,
   CircleOff,
+  Coins,
   Compass,
   Crown,
   Eye,
@@ -21,6 +22,7 @@ import {
   Gift,
   Headphones,
   Home,
+  LoaderCircle,
   MessageCircle,
   Mic,
   PackageOpen,
@@ -31,6 +33,7 @@ import {
   ShoppingCart,
   Sparkles,
   Store,
+  Trophy,
   Upload,
   UserRound,
   Users,
@@ -44,6 +47,7 @@ export type AppIconName =
   | "buy"
   | "check"
   | "close"
+  | "currency"
   | "compass"
   | "equip"
   | "filter"
@@ -52,6 +56,7 @@ export type AppIconName =
   | "headphones"
   | "home"
   | "inventory"
+  | "loading"
   | "menu-down"
   | "messages"
   | "microphone"
@@ -65,6 +70,7 @@ export type AppIconName =
   | "sort"
   | "store"
   | "superflip"
+  | "quests"
   | "unequip"
   | "upload"
   | "user";
@@ -78,6 +84,7 @@ const ICONS: Record<AppIconName, IconComponent> = {
   buy: ShoppingCart,
   check: Check,
   close: X,
+  currency: Coins,
   compass: Compass,
   equip: BadgeCheck,
   filter: Filter,
@@ -86,6 +93,7 @@ const ICONS: Record<AppIconName, IconComponent> = {
   headphones: Headphones,
   home: Home,
   inventory: Backpack,
+  loading: LoaderCircle,
   "menu-down": ChevronDown,
   messages: MessageCircle,
   microphone: Mic,
@@ -99,6 +107,7 @@ const ICONS: Record<AppIconName, IconComponent> = {
   sort: ArrowUpDown,
   store: Store,
   superflip: Gem,
+  quests: Trophy,
   unequip: CircleOff,
   upload: Upload,
   user: UserRound,
