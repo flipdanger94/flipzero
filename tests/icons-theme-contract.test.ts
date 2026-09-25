@@ -68,6 +68,19 @@ describe("icon v2 and SuperFlip theme contracts",()=>{
     expect(page).not.toContain("style={{");
   });
 
+  it("migrates profile surfaces and normalizes any remaining legacy Lucide rendering",async()=>{
+    const [popover,visit,globals]=await Promise.all([
+      readFile("components/user-profile-popover.tsx","utf8"),
+      readFile("components/profile-visit-card.tsx","utf8"),
+      readFile("app/globals.css","utf8"),
+    ]);
+    expect(popover).toContain('import { AppIcon } from "./app-icon"');
+    expect(popover).not.toContain('from "lucide-react"');
+    expect(visit).toContain('import { AppIcon } from "./app-icon"');
+    expect(visit).not.toContain('from "lucide-react"');
+    expect(globals).toContain("svg.lucide,.fz-icon{stroke-width:1.8;color:currentColor");
+  });
+
   it("covers every current inventory equipment slot with a semantic icon",async()=>{
     const store=await readFile("components/personal-economy.tsx","utf8");
     for(const slot of ["avatar_decoration","profile_effect","profile_banner","nameplate","chat_style","badge","app_theme"]){
