@@ -34,4 +34,18 @@ describe("voice client reliability contract", () => {
     expect(source).toContain("screenFps");
     expect(source).toContain("screenQuality");
   });
+
+  it("reuses the voice surface for clan voice and keeps it mounted across navigation", async () => {
+    const [room, clan, app] = await Promise.all([
+      readFile("components/voice-room.tsx", "utf8"),
+      readFile("components/clan-hub.tsx", "utf8"),
+      readFile("components/flipzero-app.tsx", "utf8"),
+    ]);
+    expect(room).toContain("resolvedTokenUrl");
+    expect(room).toContain("stateUrl?: string | null");
+    expect(clan).toContain("Клановый войс");
+    expect(clan).toContain("stateUrl={null}");
+    expect(app).toContain("clanMounted");
+    expect(app).toContain("platform-pane-hidden");
+  });
 });
