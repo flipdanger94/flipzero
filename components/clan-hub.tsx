@@ -71,7 +71,15 @@ export function ClanHub({currentUserId,onOpenDirect}:{currentUserId:string;onOpe
   const historyRef=useRef<ClanMessage[]>([]);
   const olderScrollRef=useRef<{height:number;top:number}|null>(null);
   const eventSourceRef=useRef<EventSource|null>(null);
-  useEffect(()=>{const id=new URLSearchParams(window.location.search).get("clan");if(id)queueMicrotask(()=>{setLeaderboard(true);setFocusClanId(id)});const select=(event:Event)=>{setLeaderboard(true);setFocusClanId((event as CustomEvent<string>).detail)};window.addEventListener("flipzero:clan-selected",select);return()=>window.removeEventListener("flipzero:clan-selected",select)},[]);
+  useEffect(()=>{
+    const params=new URLSearchParams(window.location.search),id=params.get("clan");
+    if(id)queueMicrotask(()=>{setLeaderboard(true);setFocusClanId(id);if(params.get("voice")==="1")setTab("voice")});
+    const select=(event:Event)=>{setLeaderboard(true);setFocusClanId((event as CustomEvent<string>).detail)};
+    const openVoice=(event:Event)=>{const clanId=(event as CustomEvent<string>).detail;if(!clanId||clanId===detail?.clan.id)setTab("voice")};
+    window.addEventListener("flipzero:clan-selected",select);
+    window.addEventListener("flipzero:open-clan-voice",openVoice);
+    return()=>{window.removeEventListener("flipzero:clan-selected",select);window.removeEventListener("flipzero:open-clan-voice",openVoice)};
+  },[detail?.clan.id]);
   useEffect(()=>{if(!leaderboard)return;let cancelled=false;void fetch(`/api/v1/clans/leaderboard?page=${rankPage}&q=${encodeURIComponent(rankQuery)}`,{cache:"no-store"}).then(r=>r.json()).then(data=>{if(cancelled)return;setRankRows(data.rows??[]);setRankTotal(data.total??0);setMyRank(data.myClan??null)}).catch(()=>{if(!cancelled)setError("Не удалось загрузить рейтинг кланов.")});return()=>{cancelled=true}},[leaderboard,rankPage,rankQuery]);
   useEffect(()=>{if(!focusClanId)return;let cancelled=false;void fetch(`/api/v1/clans/${encodeURIComponent(focusClanId)}`,{cache:"no-store"}).then(r=>r.json()).then(data=>{if(!cancelled)setPublicClan(data.clan??null)}).catch(()=>{if(!cancelled)setPublicClan(null)});return()=>{cancelled=true}},[focusClanId]);
 
