@@ -1,13 +1,11 @@
 "use client";
 
-import type { ComponentType, SVGProps } from "react";
 import {
   ArrowLeft,
   ArrowRight,
   ArrowUpDown,
   BadgeCheck,
   Backpack,
-  Bell,
   Check,
   ChevronDown,
   ChevronLeft,
@@ -15,7 +13,6 @@ import {
   CircleOff,
   Coins,
   Compass,
-  Crown,
   Eye,
   Filter,
   Gem,
@@ -25,7 +22,6 @@ import {
   LoaderCircle,
   MessageCircle,
   Mic,
-  PackageOpen,
   Palette,
   Plus,
   Search,
@@ -38,6 +34,7 @@ import {
   UserRound,
   Users,
   X,
+  type LucideIcon,
 } from "lucide-react";
 
 export type AppIconName =
@@ -75,9 +72,7 @@ export type AppIconName =
   | "upload"
   | "user";
 
-type IconComponent = ComponentType<SVGProps<SVGSVGElement> & { size?: number | string; strokeWidth?: number | string }>;
-
-const ICONS: Record<AppIconName, IconComponent> = {
+const ICONS: Record<AppIconName, LucideIcon> = {
   animated: Sparkles,
   appearance: Palette,
   back: ArrowLeft,
