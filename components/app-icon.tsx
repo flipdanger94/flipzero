@@ -1,11 +1,10 @@
-"use client";
-
 import {
   ArrowLeft,
   ArrowRight,
   ArrowUpDown,
   BadgeCheck,
   Backpack,
+  Badge,
   Check,
   ChevronDown,
   ChevronLeft,
@@ -15,14 +14,17 @@ import {
   Compass,
   Eye,
   Filter,
+  Image,
   Gem,
   Gift,
   Headphones,
   Home,
   LoaderCircle,
   MessageCircle,
+  MessageSquareText,
   Mic,
   Palette,
+  Paintbrush,
   Plus,
   Search,
   Settings,
@@ -30,6 +32,7 @@ import {
   Sparkles,
   Store,
   Trophy,
+  Type,
   Upload,
   UserRound,
   Users,
@@ -39,9 +42,13 @@ import {
 
 export type AppIconName =
   | "animated"
+  | "avatar-decoration"
+  | "badge"
+  | "banner"
   | "appearance"
   | "back"
   | "buy"
+  | "chat-style"
   | "check"
   | "close"
   | "currency"
@@ -53,12 +60,14 @@ export type AppIconName =
   | "headphones"
   | "home"
   | "inventory"
+  | "nameplate"
   | "loading"
   | "menu-down"
   | "messages"
   | "microphone"
   | "next"
   | "people"
+  | "profile-effect"
   | "plus"
   | "preview"
   | "previous"
@@ -67,6 +76,7 @@ export type AppIconName =
   | "sort"
   | "store"
   | "superflip"
+  | "theme"
   | "quests"
   | "unequip"
   | "upload"
@@ -74,9 +84,13 @@ export type AppIconName =
 
 const ICONS: Record<AppIconName, LucideIcon> = {
   animated: Sparkles,
+  "avatar-decoration": UserRound,
+  badge: Badge,
+  banner: Image,
   appearance: Palette,
   back: ArrowLeft,
   buy: ShoppingCart,
+  "chat-style": MessageSquareText,
   check: Check,
   close: X,
   currency: Coins,
@@ -88,12 +102,14 @@ const ICONS: Record<AppIconName, LucideIcon> = {
   headphones: Headphones,
   home: Home,
   inventory: Backpack,
+  nameplate: Type,
   loading: LoaderCircle,
   "menu-down": ChevronDown,
   messages: MessageCircle,
   microphone: Mic,
   next: ChevronRight,
   people: Users,
+  "profile-effect": Sparkles,
   plus: Plus,
   preview: Eye,
   previous: ChevronLeft,
@@ -102,6 +118,7 @@ const ICONS: Record<AppIconName, LucideIcon> = {
   sort: ArrowUpDown,
   store: Store,
   superflip: Gem,
+  theme: Paintbrush,
   quests: Trophy,
   unequip: CircleOff,
   upload: Upload,
