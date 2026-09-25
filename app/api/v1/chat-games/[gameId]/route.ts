@@ -1,4 +1,3 @@
-import { randomUUID } from "node:crypto";
 import { and, eq, gte, sql } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { getDatabase } from "@/db/client";
@@ -8,9 +7,9 @@ import { answerHash, gameAccess } from "@/lib/chat-game";
 import { GAME_CONFIG } from "@/lib/chat-game-config";
 import { awardClanContribution } from "@/lib/clan-season";
 import { creditCoins } from "@/lib/economy";
-import { levelFromXp } from "@/lib/gamification";
 import { getSuperFlipCapabilities } from "@/lib/superflip";
 import { isTrustedMutationRequest } from "@/lib/security-controls";
+import { awardXpInTransaction } from "@/lib/xp";
 async function authorized(userId:string,gameId:string){const [game]=await getDatabase().select().from(chatGames).where(eq(chatGames.id,gameId)).limit(1);if(!game)return null;const scope=game.clanId?"clan":game.channelId?"channel":"direct",scopeId=game.clanId??game.channelId??game.conversationId??"";return await gameAccess(userId,scope,scopeId)?game:null}
 export async function GET(_:Request,{params}:{params:Promise<{gameId:string}>}){
  const user=await getCurrentUser();if(!user)return NextResponse.json({message:"Требуется вход."},{status:401});
@@ -41,8 +40,8 @@ export async function POST(request:Request,{params}:{params:Promise<{gameId:stri
   if((wins?.count??0)>=GAME_CONFIG.dailyWinLimit)return "limit";
   const superflip=await getSuperFlipCapabilities(winnerId);
   const xp=Math.round(GAME_CONFIG.winXp*(superflip.active?1.2:1)),coins=Math.round(GAME_CONFIG.winCoins*(superflip.active?1.2:1));
-  const [inserted]=await tx.insert(xpEvents).values({id:randomUUID(),userId:winnerId,source:"game_win",amount:xp,idempotencyKey:`game_win:${gameId}:${winnerId}`}).onConflictDoNothing().returning({id:xpEvents.id});
-  if(inserted){const [updated]=await tx.update(users).set({globalXp:sql`${users.globalXp}+${xp}`}).where(eq(users.id,winnerId)).returning({xp:users.globalXp});await tx.update(users).set({globalLevel:levelFromXp(updated.xp)}).where(eq(users.id,winnerId));await awardClanContribution(tx,winnerId,xp);await creditCoins(tx,winnerId,coins,"Победа в мини-игре",`game:${gameId}`)}
+  const xpAward=await awardXpInTransaction(tx,{userId:winnerId,source:"game_win",amount:xp,dedupeKey:`game_win:${gameId}:${winnerId}`,meta:{gameId}});
+  if(xpAward.awarded){await awardClanContribution(tx,winnerId,xp);await creditCoins(tx,winnerId,coins,"Победа в мини-игре",`game:${gameId}`)}
   return "win";
  });return result==="ended"||result==="played"?NextResponse.json({message:result==="ended"?"Игра завершена.":"Ход уже сделан."},{status:409}):NextResponse.json({ok:true,result});
 }
