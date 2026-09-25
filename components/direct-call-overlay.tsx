@@ -18,6 +18,7 @@ export function DirectCallOverlay({ person, video, onClose, connection }: { pers
   const localRef = useRef<HTMLDivElement | null>(null);
   const audioRef = useRef<HTMLDivElement | null>(null);
   const callIdRef = useRef<string | null>(connection?.callId ?? null);
+  const [callId,setCallId] = useState(connection?.callId ?? "");
   const roleRef = useRef<"caller"|"receiver">(connection?.role ?? "caller");
   const hasRemoteRef = useRef(false);
 
@@ -50,6 +51,7 @@ export function DirectCallOverlay({ person, video, onClose, connection }: { pers
         if(connection){
           data=connection;
           callIdRef.current=connection.callId;
+          setCallId(connection.callId);
           roleRef.current=connection.role;
           setStatus("Подключаемся…");
         }else{
@@ -62,6 +64,7 @@ export function DirectCallOverlay({ person, video, onClose, connection }: { pers
           if (!response.ok) throw new Error(created.message ?? "Не удалось начать звонок.");
           data=created;
           callIdRef.current=created.callId??null;
+          setCallId(created.callId??"");
           roleRef.current="caller";
           setStatus("Звоним…");
         }
@@ -91,7 +94,6 @@ export function DirectCallOverlay({ person, video, onClose, connection }: { pers
   }, [person.id, video, connection]);
 
   useEffect(()=>{
-    const callId=callIdRef.current;
     if(!callId||roleRef.current!=="caller")return;
     let cancelled=false;
     const poll=async()=>{
@@ -105,7 +107,7 @@ export function DirectCallOverlay({ person, video, onClose, connection }: { pers
     };
     const timer=window.setInterval(()=>void poll(),1500);void poll();
     return()=>{cancelled=true;window.clearInterval(timer)};
-  },[onClose]);
+  },[callId,onClose]);
 
   async function closeCall(){
     const callId=callIdRef.current;
