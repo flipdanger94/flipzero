@@ -22,11 +22,15 @@ export function UserDock({
   onOpenProfile,
   onOpenSettings,
   onOpenVoiceSettings,
+  externalVoiceSession,
+  className="",
 }:{
   user:DockUser|null;
   onOpenProfile:()=>void;
   onOpenSettings:()=>void;
   onOpenVoiceSettings:()=>void;
+  externalVoiceSession?:{connected:boolean;channelName:string;spaceName?:string;quality?:string}|null;
+  className?:string;
 }){
   const rootRef=useRef<HTMLDivElement|null>(null);
   const inputButton=useRef<HTMLButtonElement|null>(null);
@@ -39,7 +43,8 @@ export function UserDock({
   const [prefs,setPrefs]=useState<AudioPrefs>(()=>readPrefs());
   const [muted,setMuted]=useState(false);
   const [deafened,setDeafened]=useState(false);
-  const [voiceSession,setVoiceSession]=useState<{connected:boolean;channelName:string;spaceName?:string;quality?:string}|null>(null);
+  const [voiceSession,setVoiceSession]=useState<{connected:boolean;channelName:string;spaceName?:string;quality?:string}|null>(externalVoiceSession??null);
+  useEffect(()=>{if(externalVoiceSession!==undefined)setVoiceSession(externalVoiceSession)},[externalVoiceSession]);
   useEffect(()=>{
     const handler=(event:Event)=>{
       const detail=(event as CustomEvent<{connected?:boolean;channelName?:string;spaceName?:string;quality?:string}>).detail;
@@ -76,7 +81,7 @@ export function UserDock({
   function toggleMic(){const next=!muted;setMuted(next);emit({type:"toggle-mic",muted:next})}
   function toggleDeafen(){const next=!deafened;setDeafened(next);emit({type:"toggle-output",deafened:next})}
 
-  return <div ref={rootRef} className={`user-dock ${voiceSession?.connected?"has-voice-session":""}`}>
+  return <div ref={rootRef} className={`user-dock ${voiceSession?.connected?"has-voice-session":""} ${className}`.trim()}>
     {voiceSession?.connected?<section className="dock-voice-session" aria-label="Текущее голосовое соединение">
       <div className="dock-voice-status"><Signal size={16}/><span><strong>Голосовая связь подключена</strong><small>{voiceSession.channelName}{voiceSession.spaceName?` · ${voiceSession.spaceName}`:""}</small></span></div>
       <span className="dock-voice-quality">{voiceSession.quality??"Проверка"}</span>
