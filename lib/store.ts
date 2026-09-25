@@ -7,6 +7,7 @@ import {
   cosmeticEquipped,
   cosmeticInventory,
   cosmeticItems,
+  userPreferences,
   userWallets,
 } from "@/db/schema";
 import { debitCoins } from "@/lib/economy";
@@ -244,6 +245,10 @@ export async function equipInventoryItem(userId: string, itemId: string) {
         target: [cosmeticEquipped.userId, cosmeticEquipped.slot],
         set: { itemId },
       });
+    if (row.item.slot === "app_theme") {
+      await tx.insert(userPreferences).values({ userId, theme: row.item.preview })
+        .onConflictDoUpdate({ target: userPreferences.userId, set: { theme: row.item.preview, updatedAt: new Date() } });
+    }
   });
   return getInventorySnapshot(userId);
 }
@@ -254,6 +259,10 @@ export async function unequipInventorySlot(userId: string, slot: string) {
   await db.transaction(async (tx) => {
     await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${userId}))`);
     await tx.delete(cosmeticEquipped).where(and(eq(cosmeticEquipped.userId, userId), eq(cosmeticEquipped.slot, slot)));
+    if (slot === "app_theme") {
+      await tx.insert(userPreferences).values({ userId, theme: "midnight" })
+        .onConflictDoUpdate({ target: userPreferences.userId, set: { theme: "midnight", updatedAt: new Date() } });
+    }
   });
   return getInventorySnapshot(userId);
 }
