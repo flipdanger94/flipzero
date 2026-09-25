@@ -10,7 +10,7 @@ type Quest={key:string;title:string;description:string;period:"daily"|"weekly";t
 type ItemState="not_owned"|"owned"|"equipped";
 type StoreItem={
   id:string;slug:string;title:string;description:string;category:string;type:string;slot:string;rarity:string;
-  priceOrbs:number;priceMoneyCents:number|null;preview:string;previewImage:string|null;previewAnimation:string|null;
+  priceмонет:number;priceMoneyCents:number|null;preview:string;previewImage:string|null;previewAnimation:string|null;
   superflipOnly:boolean;isBundle:boolean;isAnimated:boolean;isActive:boolean;isNew:boolean;state:ItemState;
   bundleItems:string[];createdAt:string;availableUntil:string|null;
 };
@@ -135,7 +135,7 @@ export function PersonalEconomy({onOpenSuperFlip}:{onOpenSuperFlip?:()=>void}={}
 
   async function purchase(item:StoreItem){
     if(item.superflipOnly&&!superflipActive){setError("Для этого предмета нужен активный SuperFlip.");return}
-    if(balance<item.priceOrbs){setError(`Не хватает ${item.priceOrbs-balance} Orbs.`);return}
+    if(balance<item.priceмонет){setError(`Не хватает ${item.priceмонет-balance} монет.`);return}
     setBusy(item.id);setError("");
     try{await post("/api/store/purchase",{itemId:item.id});await refresh()}
     catch(reason){setError(reason instanceof Error?reason.message:"Покупка не выполнена.")}
@@ -185,11 +185,11 @@ export function PersonalEconomy({onOpenSuperFlip}:{onOpenSuperFlip?:()=>void}={}
     return [...storeItems]
       .filter(item=>(category==="all"||item.category===category)&&(!q||item.title.toLocaleLowerCase("ru").includes(q)||item.description.toLocaleLowerCase("ru").includes(q)))
       .sort((a,b)=>{
-        if(sort==="price_asc")return a.priceOrbs-b.priceOrbs;
-        if(sort==="price_desc")return b.priceOrbs-a.priceOrbs;
+        if(sort==="price_asc")return a.priceмонет-b.priceмонет;
+        if(sort==="price_desc")return b.priceмонет-a.priceмонет;
         if(sort==="newest")return Number(b.isNew)-Number(a.isNew)||new Date(b.createdAt).getTime()-new Date(a.createdAt).getTime();
         if(sort==="rarity")return (rarityWeight[b.rarity]??0)-(rarityWeight[a.rarity]??0);
-        return Number(b.isBundle)-Number(a.isBundle)||Number(b.isAnimated)-Number(a.isAnimated)||a.priceOrbs-b.priceOrbs;
+        return Number(b.isBundle)-Number(a.isBundle)||Number(b.isAnimated)-Number(a.isAnimated)||a.priceмонет-b.priceмонет;
       });
   },[storeItems,query,category,sort]);
 
@@ -213,21 +213,21 @@ export function PersonalEconomy({onOpenSuperFlip}:{onOpenSuperFlip?:()=>void}={}
     if(item.isBundle){
       if(item.superflipOnly&&!superflipActive&&item.state==="not_owned")return <button onClick={()=>onOpenSuperFlip?onOpenSuperFlip():window.location.assign("/superflip")}>Нужен SuperFlip</button>;
       return <button disabled={!!busy||item.state!=="not_owned"} onClick={()=>void purchase(item)}>
-        {busy===item.id?"Покупаем…":item.state!=="not_owned"?"Набор куплен":`Купить · ${item.priceOrbs} Orbs`}
+        {busy===item.id?"Покупаем…":item.state!=="not_owned"?"Набор куплен":`Купить · ${item.priceмонет} монет`}
       </button>;
     }
     if(item.state==="equipped")return <button className="secondary" disabled={!!busy} onClick={()=>void unequip(item)}>{busy===item.id?"Снимаем…":"Снять"}</button>;
     if(item.state==="owned")return <button disabled={!!busy} onClick={()=>void equip(item)}>{busy===item.id?"Надеваем…":"Надеть"}</button>;
     if(item.superflipOnly&&!superflipActive)return <button onClick={()=>onOpenSuperFlip?onOpenSuperFlip():window.location.assign("/superflip")}>Нужен SuperFlip</button>;
-    return <button disabled={!!busy||balance<item.priceOrbs} onClick={()=>void purchase(item)}>
-      {busy===item.id?"Покупаем…":balance<item.priceOrbs?`Не хватает ${item.priceOrbs-balance}`:`Купить · ${item.priceOrbs} Orbs`}
+    return <button disabled={!!busy||balance<item.priceмонет} onClick={()=>void purchase(item)}>
+      {busy===item.id?"Покупаем…":balance<item.priceмонет?`Не хватает ${item.priceмонет-balance}`:`Купить · ${item.priceмонет} монет`}
     </button>;
   }
 
   return <div className="personal-economy store-shell">
     <header className="store-shell-head">
       <div><small>FLIPZERO STYLE</small><h3>Магазин и коллекция</h3><p>Собирайте предметы, настраивайте профиль и меняйте стиль без перезагрузки.</p></div>
-      <strong><AppIcon name="currency" size={22}/>{balance.toLocaleString("ru-RU")} <small>Orbs</small></strong>
+      <strong><AppIcon name="currency" size={22}/>{balance.toLocaleString("ru-RU")} <small>монет</small></strong>
     </header>
 
     <nav className="store-main-tabs" aria-label="Экономика и косметика">
@@ -258,7 +258,7 @@ export function PersonalEconomy({onOpenSuperFlip}:{onOpenSuperFlip?:()=>void}={}
         <div className="store-section-title"><div><small>ПОДБОРКА</small><h3>Наборы недели</h3></div><span>В одном наборе — несколько предметов для разных слотов.</span></div>
         <div className="store-featured-grid">{featuredBundles.map(item=><article key={item.id} className="store-feature-card">
           <CosmeticArt live={hovered===item.id} item={item}/>
-          <div><ItemBadges item={item}/><small>{rarityLabels[item.rarity]??item.rarity}</small><h4>{item.title}</h4><p>{item.description}</p><strong>{item.priceOrbs} Orbs</strong><div className="store-card-actions"><button className="preview" onClick={()=>setPreview(item)}><AppIcon name="preview" size={15}/>Просмотр</button>{actionFor(item)}</div></div>
+          <div><ItemBadges item={item}/><small>{rarityLabels[item.rarity]??item.rarity}</small><h4>{item.title}</h4><p>{item.description}</p><strong>{item.priceмонет} монет</strong><div className="store-card-actions"><button className="preview" onClick={()=>setPreview(item)}><AppIcon name="preview" size={15}/>Просмотр</button>{actionFor(item)}</div></div>
         </article>)}</div>
       </section>:null}
 
@@ -276,7 +276,7 @@ export function PersonalEconomy({onOpenSuperFlip}:{onOpenSuperFlip?:()=>void}={}
         </div>
         <div className="store-grid">{filteredStore.slice(0,visibleLimit).map(item=><article key={item.id} className={`store-item-card rarity-${item.rarity}`} onMouseEnter={()=>setHovered(item.id)} onMouseLeave={()=>setHovered("")} onFocus={()=>setHovered(item.id)} onBlur={()=>setHovered("")}>
           <div className="store-item-visual"><CosmeticArt live={hovered===item.id} item={item}/><ItemBadges item={item}/></div>
-          <div className="store-item-copy"><small>{rarityLabels[item.rarity]??item.rarity} · {categoryLabels[item.category]??item.category}</small><h4>{item.title}</h4><p>{item.description}</p><div className="store-item-price"><strong>{item.priceOrbs} Orbs</strong>{item.superflipOnly?<span><AppIcon name="superflip" size={12}/>SuperFlip</span>:null}</div></div>
+          <div className="store-item-copy"><small>{rarityLabels[item.rarity]??item.rarity} · {categoryLabels[item.category]??item.category}</small><h4>{item.title}</h4><p>{item.description}</p><div className="store-item-price"><strong>{item.priceмонет} монет</strong>{item.superflipOnly?<span><AppIcon name="superflip" size={12}/>SuperFlip</span>:null}</div></div>
           <div className="store-card-actions"><button className="preview" onClick={()=>setPreview(item)}><AppIcon name="preview" size={15}/>Просмотр</button>{actionFor(item)}</div>
         </article>)}</div>
         {visibleLimit<filteredStore.length?<div className="store-more"><span>Это ещё далеко не всё</span><button onClick={()=>setVisibleLimit(value=>value+16)}>Показать ещё предметы</button></div>:null}
@@ -313,11 +313,11 @@ export function PersonalEconomy({onOpenSuperFlip}:{onOpenSuperFlip?:()=>void}={}
     </div>:null}
 
     {!loading&&tab==="quests"?<div className="quests-page">
-      <div className="personal-streak"><AppIcon name="gift" size={22}/><span><strong>Серия: {streak} дн.</strong><small>Зарабатывайте Orbs и открывайте новые предметы.</small></span></div>
-      <div className="personal-economy-grid">{quests.map(quest=><article key={quest.key}><small>{quest.period==="daily"?"ЕЖЕДНЕВНЫЙ":"ЕЖЕНЕДЕЛЬНЫЙ"}</small><strong>{quest.title}</strong><p>{quest.description}</p><div className="personal-progress" role="progressbar" aria-valuenow={quest.progress} aria-valuemin={0} aria-valuemax={quest.target} aria-label={quest.title}><i style={{width:`${Math.min(100,100*quest.progress/quest.target)}%`}}/></div><span>{quest.progress}/{quest.target} · {quest.xp} XP · {quest.coins} Orbs</span><button disabled={quest.claimed||quest.progress<quest.target||!!busy} onClick={()=>void claimQuest(quest.key)}>{quest.claimed?"Получено":busy===quest.key?"Забираем…":"Забрать"}</button></article>)}</div>
+      <div className="personal-streak"><AppIcon name="gift" size={22}/><span><strong>Серия: {streak} дн.</strong><small>Зарабатывайте монет и открывайте новые предметы.</small></span></div>
+      <div className="personal-economy-grid">{quests.map(quest=><article key={quest.key}><small>{quest.period==="daily"?"ЕЖЕДНЕВНЫЙ":"ЕЖЕНЕДЕЛЬНЫЙ"}</small><strong>{quest.title}</strong><p>{quest.description}</p><div className="personal-progress" role="progressbar" aria-valuenow={quest.progress} aria-valuemin={0} aria-valuemax={quest.target} aria-label={quest.title}><i style={{width:`${Math.min(100,100*quest.progress/quest.target)}%`}}/></div><span>{quest.progress}/{quest.target} · {quest.xp} XP · {quest.coins} монет</span><button disabled={quest.claimed||quest.progress<quest.target||!!busy} onClick={()=>void claimQuest(quest.key)}>{quest.claimed?"Получено":busy===quest.key?"Забираем…":"Забрать"}</button></article>)}</div>
     </div>:null}
 
-    {!loading&&tab==="history"?<div className="personal-ledger">{ledger.length?ledger.map(entry=><article key={entry.id}><span><strong>{entry.reason}</strong><small>{new Date(entry.createdAt).toLocaleString("ru-RU")}</small></span><b className={entry.amount>0?"positive":""}>{entry.amount>0?"+":""}{entry.amount} Orbs</b></article>):<div className="store-empty"><AppIcon name="currency" size={28}/><strong>Операций пока нет</strong><p>Выполните квест или купите первый предмет.</p></div>}</div>:null}
+    {!loading&&tab==="history"?<div className="personal-ledger">{ledger.length?ledger.map(entry=><article key={entry.id}><span><strong>{entry.reason}</strong><small>{new Date(entry.createdAt).toLocaleString("ru-RU")}</small></span><b className={entry.amount>0?"positive":""}>{entry.amount>0?"+":""}{entry.amount} монет</b></article>):<div className="store-empty"><AppIcon name="currency" size={28}/><strong>Операций пока нет</strong><p>Выполните квест или купите первый предмет.</p></div>}</div>:null}
 
     {previewItem?<div className="store-preview-backdrop" role="presentation" onClick={()=>setPreview(null)}>
       <section className="store-preview-dialog" role="dialog" aria-modal="true" aria-label={`Предпросмотр: ${previewItem.title}`} onClick={event=>event.stopPropagation()}>
@@ -330,7 +330,7 @@ export function PersonalEconomy({onOpenSuperFlip}:{onOpenSuperFlip?:()=>void}={}
             <strong>{identity?.displayName??"Ваш профиль"}</strong><span>@flipzero</span>
           </div>
         </div>
-        <div className="store-preview-copy"><ItemBadges item={previewItem}/><small>{rarityLabels[previewItem.rarity]??previewItem.rarity}</small><h3>{previewItem.title}</h3><p>{previewItem.description}</p><div className="store-preview-price">{previewItem.priceOrbs} Orbs</div><div className="store-card-actions">{actionFor(previewItem)}</div></div>
+        <div className="store-preview-copy"><ItemBadges item={previewItem}/><small>{rarityLabels[previewItem.rarity]??previewItem.rarity}</small><h3>{previewItem.title}</h3><p>{previewItem.description}</p><div className="store-preview-price">{previewItem.priceмонет} монет</div><div className="store-card-actions">{actionFor(previewItem)}</div></div>
       </section>
     </div>:null}
   </div>;
