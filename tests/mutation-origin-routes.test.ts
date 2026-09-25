@@ -5,6 +5,7 @@ vi.mock("../lib/auth", () => ({ getCurrentUser: async () => { throw new Error("A
 import { POST as sendDirectMessage } from "../app/api/messages/route";
 import { POST as joinVoice } from "../app/api/v1/channels/[channelId]/voice/route";
 import { POST as uploadMedia } from "../app/api/v1/media/route";
+import { POST as directCallAction } from "../app/api/v1/direct-calls/incoming/route";
 import { isTrustedMutationRequest } from "../lib/security-controls";
 
 describe("mutation origin boundaries", () => {
@@ -37,7 +38,7 @@ describe("mutation origin boundaries", () => {
     }
   });
 
-  it("rejects cross-site direct messages, voice joins and media uploads before authentication", async () => {
+  it("rejects cross-site direct messages, voice joins, call actions and media uploads before authentication", async () => {
     const request = (path: string) => new Request(`https://flipzero.app${path}`, {
       method: "POST", headers: { origin: "https://untrusted.example", "sec-fetch-site": "cross-site" },
     });
@@ -45,9 +46,10 @@ describe("mutation origin boundaries", () => {
     const responses = await Promise.all([
       sendDirectMessage(request("/api/messages")),
       joinVoice(request("/api/v1/channels/voice-1/voice"), context),
+      directCallAction(request("/api/v1/direct-calls/incoming")),
       uploadMedia(request("/api/v1/media")),
     ]);
-    expect(responses.map((response) => response?.status)).toEqual([403, 403, 403]);
+    expect(responses.map((response) => response?.status)).toEqual([403, 403, 403, 403]);
   });
 });
 
