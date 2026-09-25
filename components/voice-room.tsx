@@ -96,6 +96,7 @@ export function VoiceRoom({
   const breakout = "main";
   const resolvedTokenUrl = tokenUrl ?? `/api/v1/channels/${channelId}/voice-token`;
   const resolvedStateUrl = stateUrl === undefined ? `/api/v1/channels/${channelId}/voice` : stateUrl;
+  const resolvedLeaveUrl = stateUrl === undefined ? `/api/v1/channels/${channelId}/voice?leave=1` : stateUrl ? `${stateUrl}?leave=1` : null;
   const [soundboard, setSoundboard] = useState(false);
   const [soundPlaying, setSoundPlaying] = useState(false);
   const screenSupported = typeof navigator === "undefined" || Boolean(navigator.mediaDevices?.getDisplayMedia);
@@ -413,7 +414,7 @@ export function VoiceRoom({
           return;
         }
         setStatus("reconnecting");
-        setError(`Переподключение… попытка ${retry} из 3`);
+        setError(`Переподключение… Попытка ${retry} из 3`);
         if (reconnectTimerRef.current) window.clearTimeout(reconnectTimerRef.current);
         reconnectTimerRef.current = window.setTimeout(() => {
           setStatus("idle");
@@ -878,14 +879,14 @@ export function VoiceRoom({
     const timer = window.setInterval(heartbeat, 45_000);
     const pagehide = () => {
       const payload = new Blob([JSON.stringify({ leave: true })], { type: "application/json" });
-      if (resolvedStateUrl) navigator.sendBeacon?.(`${resolvedStateUrl}?leave=1`, payload);
+      if (resolvedLeaveUrl) navigator.sendBeacon?.(resolvedLeaveUrl, payload);
     };
     window.addEventListener("pagehide", pagehide);
     return () => {
       window.clearInterval(timer);
       window.removeEventListener("pagehide", pagehide);
     };
-  }, [connected, channelId, resolvedStateUrl]);
+  }, [connected, channelId, resolvedLeaveUrl, resolvedStateUrl]);
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       const target = event.target as HTMLElement | null;
