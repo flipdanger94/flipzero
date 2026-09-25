@@ -10,6 +10,7 @@ import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
+  ChevronUp,
   CircleOff,
   Coins,
   Compass,
@@ -23,12 +24,16 @@ import {
   LoaderCircle,
   MessageCircle,
   MessageSquareText,
+  MicOff,
   Mic,
   Palette,
   Paintbrush,
+  PhoneOff,
   Plus,
   Search,
   Settings,
+  Signal,
+  SlidersHorizontal,
   ShoppingCart,
   Sparkles,
   Store,
@@ -38,6 +43,8 @@ import {
   Upload,
   UserPlus,
   UserRound,
+  Volume2,
+  VolumeX,
   Users,
   X,
   type LucideIcon,
@@ -45,6 +52,8 @@ import {
 
 export type AppIconName =
   | "animated"
+  | "audio"
+  | "audio-off"
   | "avatar-decoration"
   | "badge"
   | "banner"
@@ -56,6 +65,7 @@ export type AppIconName =
   | "close"
   | "currency"
   | "compass"
+  | "disconnect"
   | "equip"
   | "filter"
   | "forward"
@@ -65,10 +75,12 @@ export type AppIconName =
   | "inventory"
   | "nameplate"
   | "loading"
+  | "menu-up"
   | "menu-down"
   | "messages"
   | "notifications"
   | "microphone"
+  | "microphone-off"
   | "next"
   | "people"
   | "friends"
@@ -79,6 +91,8 @@ export type AppIconName =
   | "previous"
   | "search"
   | "settings"
+  | "signal"
+  | "controls"
   | "sort"
   | "store"
   | "superflip"
@@ -90,6 +104,8 @@ export type AppIconName =
 
 const ICONS: Record<AppIconName, LucideIcon> = {
   animated: Sparkles,
+  audio: Volume2,
+  "audio-off": VolumeX,
   "avatar-decoration": UserRound,
   badge: Badge,
   banner: Image,
@@ -101,6 +117,7 @@ const ICONS: Record<AppIconName, LucideIcon> = {
   close: X,
   currency: Coins,
   compass: Compass,
+  disconnect: PhoneOff,
   equip: BadgeCheck,
   filter: Filter,
   forward: ArrowRight,
@@ -110,10 +127,12 @@ const ICONS: Record<AppIconName, LucideIcon> = {
   inventory: Backpack,
   nameplate: Type,
   loading: LoaderCircle,
+  "menu-up": ChevronUp,
   "menu-down": ChevronDown,
   messages: MessageCircle,
   notifications: Bell,
   microphone: Mic,
+  "microphone-off": MicOff,
   next: ChevronRight,
   people: Users,
   friends: UserPlus,
@@ -124,6 +143,8 @@ const ICONS: Record<AppIconName, LucideIcon> = {
   previous: ChevronLeft,
   search: Search,
   settings: Settings,
+  signal: Signal,
+  controls: SlidersHorizontal,
   sort: ArrowUpDown,
   store: Store,
   superflip: Gem,
