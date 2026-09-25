@@ -56,7 +56,7 @@ describe("clan system migration and server boundaries", () => {
     expect(platform).toContain(".platform-pane-active .clan-section-layout");
   });
 
-  it("uses compact shared clan tags across members, profiles and voice", async () => {
+  it("uses compact clan tags on member and profile surfaces but not in voice participants", async () => {
     const [tag, shell, profile, voice, theme] = await Promise.all([
       readFile("components/clan-tag.tsx", "utf8"),
       readFile("components/flipzero-app.tsx", "utf8"),
@@ -68,10 +68,10 @@ describe("clan system migration and server boundaries", () => {
     expect(tag).toContain('variant="inline"');
     expect(tag).toContain('className="clan-tag-full"');
     expect(shell).toContain('className="member-name-row"');
-    expect(shell).toContain('ClanTag tag={participant.clanTag}');
+    expect(shell).not.toContain('ClanTag tag={participant.clanTag}');
     expect(profile).toContain('className="fz-mini-name-row"');
     expect(profile).toContain('variant="full"');
-    expect(voice).toContain('className="voice-tile-name"');
+    expect(voice).not.toContain('ClanTag tag={participant.clanTag}');
     expect(theme).toContain(".clan-tag-badge");
     expect(theme).toContain("font-size:10px");
   });
