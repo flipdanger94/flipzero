@@ -67,7 +67,7 @@ function ItemBadges({item}:{item:StoreItem}){
   </div>;
 }
 
-export function PersonalEconomy(){
+export function PersonalEconomy({onOpenSuperFlip}:{onOpenSuperFlip?:()=>void}={}){
   const [tab,setTab]=useState<"quests"|"store"|"inventory"|"history">("store");
   const [balance,setBalance]=useState(0);
   const [superflipActive,setSuperflipActive]=useState(false);
@@ -221,14 +221,16 @@ export function PersonalEconomy(){
 
   function actionFor(item:StoreItem){
     if(item.isBundle){
-      return <button disabled={!!busy||item.state!=="not_owned"||item.superflipOnly&&!superflipActive} onClick={()=>void purchase(item)}>
-        {busy===item.id?"Покупаем…":item.state!=="not_owned"?"Набор куплен":item.superflipOnly&&!superflipActive?"Нужен SuperFlip":`Купить · ${item.priceOrbs} Orbs`}
+      if(item.superflipOnly&&!superflipActive&&item.state==="not_owned")return <button onClick={()=>onOpenSuperFlip?onOpenSuperFlip():window.location.assign("/superflip")}>Нужен SuperFlip</button>;
+      return <button disabled={!!busy||item.state!=="not_owned"} onClick={()=>void purchase(item)}>
+        {busy===item.id?"Покупаем…":item.state!=="not_owned"?"Набор куплен":`Купить · ${item.priceOrbs} Orbs`}
       </button>;
     }
     if(item.state==="equipped")return <button className="secondary" disabled={!!busy} onClick={()=>void unequip(item)}>{busy===item.id?"Снимаем…":"Снять"}</button>;
     if(item.state==="owned")return <button disabled={!!busy} onClick={()=>void equip(item)}>{busy===item.id?"Надеваем…":"Надеть"}</button>;
-    return <button disabled={!!busy||item.superflipOnly&&!superflipActive||balance<item.priceOrbs} onClick={()=>void purchase(item)}>
-      {busy===item.id?"Покупаем…":item.superflipOnly&&!superflipActive?"Нужен SuperFlip":balance<item.priceOrbs?`Не хватает ${item.priceOrbs-balance}`:`Купить · ${item.priceOrbs} Orbs`}
+    if(item.superflipOnly&&!superflipActive)return <button onClick={()=>onOpenSuperFlip?onOpenSuperFlip():window.location.assign("/superflip")}>Нужен SuperFlip</button>;
+    return <button disabled={!!busy||balance<item.priceOrbs} onClick={()=>void purchase(item)}>
+      {busy===item.id?"Покупаем…":balance<item.priceOrbs?`Не хватает ${item.priceOrbs-balance}`:`Купить · ${item.priceOrbs} Orbs`}
     </button>;
   }
 
