@@ -46,6 +46,15 @@ export function UserDock({
   const [voiceSession,setVoiceSession]=useState<{connected:boolean;channelName:string;spaceName?:string;quality?:string}|null>(externalVoiceSession??null);
   useEffect(()=>{if(externalVoiceSession!==undefined)setVoiceSession(externalVoiceSession)},[externalVoiceSession]);
   useEffect(()=>{
+    const stateHandler=(event:Event)=>{
+      const detail=(event as CustomEvent<{muted?:boolean;deafened?:boolean}>).detail;
+      if(typeof detail?.muted==="boolean")setMuted(detail.muted);
+      if(typeof detail?.deafened==="boolean")setDeafened(detail.deafened);
+    };
+    window.addEventListener("flipzero:voice-state",stateHandler);
+    return()=>window.removeEventListener("flipzero:voice-state",stateHandler);
+  },[]);
+  useEffect(()=>{
     const handler=(event:Event)=>{
       const detail=(event as CustomEvent<{connected?:boolean;channelName?:string;spaceName?:string;quality?:string}>).detail;
       if(!detail?.connected){setVoiceSession(null);return}
