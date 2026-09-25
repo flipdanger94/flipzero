@@ -2412,7 +2412,11 @@ html[data-motion="off"] *::after {
   .remote-video{grid-template-columns:1fr!important}
   .remote-video video,.local-screen video,.local-camera video{width:100%!important;max-height:none!important;aspect-ratio:16/9!important;object-fit:contain!important}
   .voice-room-connected.is-focus .video-grid{position:relative!important;min-height:min(64dvh,520px)!important;background:#020305!important}
-  .voice-room-connected.is-focus .voice-tile-grid{display:none!important}
+  .voice-room-connected.is-focus .voice-tile-grid{display:grid!important;grid-template-columns:1fr!important;width:100%!important}
+  .voice-room-connected.is-focus .voice-tile.is-media-focus{min-height:0!important;aspect-ratio:16/9!important}
+  .voice-tile-stream-actions{left:7px!important;right:7px!important;top:7px!important;justify-content:flex-end!important;overflow-x:auto!important}
+  .voice-tile-stream-actions label{margin-right:auto!important;min-width:120px!important}
+  .voice-tile-stream-actions input{width:90px!important}
   .voice-stream-toolbar{position:sticky!important;bottom:0!important;top:auto!important;flex-wrap:wrap!important;gap:6px!important}.voice-stream-toolbar>strong{width:100%!important}.voice-stream-toolbar>label{order:2;margin-left:0!important;flex:1!important}.voice-stream-toolbar>label input{width:100%!important}
   .voice-tile-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:7px!important}
   .voice-tile{border-radius:12px!important}.voice-tile-avatar{width:54px!important;height:54px!important}.voice-tile footer{left:7px!important;right:7px!important;bottom:6px!important}.voice-tile footer strong{font-size:.62rem!important}.voice-tile-watch{left:7px!important;right:7px!important;bottom:30px!important;min-height:32px!important}
