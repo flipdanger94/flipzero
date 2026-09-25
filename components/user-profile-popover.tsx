@@ -15,7 +15,7 @@ type CommonFriend = { id:string; username:string; displayName:string; avatarUrl:
 type CommonServer = { id:string; name:string; iconUrl:string|null };
 type Profile = {
   id:string; username:string; displayName:string; avatarUrl:string|null; bannerUrl:string|null; bio:string|null;
-  accentColor:string; presence:string; globalLevel:number; globalXp:number; createdAt:string; profileLocation:string|null;
+  presence:string; globalLevel:number; globalXp:number; createdAt:string; profileLocation:string|null;
   profileStatus:string|null; currentLevelXp:number; nextLevelXp:number; xpToNextLevel:number; isOwnProfile:boolean; isFriend:boolean; friendshipStatus:"friends"|"outgoing"|"incoming"|"none";
   incomingRequestId:string|null; stats:{messages:number;friends:number;servers:number}; commonFriends:CommonFriend[];
   commonServers:CommonServer[]; servers:Array<{id:string;name:string;iconUrl:string|null}>;
