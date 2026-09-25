@@ -33,4 +33,36 @@
 @media(max-width:1050px){.store-hero{grid-template-columns:1fr;padding:30px}.store-hero-art{height:210px}.store-featured-grid{grid-template-columns:1fr}.store-feature-card{grid-template-columns:minmax(190px,.7fr) 1fr}.store-preview-dialog{grid-template-columns:1fr}.store-preview-stage{min-height:330px}.store-preview-copy{max-height:310px}}
 @media(max-width:767px){.store-shell-head{padding:14px 12px}.store-shell-head p{display:none}.store-shell-head>strong{font-size:14px}.store-main-tabs{padding:7px 8px;top:0}.store-page,.inventory-page,.quests-page{padding:10px 8px calc(var(--mobile-bottom-nav,66px) + 18px);gap:20px}.store-hero{min-height:0;grid-template-columns:1fr;padding:22px 16px}.store-hero h2{font-size:2.15rem}.store-hero-art{height:170px}.store-hero-art>.cosmetic-art{max-width:190px}.store-feature-card{grid-template-columns:1fr}.store-feature-card>.cosmetic-art{min-height:190px}.store-section-title{align-items:flex-start;flex-direction:column;gap:5px}.store-toolbar{align-items:stretch}.store-search{min-width:100%}.store-toolbar select{flex:1}.store-grid,.inventory-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.store-item-visual,.store-item-visual>.cosmetic-art{min-height:145px;height:145px}.store-item-copy{min-height:112px;padding:10px}.store-item-card h4{font-size:12px}.store-item-card p{font-size:10px}.store-card-actions{padding:8px;flex-direction:column}.store-card-actions button.preview{max-width:none}.equipped-slots{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.equipped-slots article{min-height:225px}.equipped-slots .cosmetic-art,.equipped-placeholder{height:120px}.store-preview-backdrop{padding:0}.store-preview-dialog{width:100vw;max-height:100dvh;height:100dvh;border:0;border-radius:0;grid-template-rows:minmax(0,1fr) auto}.store-preview-stage{min-height:0}.store-preview-copy{max-height:42dvh;padding:18px 14px calc(var(--mobile-bottom-nav,66px) + 14px)}}
 @media(max-width:430px){.store-grid,.inventory-grid,.equipped-slots{grid-template-columns:1fr}.store-hero-art>.cosmetic-art+ .cosmetic-art{display:none}}
-@media(prefers-reduced-motion:reduce){.store-hero:before,.cosmetic-art *,.visual-aurora,.visual-aurora-wave,.visual-bundle-neon:after,.visual-bundle-aurora:after,.frame-cyber:before,.fz-mini-profile:after,.fz-full-profile:after,.badge-orbit-badge,.nick-aurora{animation:none!important}.store-item-card,.inventory-card{transition:none}}
+@media(prefers-reduced-motion:reduce){.store-hero:before,.cosmetic-art *,.visual-aurora,.visual-aurora-wave,.visual-bundle-neon:after,.visual-bundle-aurora:after,.frame-cyber:before,.fz-mini-profile:after,.fz-full-profile:after,.fz-mini-banner,.fz-full-banner,.fz-mini-avatar,.fz-full-avatar,.badge-orbit-badge,.nick-aurora{animation:none!important}.store-item-card,.inventory-card{transition:none}}
+
+
+.inventory-actions{flex-wrap:wrap}
+.inventory-actions button{flex:1 1 86px}
+.inventory-actions button.preview{max-width:none}
+
+.fz-mini-banner.cosmetic-orbit,.fz-full-banner.cosmetic-orbit,
+.store-preview-banner.cosmetic-orbit{
+  background-image:
+    radial-gradient(circle at 18% 28%,#9f8cff8a,transparent 28%),
+    radial-gradient(circle at 82% 66%,#d56fff68,transparent 30%),
+    linear-gradient(130deg,#111b38,#321845)!important;
+  background-size:140% 140%,150% 150%,100% 100%!important;
+  animation:profile-banner-orbit 7s ease-in-out infinite
+}
+.fz-mini-banner.cosmetic-void,.fz-full-banner.cosmetic-void,
+.store-preview-banner.cosmetic-void{
+  background-image:
+    radial-gradient(circle at 24% 40%,#8a58ff75,transparent 32%),
+    radial-gradient(circle at 72% 22%,#d548ff45,transparent 28%),
+    linear-gradient(145deg,#050713,#131027)!important;
+  background-size:150% 150%,140% 140%,100% 100%!important;
+  animation:profile-banner-void 8s ease-in-out infinite
+}
+.fz-mini-avatar.frame-nebula,.fz-full-avatar.frame-nebula,
+.fz-mini-avatar.frame-solar,.fz-full-avatar.frame-solar,
+.fz-mini-avatar.frame-glow,.fz-full-avatar.frame-glow{
+  animation:profile-frame-breathe 2.8s ease-in-out infinite
+}
+@keyframes profile-banner-orbit{50%{background-position:100% 30%,0 70%,0 0}}
+@keyframes profile-banner-void{50%{background-position:80% 60%,20% 30%,0 0;filter:saturate(1.15)}}
+@keyframes profile-frame-breathe{50%{filter:brightness(1.12);transform:scale(1.018)}}
