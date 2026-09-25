@@ -5,6 +5,7 @@ vi.mock("../lib/auth", () => ({ getCurrentUser: async () => { throw new Error("A
 import { POST as sendDirectMessage } from "../app/api/messages/route";
 import { POST as joinVoice } from "../app/api/v1/channels/[channelId]/voice/route";
 import { POST as uploadMedia } from "../app/api/v1/media/route";
+import { POST as mutateDirectCall } from "../app/api/v1/direct-calls/incoming/route";
 import { POST as directCallAction } from "../app/api/v1/direct-calls/incoming/route";
 import { isTrustedMutationRequest } from "../lib/security-controls";
 
