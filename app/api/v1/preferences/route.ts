@@ -28,8 +28,17 @@ export async function PATCH(request:Request){
   db.select().from(userPreferences).where(eq(userPreferences.userId,user.id)).limit(1),
   getAppThemes(),
  ]);
- const {accentColor:_legacyAccent,...bodyWithoutAccent}=body as Record<string,unknown>;
- const next={...defaults,...current,...bodyWithoutAccent};
+ const raw=body as Record<string,unknown>;
+ const next={
+  theme:typeof raw.theme==="string"?raw.theme:(current?.theme??defaults.theme),
+  dndEnabled:typeof raw.dndEnabled==="boolean"?raw.dndEnabled:(current?.dndEnabled??defaults.dndEnabled),
+  dndDays:Array.isArray(raw.dndDays)?raw.dndDays:(current?.dndDays??defaults.dndDays),
+  dndStart:typeof raw.dndStart==="string"?raw.dndStart:(current?.dndStart??defaults.dndStart),
+  dndEnd:typeof raw.dndEnd==="string"?raw.dndEnd:(current?.dndEnd??defaults.dndEnd),
+  dndTimezone:typeof raw.dndTimezone==="string"?raw.dndTimezone:(current?.dndTimezone??defaults.dndTimezone),
+  dndFavoriteIds:Array.isArray(raw.dndFavoriteIds)?raw.dndFavoriteIds:(current?.dndFavoriteIds??defaults.dndFavoriteIds),
+  dndClanException:typeof raw.dndClanException==="boolean"?raw.dndClanException:(current?.dndClanException??defaults.dndClanException),
+ };
  const theme=themes.find(item=>item.id===next.theme);if(!theme)return NextResponse.json({message:"Неизвестная тема."},{status:400});
  if(theme.access==="superflip"&&!await hasActiveSuperFlip(user.id))return NextResponse.json({message:"Тема доступна с SuperFlip."},{status:403});
  if(theme.access.startsWith("shop:")){
