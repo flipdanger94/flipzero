@@ -1,20 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import {
-  Check,
-  Coins,
-  Crown,
-  Eye,
-  Gift,
-  LoaderCircle,
-  PackageOpen,
-  Search,
-  ShoppingBag,
-  Sparkles,
-  Trophy,
-  X,
-} from "lucide-react";
+import { AppIcon } from "./app-icon";
 import { CosmeticArt } from "./cosmetic-art";
 import { MediaImage } from "./media-image";
 
@@ -60,11 +47,11 @@ function withEquippedState<T extends StoreItem>(items:T[],equipped:Record<string
 
 function ItemBadges({item}:{item:StoreItem}){
   return <div className="store-item-badges">
-    {item.state==="owned"?<span className="owned"><Check size={11}/>Куплено</span>:null}
-    {item.state==="equipped"?<span className="equipped"><Check size={11}/>Надето</span>:null}
+    {item.state==="owned"?<span className="owned"><AppIcon name="check" size={11}/>Куплено</span>:null}
+    {item.state==="equipped"?<span className="equipped"><AppIcon name="check" size={11}/>Надето</span>:null}
     {item.isNew?<span>Новый</span>:null}
     {item.isBundle?<span>В наборе</span>:null}
-    {item.isAnimated?<span className="animated"><Sparkles size={11}/>Анимированный</span>:null}
+    {item.isAnimated?<span className="animated"><AppIcon name="animated" size={11}/>Анимированный</span>:null}
   </div>;
 }
 
@@ -240,23 +227,23 @@ export function PersonalEconomy({onOpenSuperFlip}:{onOpenSuperFlip?:()=>void}={}
   return <div className="personal-economy store-shell">
     <header className="store-shell-head">
       <div><small>FLIPZERO STYLE</small><h3>Магазин и коллекция</h3><p>Собирайте предметы, настраивайте профиль и меняйте стиль без перезагрузки.</p></div>
-      <strong><Coins size={22}/>{balance.toLocaleString("ru-RU")} <small>Orbs</small></strong>
+      <strong><AppIcon name="currency" size={22}/>{balance.toLocaleString("ru-RU")} <small>Orbs</small></strong>
     </header>
 
     <nav className="store-main-tabs" aria-label="Экономика и косметика">
-      <button className={tab==="store"?"active":""} onClick={()=>setTab("store")}><ShoppingBag size={17}/>Магазин</button>
-      <button className={tab==="inventory"?"active":""} onClick={()=>setTab("inventory")}><PackageOpen size={17}/>Инвентарь</button>
-      <button className={tab==="quests"?"active":""} onClick={()=>setTab("quests")}><Trophy size={17}/>Квесты</button>
-      <button className={tab==="history"?"active":""} onClick={()=>setTab("history")}><Coins size={17}/>История</button>
+      <button className={tab==="store"?"active":""} onClick={()=>setTab("store")}><AppIcon name="store" size={17}/>Магазин</button>
+      <button className={tab==="inventory"?"active":""} onClick={()=>setTab("inventory")}><AppIcon name="inventory" size={17}/>Инвентарь</button>
+      <button className={tab==="quests"?"active":""} onClick={()=>setTab("quests")}><AppIcon name="quests" size={17}/>Квесты</button>
+      <button className={tab==="history"?"active":""} onClick={()=>setTab("history")}><AppIcon name="currency" size={17}/>История</button>
     </nav>
 
-    {error?<div role="alert" className="store-error">{error}<button type="button" onClick={()=>setError("")}><X size={15}/></button></div>:null}
-    {loading?<div className="social-loading"><LoaderCircle className="spin"/>Загружаем коллекцию…</div>:null}
+    {error?<div role="alert" className="store-error">{error}<button type="button" onClick={()=>setError("")}><AppIcon name="close" size={15}/></button></div>:null}
+    {loading?<div className="social-loading"><AppIcon name="loading" className="spin"/>Загружаем коллекцию…</div>:null}
 
     {!loading&&tab==="store"?<div className="store-page">
       <section className="store-hero">
         <div>
-          <span><Sparkles size={14}/> КОЛЛЕКЦИИ FLIPZERO</span>
+          <span><AppIcon name="animated" size={14}/> КОЛЛЕКЦИИ FLIPZERO</span>
           <h2>Найдите свой стиль.</h2>
           <p>Рамки, живые эффекты, баннеры, темы и наборы. Анимированные предметы запускаются при наведении и в предпросмотре.</p>
           <div><button onClick={()=>{setCategory("bundle");document.querySelector(".store-catalog")?.scrollIntoView({behavior:"smooth"})}}>Смотреть наборы</button><button className="ghost" onClick={()=>setTab("inventory")}>Моя коллекция</button></div>
@@ -271,14 +258,14 @@ export function PersonalEconomy({onOpenSuperFlip}:{onOpenSuperFlip?:()=>void}={}
         <div className="store-section-title"><div><small>ПОДБОРКА</small><h3>Наборы недели</h3></div><span>В одном наборе — несколько предметов для разных слотов.</span></div>
         <div className="store-featured-grid">{featuredBundles.map(item=><article key={item.id} className="store-feature-card">
           <CosmeticArt live={hovered===item.id} item={item}/>
-          <div><ItemBadges item={item}/><small>{rarityLabels[item.rarity]??item.rarity}</small><h4>{item.title}</h4><p>{item.description}</p><strong>{item.priceOrbs} Orbs</strong><div className="store-card-actions"><button className="preview" onClick={()=>setPreview(item)}><Eye size={15}/>Просмотр</button>{actionFor(item)}</div></div>
+          <div><ItemBadges item={item}/><small>{rarityLabels[item.rarity]??item.rarity}</small><h4>{item.title}</h4><p>{item.description}</p><strong>{item.priceOrbs} Orbs</strong><div className="store-card-actions"><button className="preview" onClick={()=>setPreview(item)}><AppIcon name="preview" size={15}/>Просмотр</button>{actionFor(item)}</div></div>
         </article>)}</div>
       </section>:null}
 
       <section className="store-catalog">
         <div className="store-section-title"><div><small>МАГАЗИН</small><h3>Косметика</h3></div><span>{filteredStore.length} предметов</span></div>
         <div className="store-toolbar">
-          <label className="store-search"><Search size={16}/><input value={query} onChange={event=>{setQuery(event.target.value);setVisibleLimit(12)}} placeholder="Поиск по магазину" aria-label="Поиск по магазину"/></label>
+          <label className="store-search"><AppIcon name="search" size={16}/><input value={query} onChange={event=>{setQuery(event.target.value);setVisibleLimit(12)}} placeholder="Поиск по магазину" aria-label="Поиск по магазину"/></label>
           <select value={sort} onChange={event=>setSort(event.target.value)} aria-label="Сортировка магазина">
             <option value="featured">Для вас</option><option value="newest">Сначала новые</option><option value="rarity">По редкости</option><option value="price_asc">Сначала дешевле</option><option value="price_desc">Сначала дороже</option>
           </select>
@@ -289,11 +276,11 @@ export function PersonalEconomy({onOpenSuperFlip}:{onOpenSuperFlip?:()=>void}={}
         </div>
         <div className="store-grid">{filteredStore.slice(0,visibleLimit).map(item=><article key={item.id} className={`store-item-card rarity-${item.rarity}`} onMouseEnter={()=>setHovered(item.id)} onMouseLeave={()=>setHovered("")} onFocus={()=>setHovered(item.id)} onBlur={()=>setHovered("")}>
           <div className="store-item-visual"><CosmeticArt live={hovered===item.id} item={item}/><ItemBadges item={item}/></div>
-          <div className="store-item-copy"><small>{rarityLabels[item.rarity]??item.rarity} · {categoryLabels[item.category]??item.category}</small><h4>{item.title}</h4><p>{item.description}</p><div className="store-item-price"><strong>{item.priceOrbs} Orbs</strong>{item.superflipOnly?<span><Crown size={12}/>SuperFlip</span>:null}</div></div>
-          <div className="store-card-actions"><button className="preview" onClick={()=>setPreview(item)}><Eye size={15}/>Просмотр</button>{actionFor(item)}</div>
+          <div className="store-item-copy"><small>{rarityLabels[item.rarity]??item.rarity} · {categoryLabels[item.category]??item.category}</small><h4>{item.title}</h4><p>{item.description}</p><div className="store-item-price"><strong>{item.priceOrbs} Orbs</strong>{item.superflipOnly?<span><AppIcon name="superflip" size={12}/>SuperFlip</span>:null}</div></div>
+          <div className="store-card-actions"><button className="preview" onClick={()=>setPreview(item)}><AppIcon name="preview" size={15}/>Просмотр</button>{actionFor(item)}</div>
         </article>)}</div>
         {visibleLimit<filteredStore.length?<div className="store-more"><span>Это ещё далеко не всё</span><button onClick={()=>setVisibleLimit(value=>value+16)}>Показать ещё предметы</button></div>:null}
-        {!filteredStore.length?<div className="store-empty"><Search size={28}/><strong>Ничего не найдено</strong><p>Попробуйте другой запрос или категорию.</p></div>:null}
+        {!filteredStore.length?<div className="store-empty"><AppIcon name="search" size={28}/><strong>Ничего не найдено</strong><p>Попробуйте другой запрос или категорию.</p></div>:null}
       </section>
     </div>:null}
 
@@ -304,7 +291,7 @@ export function PersonalEconomy({onOpenSuperFlip}:{onOpenSuperFlip?:()=>void}={}
           const current=equippedItems.find(entry=>entry.slot===slot)?.item??null;
           return <article key={slot} className={current?"filled":""}>
             <div className="equipped-slot-head"><span>{slotLabels[slot]??slot}</span>{current?<b>Надето</b>:null}</div>
-            {current?<><CosmeticArt live item={current}/><strong>{current.title}</strong><button onClick={()=>void unequip(current)} disabled={!!busy}>Снять</button></>:<><div className="equipped-placeholder"><Sparkles size={24}/></div><strong>Слот свободен</strong><button onClick={()=>{setInventorySlot(slot);document.querySelector(".inventory-all")?.scrollIntoView({behavior:"smooth"})}}>Выбрать предмет</button></>}
+            {current?<><CosmeticArt live item={current}/><strong>{current.title}</strong><button onClick={()=>void unequip(current)} disabled={!!busy}>Снять</button></>:<><div className="equipped-placeholder"><AppIcon name="animated" size={24}/></div><strong>Слот свободен</strong><button onClick={()=>{setInventorySlot(slot);document.querySelector(".inventory-all")?.scrollIntoView({behavior:"smooth"})}}>Выбрать предмет</button></>}
           </article>;
         })}</div>
       </section>
@@ -312,29 +299,29 @@ export function PersonalEconomy({onOpenSuperFlip}:{onOpenSuperFlip?:()=>void}={}
       <section className="inventory-all">
         <div className="store-section-title"><div><small>КОЛЛЕКЦИЯ</small><h3>Все предметы</h3></div><span>{inventory.items.length} в коллекции</span></div>
         <div className="store-toolbar">
-          <label className="store-search"><Search size={16}/><input value={inventoryQuery} onChange={event=>setInventoryQuery(event.target.value)} placeholder="Поиск в инвентаре" aria-label="Поиск в инвентаре"/></label>
+          <label className="store-search"><AppIcon name="search" size={16}/><input value={inventoryQuery} onChange={event=>setInventoryQuery(event.target.value)} placeholder="Поиск в инвентаре" aria-label="Поиск в инвентаре"/></label>
           <select value={inventorySlot} onChange={event=>setInventorySlot(event.target.value)} aria-label="Фильтр по слоту"><option value="all">Все слоты</option>{inventory.slots.filter(slot=>slot!=="bundle").map(slot=><option key={slot} value={slot}>{slotLabels[slot]??slot}</option>)}</select>
           <select value={inventorySort} onChange={event=>setInventorySort(event.target.value)} aria-label="Сортировка инвентаря"><option value="newest">Сначала новые</option><option value="rarity">По редкости</option><option value="name">По названию</option></select>
         </div>
         <div className="inventory-grid">{filteredInventory.map(item=><article key={item.id} className={`inventory-card rarity-${item.rarity}`}>
           <div className="store-item-visual"><CosmeticArt live item={item}/><ItemBadges item={item}/></div>
           <div><small>{slotLabels[item.slot]??categoryLabels[item.category]??item.category}</small><strong>{item.title}</strong><p>Получено {new Date(item.acquiredAt).toLocaleDateString("ru-RU")}</p></div>
-          <div className="store-card-actions inventory-actions"><button className="preview" onClick={()=>setPreview(item)}><Eye size={15}/>Просмотр</button><button className="preview" onClick={()=>{setTab("store");setCategory(item.category);setQuery(item.title);window.setTimeout(()=>document.querySelector(".store-catalog")?.scrollIntoView({behavior:"smooth"}),0)}}><ShoppingBag size={15}/>В магазин</button>{item.isBundle?<button disabled>Набор</button>:item.state==="equipped"?<button className="secondary" onClick={()=>void unequip(item)} disabled={!!busy}>Снять</button>:<button onClick={()=>void equip(item)} disabled={!!busy}>Надеть</button>}</div>
+          <div className="store-card-actions inventory-actions"><button className="preview" onClick={()=>setPreview(item)}><AppIcon name="preview" size={15}/>Просмотр</button><button className="preview" onClick={()=>{setTab("store");setCategory(item.category);setQuery(item.title);window.setTimeout(()=>document.querySelector(".store-catalog")?.scrollIntoView({behavior:"smooth"}),0)}}><AppIcon name="store" size={15}/>В магазин</button>{item.isBundle?<button disabled>Набор</button>:item.state==="equipped"?<button className="secondary" onClick={()=>void unequip(item)} disabled={!!busy}>Снять</button>:<button onClick={()=>void equip(item)} disabled={!!busy}>Надеть</button>}</div>
         </article>)}</div>
-        {!filteredInventory.length?<div className="store-empty"><PackageOpen size={30}/><strong>В этом разделе пока пусто</strong><p>Откройте магазин и добавьте первые предметы в коллекцию.</p><button onClick={()=>setTab("store")}>Открыть магазин</button></div>:null}
+        {!filteredInventory.length?<div className="store-empty"><AppIcon name="inventory" size={30}/><strong>В этом разделе пока пусто</strong><p>Откройте магазин и добавьте первые предметы в коллекцию.</p><button onClick={()=>setTab("store")}>Открыть магазин</button></div>:null}
       </section>
     </div>:null}
 
     {!loading&&tab==="quests"?<div className="quests-page">
-      <div className="personal-streak"><Gift size={22}/><span><strong>Серия: {streak} дн.</strong><small>Зарабатывайте Orbs и открывайте новые предметы.</small></span></div>
+      <div className="personal-streak"><AppIcon name="gift" size={22}/><span><strong>Серия: {streak} дн.</strong><small>Зарабатывайте Orbs и открывайте новые предметы.</small></span></div>
       <div className="personal-economy-grid">{quests.map(quest=><article key={quest.key}><small>{quest.period==="daily"?"ЕЖЕДНЕВНЫЙ":"ЕЖЕНЕДЕЛЬНЫЙ"}</small><strong>{quest.title}</strong><p>{quest.description}</p><div className="personal-progress" role="progressbar" aria-valuenow={quest.progress} aria-valuemin={0} aria-valuemax={quest.target} aria-label={quest.title}><i style={{width:`${Math.min(100,100*quest.progress/quest.target)}%`}}/></div><span>{quest.progress}/{quest.target} · {quest.xp} XP · {quest.coins} Orbs</span><button disabled={quest.claimed||quest.progress<quest.target||!!busy} onClick={()=>void claimQuest(quest.key)}>{quest.claimed?"Получено":busy===quest.key?"Забираем…":"Забрать"}</button></article>)}</div>
     </div>:null}
 
-    {!loading&&tab==="history"?<div className="personal-ledger">{ledger.length?ledger.map(entry=><article key={entry.id}><span><strong>{entry.reason}</strong><small>{new Date(entry.createdAt).toLocaleString("ru-RU")}</small></span><b className={entry.amount>0?"positive":""}>{entry.amount>0?"+":""}{entry.amount} Orbs</b></article>):<div className="store-empty"><Coins size={28}/><strong>Операций пока нет</strong><p>Выполните квест или купите первый предмет.</p></div>}</div>:null}
+    {!loading&&tab==="history"?<div className="personal-ledger">{ledger.length?ledger.map(entry=><article key={entry.id}><span><strong>{entry.reason}</strong><small>{new Date(entry.createdAt).toLocaleString("ru-RU")}</small></span><b className={entry.amount>0?"positive":""}>{entry.amount>0?"+":""}{entry.amount} Orbs</b></article>):<div className="store-empty"><AppIcon name="currency" size={28}/><strong>Операций пока нет</strong><p>Выполните квест или купите первый предмет.</p></div>}</div>:null}
 
     {previewItem?<div className="store-preview-backdrop" role="presentation" onClick={()=>setPreview(null)}>
       <section className="store-preview-dialog" role="dialog" aria-modal="true" aria-label={`Предпросмотр: ${previewItem.title}`} onClick={event=>event.stopPropagation()}>
-        <button className="store-preview-close" onClick={()=>setPreview(null)} aria-label="Закрыть"><X/></button>
+        <button className="store-preview-close" onClick={()=>setPreview(null)} aria-label="Закрыть"><AppIcon name="close" size={20}/></button>
         <div className="store-preview-stage">
           <div className={`store-preview-profile cosmetic-${previewItem.preview}`}>
             <div className="store-preview-banner" style={identity?.bannerUrl?{backgroundImage:`url("${identity.bannerUrl}")`}:undefined}/>
