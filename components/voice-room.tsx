@@ -62,6 +62,9 @@ export function VoiceRoom({
   const [deafened, setDeafened] = useState(false);
   const [audioBlocked, setAudioBlocked] = useState(false);
   const [camera, setCamera] = useState(false);
+  const [cameraPreviewOpen, setCameraPreviewOpen] = useState(false);
+  const [cameraPreviewError, setCameraPreviewError] = useState("");
+  const [cameraPreviewBusy, setCameraPreviewBusy] = useState(false);
   const [sharing, setSharing] = useState(false);
   const [remoteVideo, setRemoteVideo] = useState(false);
   const [selectedStreamId, setSelectedStreamId] = useState(initialStreamId);
@@ -93,6 +96,8 @@ export function VoiceRoom({
   const audioRef = useRef<HTMLDivElement | null>(null);
   const remoteVideoRef = useRef<HTMLDivElement | null>(null);
   const localCameraRef = useRef<HTMLDivElement | null>(null);
+  const cameraPreviewRef = useRef<HTMLVideoElement | null>(null);
+  const cameraPreviewStreamRef = useRef<MediaStream | null>(null);
   const localScreenRef = useRef<HTMLDivElement | null>(null);
   const consentRequestRef = useRef("");
   const deafenedRef = useRef(false);
@@ -115,6 +120,8 @@ export function VoiceRoom({
       joinAttemptRef.current++;
       if (speakingTimerRef.current) window.clearTimeout(speakingTimerRef.current);
       if (reconnectTimerRef.current) window.clearTimeout(reconnectTimerRef.current);
+      cameraPreviewStreamRef.current?.getTracks().forEach((track) => track.stop());
+      cameraPreviewStreamRef.current = null;
       roomRef.current?.disconnect();
       roomRef.current = null;
     },
@@ -648,18 +655,77 @@ export function VoiceRoom({
       setError("");
     } catch { setError("Не удалось включить микрофон. Разрешите доступ в настройках браузера."); }
   }
+  function closeCameraPreview() {
+    cameraPreviewStreamRef.current?.getTracks().forEach((track) => track.stop());
+    cameraPreviewStreamRef.current = null;
+    if (cameraPreviewRef.current) cameraPreviewRef.current.srcObject = null;
+    setCameraPreviewOpen(false);
+    setCameraPreviewBusy(false);
+    setCameraPreviewError("");
+  }
+  async function openCameraPreview() {
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setError("Камера недоступна в этом браузере.");
+      return;
+    }
+    setCameraPreviewOpen(true);
+    setCameraPreviewBusy(true);
+    setCameraPreviewError("");
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+      cameraPreviewStreamRef.current = stream;
+      requestAnimationFrame(() => {
+        if (cameraPreviewRef.current) {
+          cameraPreviewRef.current.srcObject = stream;
+          void cameraPreviewRef.current.play().catch(() => undefined);
+        }
+      });
+    } catch (cause) {
+      const name = cause instanceof DOMException ? cause.name : "";
+      setCameraPreviewError(
+        name === "NotAllowedError" || name === "SecurityError"
+          ? "Нет разрешения на камеру. Разрешите доступ в настройках браузера."
+          : name === "NotFoundError" || name === "OverconstrainedError"
+            ? "Камера не найдена или выбранное устройство недоступно."
+            : name === "NotReadableError"
+              ? "Камера занята другим приложением. Закройте его и попробуйте снова."
+              : "Не удалось открыть камеру.",
+      );
+    } finally {
+      setCameraPreviewBusy(false);
+    }
+  }
+  async function confirmCamera() {
+    const room = roomRef.current;
+    if (!room) return;
+    setCameraPreviewBusy(true);
+    try {
+      closeCameraPreview();
+      await room.localParticipant.setCameraEnabled(true);
+      setCamera(true);
+      attachLocal(Track.Source.Camera, localCameraRef.current);
+      setError("");
+    } catch {
+      setCamera(false);
+      setError("Не удалось включить камеру. Проверьте разрешение браузера и доступ к устройству.");
+    } finally {
+      setCameraPreviewBusy(false);
+    }
+  }
   async function toggleCamera() {
     const room = roomRef.current;
     if (!room) return;
-    const next = !camera;
+    if (!camera) {
+      await openCameraPreview();
+      return;
+    }
     try {
-      await room.localParticipant.setCameraEnabled(next);
-      setCamera(next);
-      if (next) attachLocal(Track.Source.Camera, localCameraRef.current);
-      else clearMedia(localCameraRef.current);
+      await room.localParticipant.setCameraEnabled(false);
+      setCamera(false);
+      clearMedia(localCameraRef.current);
       setError("");
     } catch {
-      setError("Не удалось включить камеру. Проверьте разрешение браузера и доступ к устройству.");
+      setError("Не удалось выключить камеру.");
     }
   }
   async function toggleScreen() {
@@ -889,6 +955,13 @@ export function VoiceRoom({
         <button className="voice-leave" onClick={leave} aria-label="Отключиться"><PhoneOff size={20}/><span>Выйти</span></button>
       </nav>
 
+      {cameraPreviewOpen ? <div className="voice-camera-preview-backdrop" role="presentation" onMouseDown={(event)=>{if(event.target===event.currentTarget)closeCameraPreview()}}>
+        <section className="voice-camera-preview" role="dialog" aria-modal="true" aria-label="Предпросмотр камеры">
+          <header><div><small>ПРЕДПРОСМОТР КАМЕРЫ</small><strong>Проверьте кадр перед включением</strong></div><button type="button" onClick={closeCameraPreview} aria-label="Закрыть предпросмотр">×</button></header>
+          <div className="voice-camera-preview-video">{cameraPreviewError ? <div className="voice-camera-preview-error">{cameraPreviewError}</div> : <video ref={cameraPreviewRef} autoPlay muted playsInline />}{cameraPreviewBusy ? <LoaderCircle className="spin" size={24}/> : null}</div>
+          <footer><button type="button" onClick={closeCameraPreview}>Отмена</button><button type="button" className="primary" onClick={()=>void confirmCamera()} disabled={cameraPreviewBusy||Boolean(cameraPreviewError)}>Включить камеру</button></footer>
+        </section>
+      </div> : null}
       {incomingConsent ? <div className="consent-request"><ShieldCheck size={20}/><div><strong>{incomingConsent.requester} запрашивает запись</strong><span>Подтвердите согласие на запись и транскрипцию комнаты.</span></div><button onClick={()=>respondToConsent(true)}>Согласен</button><button onClick={()=>respondToConsent(false)}>Отказаться</button></div>:null}
     </div>
   );
