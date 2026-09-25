@@ -78,6 +78,11 @@ export function DirectCallOverlay({ person, video, onClose, connection }: { pers
 
     return () => {
       cancelled = true;
+      const callId=callIdRef.current;
+      if(callId){
+        const action=roleRef.current==="caller"&&status!=="На связи"?"cancel":"end";
+        void fetch("/api/v1/direct-calls/incoming",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({callId,action}),keepalive:true}).catch(()=>undefined);
+      }
       void room.disconnect();
       roomRef.current = null;
     };
