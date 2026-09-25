@@ -21,6 +21,7 @@ import {
   Gift,
   Headphones,
   Home,
+  Hash,
   LoaderCircle,
   MessageCircle,
   MessageSquareText,
@@ -61,6 +62,7 @@ export type AppIconName =
   | "back"
   | "buy"
   | "chat-style"
+  | "channel"
   | "check"
   | "close"
   | "currency"
@@ -113,6 +115,7 @@ const ICONS: Record<AppIconName, LucideIcon> = {
   back: ArrowLeft,
   buy: ShoppingCart,
   "chat-style": MessageSquareText,
+  channel: Hash,
   check: Check,
   close: X,
   currency: Coins,
