@@ -38,6 +38,126 @@
   background: rgba(255, 177, 75, 0.16);
 }
 
+@media (min-width: 768px) {
+  .platform-workspace {
+    padding: 0;
+  }
+
+  .social-hub-embedded,
+  .admin-dialog-embedded {
+    border: 0;
+    border-radius: 0;
+  }
+
+  .social-hub-embedded > .social-nav-rail {
+    padding-bottom: 92px;
+  }
+
+  .admin-dialog-embedded {
+    padding-bottom: 0;
+  }
+
+  .admin-dialog-embedded > .admin-body {
+    flex: 1;
+    min-height: 0;
+    display: grid;
+    grid-template-columns: 248px minmax(0, 1fr);
+    overflow: hidden;
+  }
+
+  .admin-dialog-embedded .admin-section-nav {
+    min-width: 0;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 5px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 12px 10px 92px;
+    border-right: 1px solid var(--border);
+    border-bottom: 0;
+    background: var(--panel);
+  }
+
+  .admin-dialog-embedded .admin-section-nav span {
+    display: none;
+  }
+
+  .admin-dialog-embedded .admin-section-nav button {
+    width: 100%;
+    min-height: 40px;
+    justify-content: flex-start;
+    border-radius: 8px;
+    padding: 0 10px;
+    text-align: left;
+  }
+
+  .admin-dialog-embedded .admin-section-content {
+    min-width: 0;
+    min-height: 0;
+    overflow-y: auto;
+    padding-bottom: 18px;
+  }
+
+  .platform-pane-active > .clan-hub {
+    width: 100%;
+    height: 100%;
+  }
+
+  .platform-pane-active .clan-member-view {
+    display: grid;
+    grid-template-columns: 248px minmax(0, 1fr);
+    grid-template-rows: 176px minmax(0, 1fr);
+  }
+
+  .platform-pane-active .clan-member-view > .clan-hero {
+    grid-column: 1 / -1;
+    grid-row: 1;
+    min-width: 0;
+  }
+
+  .platform-pane-active .clan-member-view > .clan-tabs {
+    grid-column: 1;
+    grid-row: 2;
+    min-width: 0;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 4px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 12px 10px 92px;
+    border-right: 1px solid var(--border);
+    border-bottom: 0;
+    background: var(--panel);
+  }
+
+  .platform-pane-active .clan-member-view > .clan-tabs button {
+    min-height: 40px;
+    flex: 0 0 auto;
+    justify-content: flex-start;
+    border: 0;
+    border-left: 2px solid transparent;
+    border-radius: 8px;
+    padding: 0 10px;
+  }
+
+  .platform-pane-active .clan-member-view > .clan-tabs button.active {
+    border-left-color: var(--accent);
+    border-bottom-color: transparent;
+    background: color-mix(in srgb, var(--accent) 12%, transparent);
+  }
+
+  .platform-pane-active .clan-member-view > :not(.clan-hero):not(.clan-tabs) {
+    grid-column: 2;
+    grid-row: 2;
+    min-width: 0;
+    min-height: 0;
+  }
+}
+
 @media (max-width: 767px) {
   .platform-workspace {
     position: fixed;
@@ -56,6 +176,29 @@
   .social-hub-embedded > header,
   .admin-dialog-embedded > header {
     padding-top: max(20px, env(safe-area-inset-top));
+  }
+
+  .admin-dialog-embedded > .admin-body {
+    min-height: 0;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .admin-dialog-embedded .admin-section-nav {
+    flex: 0 0 auto;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    overflow-x: auto;
+    overflow-y: hidden;
+  }
+
+  .admin-dialog-embedded .admin-section-content {
+    min-height: 0;
+    flex: 1;
+    overflow-y: auto;
   }
 
   .platform-view-active .mobile-tab-bar {
