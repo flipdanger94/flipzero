@@ -98,6 +98,8 @@ export function VoiceRoom({
   const joinAttemptRef = useRef(0);
   const soundPlayingRef = useRef(false);
   const speakingRef = useRef(false);
+  const speakingTimerRef = useRef<number | null>(null);
+  const selectedStreamRef = useRef(initialStreamId);
   const joinRef = useRef<() => Promise<void>>(async () => {});
   const outputVolumeRef = useRef(1);
   const voiceRootRef = useRef<HTMLDivElement | null>(null);
@@ -106,11 +108,13 @@ export function VoiceRoom({
   useEffect(
     () => () => {
       joinAttemptRef.current++;
+      if (speakingTimerRef.current) window.clearTimeout(speakingTimerRef.current);
       roomRef.current?.disconnect();
       roomRef.current = null;
     },
     [channelId],
   );
+  useEffect(() => { selectedStreamRef.current = selectedStreamId; }, [selectedStreamId]);
   useEffect(() => {
     const controller = new AbortController();
     void fetch("/api/v1/voice/status?check=1", { signal: controller.signal })
@@ -227,14 +231,35 @@ export function VoiceRoom({
         const localSpeaking = speakers.some((participant) => participant.isLocal);
         if (localSpeaking !== speakingRef.current) {
           speakingRef.current = localSpeaking;
-          void fetch(`/api/v1/channels/${channelId}/voice`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ speaking: localSpeaking }) });
+          if (speakingTimerRef.current) window.clearTimeout(speakingTimerRef.current);
+          speakingTimerRef.current = window.setTimeout(() => {
+            void fetch(`/api/v1/channels/${channelId}/voice`, {
+              method: "PATCH",
+              headers: { "content-type": "application/json" },
+              body: JSON.stringify({ speaking: speakingRef.current }),
+            }).catch(() => undefined);
+          }, 1600);
         }
         refresh();
       });
       room.on(RoomEvent.TrackMuted, refresh);
       room.on(RoomEvent.TrackUnmuted, refresh);
-      room.on(RoomEvent.TrackPublished, refresh);
-      room.on(RoomEvent.TrackUnpublished, refresh);
+      room.on(RoomEvent.TrackPublished, (publication, participant) => {
+        if (publication.source === Track.Source.ScreenShare || publication.source === Track.Source.ScreenShareAudio) {
+          publication.setSubscribed(participant.identity === selectedStreamRef.current);
+        } else {
+          publication.setSubscribed(true);
+        }
+        refresh();
+      });
+      room.on(RoomEvent.TrackUnpublished, (publication, participant) => {
+        if ((publication.source === Track.Source.ScreenShare || publication.source === Track.Source.ScreenShareAudio) && participant.identity === selectedStreamRef.current) {
+          selectedStreamRef.current = "";
+          setSelectedStreamId("");
+          setFocusMode(false);
+        }
+        refresh();
+      });
       room.on(RoomEvent.ConnectionQualityChanged, (next, participant) => {
         if (participant.isLocal) { setQuality(next); emitVoiceSession(true, next); }
       });
@@ -266,7 +291,12 @@ export function VoiceRoom({
       });
       room.on(RoomEvent.Reconnecting, () => setStatus("reconnecting"));
       room.on(RoomEvent.Reconnected, () => setStatus("connected"));
-      room.on(RoomEvent.TrackSubscribed, (track, _publication, participant) => {
+      room.on(RoomEvent.TrackSubscribed, (track, publication, participant) => {
+        const isScreen = publication.source === Track.Source.ScreenShare || publication.source === Track.Source.ScreenShareAudio;
+        if (isScreen && participant.identity !== selectedStreamRef.current) {
+          publication.setSubscribed(false);
+          return;
+        }
         if (track.kind === Track.Kind.Audio) {
           const element = track.attach();
           element.dataset.participantId = participant.identity;
@@ -324,13 +354,19 @@ export function VoiceRoom({
       });
       room.on(RoomEvent.AudioPlaybackStatusChanged, () => setAudioBlocked(!connectedRoom.canPlaybackAudio));
       await Promise.race([
-        room.connect(data.url, data.token, { websocketTimeout: 10000, peerConnectionTimeout: 10000, maxRetries: 1 }),
+        room.connect(data.url, data.token, { websocketTimeout: 10000, peerConnectionTimeout: 10000, maxRetries: 1, autoSubscribe: false }),
         new Promise<never>((_, reject) => {
           connectTimeout = window.setTimeout(() => reject(new Error("VOICE_CONNECTION_TIMEOUT")), 20000);
         }),
       ]);
       window.clearTimeout(connectTimeout);
       if (attempt !== joinAttemptRef.current) { void room.disconnect(); return; }
+      connectedRoom.remoteParticipants.forEach((participant) => {
+        participant.trackPublications.forEach((publication) => {
+          const screen = publication.source === Track.Source.ScreenShare || publication.source === Track.Source.ScreenShareAudio;
+          publication.setSubscribed(!screen || participant.identity === selectedStreamRef.current);
+        });
+      });
       let audioPrefs: { inputId?: string; outputId?: string; inputVolume?: number; outputVolume?: number; inputProfile?: "standard"|"noise"|"raw" } = {};
       try { audioPrefs = JSON.parse(localStorage.getItem("flipzero:audio-devices:v1") ?? "{}"); } catch { audioPrefs = {}; }
       outputVolumeRef.current = Math.max(0, Math.min(1, Number(audioPrefs.outputVolume ?? 100) / 100));
@@ -645,8 +681,12 @@ export function VoiceRoom({
   const selectedStream = streamingParticipants.find((participant) => participant.id === selectedStreamId) ?? streamingParticipants[0] ?? null;
 
   function focusStream(participantId: string) {
+    selectedStreamRef.current = participantId;
     setSelectedStreamId(participantId);
     setFocusMode(true);
+    roomRef.current?.remoteParticipants.get(participantId)?.trackPublications.forEach((publication) => {
+      if (publication.source === Track.Source.ScreenShare || publication.source === Track.Source.ScreenShareAudio) publication.setSubscribed(true);
+    });
     remoteVideoRef.current?.querySelectorAll<HTMLElement>("[data-participant-id]").forEach((element) => {
       element.hidden = element.dataset.participantId !== participantId;
     });
@@ -656,8 +696,13 @@ export function VoiceRoom({
     setFocusMode(false);
   }
   function clearFocus() {
+    const previous = selectedStreamRef.current;
+    selectedStreamRef.current = "";
     setFocusMode(false);
     setSelectedStreamId("");
+    roomRef.current?.remoteParticipants.get(previous)?.trackPublications.forEach((publication) => {
+      if (publication.source === Track.Source.ScreenShare || publication.source === Track.Source.ScreenShareAudio) publication.setSubscribed(false);
+    });
     remoteVideoRef.current?.querySelectorAll<HTMLElement>("[data-participant-id]").forEach((element) => { element.hidden = false; });
   }
   function applyStreamVolume() {
@@ -668,6 +713,39 @@ export function VoiceRoom({
     });
   }
   useEffect(() => { applyStreamVolume(); }, [selectedStreamId, streamMuted, streamVolume]);
+  useEffect(() => {
+    if (!connected) return;
+    const heartbeat = () => {
+      if (document.visibilityState !== "visible") return;
+      void fetch(`/api/v1/channels/${channelId}/voice`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ heartbeat: true }),
+        keepalive: true,
+      }).catch(() => undefined);
+    };
+    heartbeat();
+    const timer = window.setInterval(heartbeat, 45_000);
+    const pagehide = () => {
+      const payload = new Blob([], { type: "application/json" });
+      navigator.sendBeacon?.(`/api/v1/channels/${channelId}/voice`, payload);
+    };
+    window.addEventListener("pagehide", pagehide);
+    return () => {
+      window.clearInterval(timer);
+      window.removeEventListener("pagehide", pagehide);
+    };
+  }, [connected, channelId]);
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement | null;
+      if (target?.closest("input, textarea, select, [contenteditable='true']") || event.repeat) return;
+      if (event.key.toLowerCase() === "m") { event.preventDefault(); void toggleMute(); }
+      if (event.key.toLowerCase() === "d") { event.preventDefault(); void toggleDeafen(); }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  });
   useEffect(() => {
     if (!initialStreamId || !remoteVideo) return;
     remoteVideoRef.current?.querySelectorAll<HTMLElement>("[data-participant-id]").forEach((element) => {
@@ -724,7 +802,7 @@ export function VoiceRoom({
             <div ref={remoteVideoRef} className="remote-video"/>
             <div ref={localScreenRef} className={`local-screen ${sharing ? "visible" : ""}`}/>
             <div ref={localCameraRef} className={`local-camera ${camera ? "visible" : ""}`}/>
-          </div> : <div className="voice-stage-empty" aria-hidden="true" />}
+          </div> : null}
 
           {focusMode && selectedStream ? <div className="voice-stream-toolbar">
             <strong><span className="voice-live-badge">LIVE</span>{selectedStream.name}</strong>
@@ -741,18 +819,14 @@ export function VoiceRoom({
             {visibleParticipants.map((participant)=><article key={participant.id} role="listitem" className={`voice-tile ${participant.speaking ? "speaking" : ""} ${participant.streaming || participant.sharing ? "is-streaming" : ""}`}>
               {participant.streaming || participant.sharing ? <div className="voice-tile-stream-preview" data-stream-preview-id={participant.id} aria-hidden="true" /> : null}
               <div className="voice-tile-avatar">{participant.avatarUrl?<MediaImage src={participant.avatarUrl}/>:participant.name.slice(0,2).toLocaleUpperCase("ru")}</div>
-              <footer className="voice-tile-footer"><strong title={participant.name}>{participant.name}</strong><span>{participant.streaming || participant.sharing ? <b className="voice-live-badge">LIVE</b> : null}{participant.muted?<MicOff size={14}/>:null}{participant.deafened?<Headphones size={14}/>:null}{participant.camera?<Video size={14}/>:null}</span></footer>
+              <footer className="voice-tile-footer"><strong title={participant.name}>{participant.name}{participant.clanTag ? <em className="voice-clan-tag"> [{participant.clanTag}]</em> : null}</strong><span>{participant.streaming || participant.sharing ? <b className="voice-live-badge">LIVE</b> : null}{participant.muted?<MicOff size={14}/>:null}{participant.deafened?<Headphones size={14}/>:null}{participant.camera?<Video size={14}/>:null}</span></footer>
               {participant.streaming || participant.sharing ? <button type="button" className="voice-tile-watch" onClick={()=>focusStream(participant.id)} aria-label={`Смотреть стрим ${participant.name}`}>Смотреть стрим</button>:null}
             </article>)}
             {hiddenParticipantCount ? <article className="voice-tile voice-tile-more" role="listitem"><strong>+{hiddenParticipantCount}</strong><span>ещё участников</span></article>:null}
           </div>
           {streamingParticipants.length > 1 ? <div className="voice-stream-switcher" aria-label="Активные стримы">{streamingParticipants.map((participant)=><button type="button" className={selectedStreamId===participant.id?"active":""} key={participant.id} onClick={()=>focusStream(participant.id)}><span className="voice-live-badge">LIVE</span>{participant.name}</button>)}</div>:null}
           {activeSpeaker || audioBlocked || error ? <div className="voice-stage-notices">{activeSpeaker ? <div className="active-speaker"><i/>Говорит: <b>{activeSpeaker}</b></div>:null}{audioBlocked ? <button className="voice-enable-audio" onClick={enableAudio}><Headphones size={18}/>Включить звук</button>:null}{error ? <div className="voice-error">{error}</div>:null}</div>:null}
-          <div className="voice-secondary-toolbar" aria-label="Дополнительные инструменты">
-            <button type="button" className={settings?"active":""} onClick={()=>setSettings((value)=>!value)} aria-label="Устройства"><Settings2 size={18}/><span>Устройства</span></button>
-            <button type="button" className={soundboard?"active":""} onClick={()=>setSoundboard((value)=>!value)} aria-label="Soundboard"><Music2 size={18}/><span>Soundboard</span></button>
-            <button type="button" onClick={requestRecordingConsent} aria-label="Согласие на запись"><ShieldCheck size={18}/><span>Согласие</span></button>
-          </div>
+
           {settings ? <div className="voice-device-settings voice-inline-panel">
             <label className="device-picker"><span>Микрофон</span><select value={deviceId} onChange={(event)=>void chooseDevice(event.target.value)} disabled={!devices.length}>{!devices.length?<option value="">Микрофон недоступен</option>:devices.map((device,index)=><option key={device.deviceId} value={device.deviceId}>{device.label||`Микрофон ${index+1}`}</option>)}</select></label>
             <label className="device-picker"><span>Динамики / наушники</span><select value={outputDeviceId} onChange={(event)=>void chooseOutput(event.target.value)} disabled={!outputDevices.length}>{!outputDevices.length?<option value="">Системное устройство</option>:outputDevices.map((device,index)=><option key={device.deviceId} value={device.deviceId}>{device.label||`Устройство ${index+1}`}</option>)}</select></label>
@@ -763,10 +837,13 @@ export function VoiceRoom({
       </main>
 
       <nav className="voice-bottom-controls" aria-label="Управление голосовым каналом">
-        <button className={muted?"is-muted":""} onClick={toggleMute} aria-label={muted?"Включить микрофон":"Выключить микрофон"}>{muted?<MicOff size={20}/>:<Mic size={20}/>}<span>Микрофон</span></button>
-        <button className={deafened?"is-muted":""} onClick={toggleDeafen} aria-label={deafened?"Включить звук":"Выключить звук"}><Headphones size={20}/><span>Звук</span></button>
+        <button className={muted?"is-muted":""} onClick={toggleMute} aria-label={muted?"Включить микрофон":"Выключить микрофон"} title="Микрофон · M">{muted?<MicOff size={20}/>:<Mic size={20}/>}<span>Микрофон</span></button>
+        <button className={deafened?"is-muted":""} onClick={toggleDeafen} aria-label={deafened?"Включить звук":"Выключить звук"} title="Звук · D"><Headphones size={20}/><span>Звук</span></button>
         <button className={camera?"is-active":""} onClick={toggleCamera} aria-label={camera?"Выключить камеру":"Включить камеру"}>{camera?<VideoOff size={20}/>:<Video size={20}/>}<span>Камера</span></button>
         <button className={sharing?"is-active":""} onClick={toggleScreen} disabled={!screenSupported} aria-label={sharing?"Остановить демонстрацию экрана":"Демонстрация экрана"}><MonitorUp size={20}/><span>Экран</span></button>
+        <button className={settings?"is-active":""} onClick={()=>setSettings((value)=>!value)} aria-label="Устройства" title="Устройства"><Settings2 size={20}/><span>Устройства</span></button>
+        <button className={soundboard?"is-active":""} onClick={()=>setSoundboard((value)=>!value)} aria-label="Soundboard" title="Soundboard"><Music2 size={20}/><span>Soundboard</span></button>
+        <button onClick={requestRecordingConsent} aria-label="Запросить согласие на запись" title="Согласие на запись"><ShieldCheck size={20}/><span>Запись</span></button>
         <button className="voice-leave" onClick={leave} aria-label="Отключиться"><PhoneOff size={20}/><span>Выйти</span></button>
       </nav>
 
