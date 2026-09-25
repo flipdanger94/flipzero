@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-require-imports */
-const { app, BrowserWindow, session, shell, Tray, Menu, nativeImage } = require('electron');
+const { app, BrowserWindow, desktopCapturer, session, shell, Tray, Menu, nativeImage } = require('electron');
 const path = require('node:path');
 const ORIGIN = 'https://flipzeroapp.vercel.app';
 const URL_APP = ORIGIN + '/app';
@@ -35,6 +35,25 @@ else {
   app.whenReady().then(() => {
     session.defaultSession.setPermissionCheckHandler((_wc, permission, origin) => trusted(origin) && ['media', 'notifications', 'fullscreen'].includes(permission));
     session.defaultSession.setPermissionRequestHandler((wc, permission, callback) => callback(trusted(wc.getURL()) && ['media', 'notifications', 'fullscreen'].includes(permission)));
+    session.defaultSession.setDisplayMediaRequestHandler(async (request, callback) => {
+      const origin = request.frame?.url || request.securityOrigin || '';
+      if (!trusted(origin)) { callback({}); return; }
+      try {
+        const sources = await desktopCapturer.getSources({ types: ['screen', 'window'], thumbnailSize: { width: 320, height: 180 }, fetchWindowIcons: true });
+        if (!sources.length) { callback({}); return; }
+        let settled = false;
+        const choose = (source) => {
+          if (settled) return;
+          settled = true;
+          callback({ video: source, ...(request.audioRequested && process.platform === 'win32' ? { audio: 'loopback' } : {}) });
+        };
+        const menu = Menu.buildFromTemplate(sources.slice(0, 20).map(source => ({ label: source.name || 'Экран', click: () => choose(source) })));
+        menu.once('menu-will-close', () => { setTimeout(() => { if (!settled) { settled = true; callback({}); } }, 0); });
+        menu.popup({ window: win || undefined });
+      } catch {
+        callback({});
+      }
+    });
     createWindow(); createTray();
   });
 }
