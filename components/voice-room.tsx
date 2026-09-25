@@ -820,7 +820,7 @@ export function VoiceRoom({
     onPresenceChange?.([]);
   }
 
-  const normalizedPresence = normalizeVoicePresence(presence ?? localPresence);
+  const normalizedPresence = normalizeVoicePresence(presence?.length ? presence : localPresence);
   const streamingParticipants = normalizedPresence.filter((participant) => participant.streaming || participant.sharing);
   const compactMode=typeof document!=="undefined"&&document.documentElement.dataset.compact==="on";
   const gridLayout=voiceGridLayout(normalizedPresence.length,compactMode);
@@ -965,7 +965,8 @@ export function VoiceRoom({
           </div> : null}
 
           {selectedStreamId && !focusMode ? <div className="voice-mini-stream-controls" aria-label="Мини-плеер стрима"><button type="button" onClick={()=>setFocusMode(true)} aria-label="Развернуть стрим"><Maximize2 size={16}/></button><button type="button" onClick={clearFocus} aria-label="Закрыть стрим">×</button></div>:null}
-          <div className="voice-tile-grid" role="list" aria-label="Участники" style={{"--voice-grid-columns":gridLayout.columns} as CSSProperties}>
+          {normalizedPresence.length === 0 ? <div className="voice-stage-empty voice-stage-empty-visible" role="status"><Users size={28}/><strong>В канале пока никого нет</strong><span>Участники появятся здесь после подключения.</span></div> : null}
+          <div className="voice-tile-grid" role="list" aria-label="Участники" data-participant-count={normalizedPresence.length} style={{"--voice-grid-columns":gridLayout.columns,"--voice-grid-rows":gridLayout.rows} as CSSProperties}>
             {visibleParticipants.map((participant)=><article key={participant.id} role="listitem" className={`voice-tile ${participant.speaking ? "speaking" : ""} ${participant.streaming || participant.sharing ? "is-streaming" : ""}`}>
               {participant.streaming || participant.sharing ? <div className="voice-tile-stream-preview" data-stream-preview-id={participant.id} aria-hidden="true" /> : null}
               <div className="voice-tile-avatar">{participant.avatarUrl?<MediaImage src={participant.avatarUrl}/>:participant.name.slice(0,2).toLocaleUpperCase("ru")}</div>
