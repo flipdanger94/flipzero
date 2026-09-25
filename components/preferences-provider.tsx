@@ -5,11 +5,12 @@ type RuntimeTheme={
   id:string;surface:string;panel?:string;deep?:string;raised?:string;accent:string;text?:string;muted?:string;appBackground?:string;
 };
 
-function applyTheme(root:HTMLElement,theme:RuntimeTheme|undefined,accentColor:string,themeId:string){
+function applyTheme(root:HTMLElement,theme:RuntimeTheme|undefined,themeId:string){
   root.dataset.theme=themeId;
+  if(!theme)return;
+  const accentColor=theme.accent;
   root.style.setProperty("--accent",accentColor);
   root.style.setProperty("--pink",accentColor);
-  if(!theme)return;
   root.style.setProperty("--theme-surface",theme.surface);
   root.style.setProperty("--bg",theme.surface);
   root.style.setProperty("--panel",theme.panel??theme.surface);
@@ -44,7 +45,7 @@ export function PreferencesProvider({userId}:{userId:string}){
         if(!response.ok||!active)return;
         const {preferences,themes}=await response.json();
         const theme=(themes as RuntimeTheme[]).find((item)=>item.id===preferences.theme);
-        applyTheme(document.documentElement,theme,preferences.accentColor,preferences.theme);
+        applyTheme(document.documentElement,theme,preferences.theme);
       }catch{}
     }
     void refresh();
