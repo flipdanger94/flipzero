@@ -99,3 +99,12 @@
 5. В интерфейсе существующий внутренний balance показывается как Orbs; отдельный денежный checkout не выдумывается до появления billing provider.
 6. SuperFlip UI можно расширять, но его CTA остаётся waitlist/status flow, потому что реального card billing в коде нет.
 7. Animated store items реализуются с CSS animation и generic URL preview support/fallback; reduced-motion сохраняется.
+
+
+## Реализация по итогам аудита
+
+- Существующий cosmetics stack расширен миграцией `0033_store_inventory.sql`, без параллельных дублирующих таблиц магазина.
+- Покупка, equip и unequip проходят через общий `lib/store.ts`; замена предмета в одном слоте выполняется атомарным upsert внутри транзакции.
+- Деактивированные товары скрываются из витрины, но уже принадлежащие пользователю предметы остаются в inventory и могут быть экипированы.
+- Анимированные превью не загружаются постоянно для всего каталога: live-media включается только при hover/focus/предпросмотре, CSS-анимации уважают `prefers-reduced-motion`.
+- SuperFlip остаётся честным waitlist/status flow: реальный платёжный checkout не добавлялся, потому что billing provider в проекте отсутствует.
