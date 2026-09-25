@@ -1,5 +1,41 @@
 [
-  {"id":"midnight","label":"Классическая","access":"free","surface":"#101622","panel":"#171d2b","deep":"#080d18","raised":"#222a3b","accent":"#8f70ff","text":"#f5f6ff","muted":"#a1a8bd"},
-  {"id":"deep-space","label":"Глубокий космос","access":"shop:theme-midnight","surface":"#0c1020","panel":"#12172a","deep":"#060816","raised":"#1c2440","accent":"#6f8bff","text":"#f3f5ff","muted":"#99a4c4"},
-  {"id":"aurora","label":"Полярное сияние","access":"superflip","surface":"#111a24","panel":"#17252f","deep":"#081217","raised":"#213641","accent":"#4dc9b2","text":"#f0fffb","muted":"#9fc4bd"}
+  {
+    "id": "midnight",
+    "label": "Классическая",
+    "access": "free",
+    "surface": "#101622",
+    "panel": "#171d2b",
+    "deep": "#080d18",
+    "raised": "#222a3b",
+    "accent": "#8f70ff",
+    "text": "#f5f6ff",
+    "muted": "#a1a8bd",
+    "appBackground": "radial-gradient(circle at 74% -16%, rgba(143,112,255,.20), transparent 34%), radial-gradient(circle at 8% 112%, rgba(68,111,255,.12), transparent 36%), linear-gradient(145deg,#060913,#0a1020 58%,#060913)"
+  },
+  {
+    "id": "deep-space",
+    "label": "Глубокий космос",
+    "access": "shop:theme-midnight",
+    "surface": "#0c1020",
+    "panel": "#12172a",
+    "deep": "#060816",
+    "raised": "#1c2440",
+    "accent": "#6f8bff",
+    "text": "#f3f5ff",
+    "muted": "#99a4c4",
+    "appBackground": "radial-gradient(circle at 12% 18%, rgba(255,255,255,.13) 0 1px, transparent 1.5px), radial-gradient(circle at 76% 10%, rgba(111,139,255,.34) 0 1px, transparent 1.7px), radial-gradient(circle at 84% 72%, rgba(98,148,255,.14), transparent 32%), linear-gradient(160deg,#020511,#071027 58%,#030817)"
+  },
+  {
+    "id": "aurora",
+    "label": "Полярное сияние",
+    "access": "superflip",
+    "surface": "#111a24",
+    "panel": "#17252f",
+    "deep": "#081217",
+    "raised": "#213641",
+    "accent": "#4dc9b2",
+    "text": "#f0fffb",
+    "muted": "#9fc4bd",
+    "appBackground": "radial-gradient(ellipse at 18% -8%, rgba(77,201,178,.28), transparent 38%), radial-gradient(ellipse at 84% 8%, rgba(91,126,255,.20), transparent 34%), radial-gradient(ellipse at 52% 108%, rgba(68,215,168,.10), transparent 35%), linear-gradient(150deg,#040c0a,#091b19 58%,#07120f)"
+  }
 ]
