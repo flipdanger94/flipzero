@@ -15,6 +15,10 @@ html[data-theme="midnight"] {
   --theme-border: rgba(130, 126, 255, 0.18);
   --theme-overlay: rgba(2, 5, 12, 0.82);
   --theme-scroll-track: #050812;
+  --app-background:
+    radial-gradient(circle at 74% -16%, rgba(143,112,255,.20), transparent 34%),
+    radial-gradient(circle at 8% 112%, rgba(68,111,255,.12), transparent 36%),
+    linear-gradient(145deg,#060913,#0a1020 58%,#060913);
 }
 
 html[data-theme="deep-space"] {
@@ -29,6 +33,11 @@ html[data-theme="deep-space"] {
   --theme-border: rgba(96, 139, 255, 0.22);
   --theme-overlay: rgba(1, 4, 13, 0.86);
   --theme-scroll-track: #020511;
+  --app-background:
+    radial-gradient(circle at 12% 18%, rgba(255,255,255,.13) 0 1px, transparent 1.5px),
+    radial-gradient(circle at 76% 10%, rgba(111,139,255,.34) 0 1px, transparent 1.7px),
+    radial-gradient(circle at 84% 72%, rgba(98,148,255,.14), transparent 32%),
+    linear-gradient(160deg,#020511,#071027 58%,#030817);
 }
 
 html[data-theme="aurora"] {
@@ -43,6 +52,11 @@ html[data-theme="aurora"] {
   --theme-border: rgba(77, 201, 178, 0.23);
   --theme-overlay: rgba(2, 10, 8, 0.84);
   --theme-scroll-track: #040c0a;
+  --app-background:
+    radial-gradient(ellipse at 18% -8%, rgba(77,201,178,.28), transparent 38%),
+    radial-gradient(ellipse at 84% 8%, rgba(91,126,255,.20), transparent 34%),
+    radial-gradient(ellipse at 52% 108%, rgba(68,215,168,.10), transparent 35%),
+    linear-gradient(150deg,#040c0a,#091b19 58%,#07120f);
 }
 
 html[data-theme] {
@@ -58,7 +72,7 @@ html[data-theme] {
 }
 
 html[data-theme] body {
-  background: var(--theme-app);
+  background: var(--app-background, var(--theme-app));
   color: var(--theme-text);
 }
 
@@ -76,10 +90,7 @@ html[data-theme] .app-shell {
   --fz-purple: color-mix(in srgb, var(--accent, #8f70ff) 82%, #d849f4 18%);
   --fz-pink: color-mix(in srgb, var(--accent, #8f70ff) 72%, #f34fda 28%);
   --fz-cyan: color-mix(in srgb, var(--accent, #8f70ff) 62%, #39d8ff 38%);
-  background:
-    radial-gradient(circle at 74% -16%, color-mix(in srgb, var(--accent, #8f70ff) 20%, transparent), transparent 34%),
-    radial-gradient(circle at 8% 112%, color-mix(in srgb, var(--accent, #8f70ff) 11%, transparent), transparent 36%),
-    var(--theme-app) !important;
+  background: var(--app-background, var(--theme-app)) !important;
   color: var(--theme-text);
 }
 
@@ -117,9 +128,7 @@ html[data-theme] .voice-bottom-controls {
 }
 
 html[data-theme] .platform-workspace {
-  background:
-    radial-gradient(circle at 40% -10%, color-mix(in srgb, var(--accent, #8f70ff) 14%, transparent), transparent 40%),
-    var(--theme-app) !important;
+  background: var(--app-background, var(--theme-app)) !important;
 }
 
 html[data-theme] .rail-action:not(.home-action):not(.platform-admin-rail),
@@ -235,7 +244,7 @@ html[data-theme] .clan-member-view,
 html[data-theme] .voice-room-connected,
 html[data-theme] .voice-room,
 html[data-theme] .discovery-content {
-  background: var(--theme-app) !important;
+  background: var(--app-background, var(--theme-app)) !important;
   color: var(--theme-text) !important;
 }
 
@@ -401,4 +410,39 @@ html[data-theme] *::-webkit-scrollbar-button {
     background: var(--theme-accent-soft) !important;
     color: var(--accent, #8f70ff) !important;
   }
+}
+
+
+/* User-selected accent is shared by voice, clans and profile surfaces. */
+html[data-theme] :where(.clan-primary,.clan-discovery-toolbar form button,.clan-invite-form button,.profile-visit-card>header button) {
+  background: color-mix(in srgb, var(--accent, #8f70ff) 24%, var(--theme-raised)) !important;
+  border-color: var(--theme-accent-border) !important;
+  color: var(--theme-text) !important;
+}
+html[data-theme] :where(.clan-primary,.clan-discovery-toolbar form button,.clan-invite-form button,.profile-visit-card>header button):hover {
+  background: color-mix(in srgb, var(--accent, #8f70ff) 34%, var(--theme-raised)) !important;
+}
+html[data-theme] :where(.clan-tabs button.active,.clan-governance>nav button.active,.fz-profile-tabs button.active,.fz-full-profile main>nav button.active) {
+  color: color-mix(in srgb, var(--accent, #8f70ff) 76%, white 24%) !important;
+  border-color: var(--accent, #8f70ff) !important;
+  background: var(--theme-accent-soft) !important;
+}
+html[data-theme] :where(.clan-own-badge,.voice-live-badge,.member-voice-indicator) {
+  color: color-mix(in srgb, var(--accent, #8f70ff) 76%, white 24%) !important;
+  background: var(--theme-accent-soft) !important;
+  border-color: var(--theme-accent-border) !important;
+}
+html[data-theme] .voice-tile.speaking {
+  border-color: var(--accent, #8f70ff) !important;
+  box-shadow: 0 0 0 1px var(--theme-accent-border);
+}
+html[data-theme] .voice-tile-watch {
+  border-color: var(--theme-accent-border) !important;
+}
+html[data-theme] :where(.fz-mini-xp>i>b,.fz-profile-xp-progress i b,.level-progress i,.mini-progress b,.achievement-progress b,.progress i) {
+  background: linear-gradient(90deg,var(--accent, #8f70ff),color-mix(in srgb,var(--accent, #8f70ff) 58%,#58d6ff 42%)) !important;
+}
+html[data-theme] :where(.clan-rank-card.is-own,.clan-rank-card.is-focused) {
+  border-color: var(--theme-accent-border) !important;
+  background: linear-gradient(90deg,var(--theme-accent-soft),var(--theme-panel-soft) 44%) !important;
 }
