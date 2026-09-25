@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { type CSSProperties, useEffect, useRef, useState } from "react";
 import {
   Headphones,
   LoaderCircle,
@@ -24,6 +24,7 @@ import {
 import { ConnectionQuality, Room, RoomEvent, Track } from "livekit-client";
 import { MediaImage } from "./media-image";
 import { normalizeVoicePresence, type VoicePresence } from "@/lib/voice-presence";
+import { voiceGridLayout } from "@/lib/voice-layout";
 
 type VoiceStatus = "idle" | "connecting" | "connected" | "reconnecting";
 export type { VoicePresence } from "@/lib/voice-presence";
@@ -674,7 +675,9 @@ export function VoiceRoom({
 
   const normalizedPresence = normalizeVoicePresence(presence);
   const streamingParticipants = normalizedPresence.filter((participant) => participant.streaming || participant.sharing);
-  const visibleParticipants = normalizedPresence.slice(0, 50);
+  const compactMode=typeof document!=="undefined"&&document.documentElement.dataset.compact==="on";
+  const gridLayout=voiceGridLayout(normalizedPresence.length,compactMode);
+  const visibleParticipants = normalizedPresence.slice(0, gridLayout.visible);
   const hiddenParticipantCount = Math.max(0, normalizedPresence.length - visibleParticipants.length);
   const showingVideo = camera || sharing || remoteVideo;
   const connected = status === "connected" || status === "reconnecting";
@@ -815,7 +818,7 @@ export function VoiceRoom({
           </div> : null}
 
           {selectedStreamId && !focusMode ? <div className="voice-mini-stream-controls" aria-label="Мини-плеер стрима"><button type="button" onClick={()=>setFocusMode(true)} aria-label="Развернуть стрим"><Maximize2 size={16}/></button><button type="button" onClick={clearFocus} aria-label="Закрыть стрим">×</button></div>:null}
-          <div className="voice-tile-grid" role="list" aria-label="Участники">
+          <div className="voice-tile-grid" role="list" aria-label="Участники" style={{"--voice-grid-columns":gridLayout.columns} as CSSProperties}>
             {visibleParticipants.map((participant)=><article key={participant.id} role="listitem" className={`voice-tile ${participant.speaking ? "speaking" : ""} ${participant.streaming || participant.sharing ? "is-streaming" : ""}`}>
               {participant.streaming || participant.sharing ? <div className="voice-tile-stream-preview" data-stream-preview-id={participant.id} aria-hidden="true" /> : null}
               <div className="voice-tile-avatar">{participant.avatarUrl?<MediaImage src={participant.avatarUrl}/>:participant.name.slice(0,2).toLocaleUpperCase("ru")}</div>
