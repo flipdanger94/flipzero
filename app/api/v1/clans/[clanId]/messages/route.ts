@@ -1,8 +1,8 @@
 import { randomUUID } from "node:crypto";
-import { and, desc, eq, gte, isNull, lt, or } from "drizzle-orm";
+import { and, desc, eq, isNull, lt, or } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { getDatabase } from "@/db/client";
-import { clanMessages, users, xpEvents } from "@/db/schema";
+import { clanMessages, users } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
 import { getClanRole, normalizeClanAttachments } from "@/lib/clans";
 import { getSuperFlipCapabilities } from "@/lib/superflip";
@@ -52,10 +52,6 @@ export async function POST(request:Request,{params}:{params:Promise<{clanId:stri
   const id=randomUUID(), now=new Date();
   const db=getDatabase();await db.transaction(async tx=>{
     await tx.insert(clanMessages).values({id,clanId,authorId:user.id,content:raw,attachments});
-    if(raw.length>=5){
-      const [recent]=await tx.select({id:xpEvents.id}).from(xpEvents).where(and(eq(xpEvents.userId,user.id),eq(xpEvents.source,"clan_message"),gte(xpEvents.createdAt,new Date(Date.now()-30_000)))).limit(1);
-      if(!recent)await tx.insert(xpEvents).values({id:randomUUID(),userId:user.id,source:"clan_message",amount:0,idempotencyKey:`clan_message:${id}`});
-    }
   });
   return NextResponse.json({message:{id,clanId,authorId:user.id,content:raw,attachments,createdAt:now.toISOString(),editedAt:null,username:user.username,displayName:user.displayName,avatarUrl:user.avatarUrl,globalLevel:levelFromXp(user.globalXp)}},{status:201});
 }
