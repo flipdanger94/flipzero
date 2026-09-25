@@ -15,6 +15,7 @@ export type AppTheme = {
   accent:string;
   text:string;
   muted:string;
+  appBackground?:string;
   custom?:boolean;
 };
 
