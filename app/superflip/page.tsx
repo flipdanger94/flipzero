@@ -16,7 +16,7 @@ export const metadata: Metadata = {
 };
 
 const whatsNew: Array<{icon:AppIconName;eyebrow:string;title:string;text:string;art:string}> = [
-  { icon: "gift", eyebrow: "ORB BONUS", title: "Больше Orbs за активность", text: "Квесты с активным SuperFlip дают на 20% больше XP и Orbs — коллекция косметики растёт быстрее.", art: "orbs" },
+  { icon: "gift", eyebrow: "ORB BONUS", title: "Больше монет за активность", text: "Квесты с активным SuperFlip дают на 20% больше XP и монет — коллекция косметики растёт быстрее.", art: "orbs" },
   { icon: "user", eyebrow: "PROFILE", title: "Живой профиль", text: "Анимированные медиа, больше места для описания и косметика из магазина работают вместе.", art: "profile" },
   { icon: "appearance", eyebrow: "STYLE", title: "Эксклюзивные предметы", text: "Часть анимированных рамок, эффектов и наборов в магазине открывается только с SuperFlip.", art: "style" },
 ];
@@ -25,7 +25,7 @@ const benefits: Array<{icon:AppIconName;title:string;text:string}> = [
   { icon: "user", title: "Профиль до 500 символов", text: "Больше места для описания, статуса и собственной подачи." },
   { icon: "upload", title: "Больше медиа", text: "Аватар до 8 МБ, баннер до 16 МБ и анимированные изображения." },
   { icon: "messages", title: "Сообщения до 4000", text: "Длинные личные сообщения вместо базового лимита 1000 символов." },
-  { icon: "gift", title: "+20% к наградам", text: "Больше XP и Orbs за выполненные задания и серии активности." },
+  { icon: "gift", title: "+20% к наградам", text: "Больше XP и монет за выполненные задания и серии активности." },
   { icon: "equip", title: "5 бейджей в профиле", text: "Расширенная витрина наград и достижений." },
   { icon: "superflip", title: "SuperUp пространства", text: "Поддержка одного пространства и дополнительный вклад в его развитие." },
 ];
@@ -35,7 +35,7 @@ const comparison = [
   ["Аватар", "2 МБ", "8 МБ"],
   ["Баннер", "4 МБ", "16 МБ"],
   ["Личное сообщение", "1000 символов", "4000 символов"],
-  ["Награды за квесты", "Базовые", "+20% XP и Orbs"],
+  ["Награды за квесты", "Базовые", "+20% XP и монет"],
   ["Бейджи в профиле", "3", "5"],
   ["Анимированные медиа", "—", "Доступно"],
   ["Эксклюзивная косметика", "Часть каталога", "Расширенный каталог"],
@@ -90,7 +90,7 @@ export default function SuperFlipPage() {
         <div className={styles.sectionTitle}><span>ВЫБЕРИТЕ ТАРИФ</span><h2>Просто и прозрачно</h2><p>Платёжная система ещё не подключена, поэтому кнопка ведёт в текущий waitlist/status flow, а не на вымышленный checkout.</p></div>
         <div className={styles.planGrid}>
           <article className={styles.freePlan}><small>FLIPZERO FREE</small><h3>Базовый</h3><strong>$0</strong><p>Все основные чаты, голос, сообщества и базовая персонализация.</p><ul><li><AppIcon name="equip" size={15}/>Основные функции FlipZero</li><li><AppIcon name="equip" size={15}/>Базовые лимиты профиля</li><li><AppIcon name="equip" size={15}/>Магазин и инвентарь</li></ul><Link href="/app">Открыть FlipZero</Link></article>
-          <article className={styles.premiumPlan}><div className={styles.recommended}><AppIcon name="superflip" size={13}/>SUPERFLIP</div><small>ОЖИДАЕМАЯ ЦЕНА</small><h3>SuperFlip</h3><strong>$4.99 <em>/ месяц</em></strong><p>Все возможности Free плюс расширенная персонализация, награды и эксклюзивы.</p><ul><li><AppIcon name="equip" size={15}/>+20% XP и Orbs</li><li><AppIcon name="equip" size={15}/>Анимированные медиа</li><li><AppIcon name="equip" size={15}/>Эксклюзивная косметика</li></ul><Link href="/app">В лист ожидания <AppIcon name="forward" size={15}/></Link></article>
+          <article className={styles.premiumPlan}><div className={styles.recommended}><AppIcon name="superflip" size={13}/>SUPERFLIP</div><small>ОЖИДАЕМАЯ ЦЕНА</small><h3>SuperFlip</h3><strong>$4.99 <em>/ месяц</em></strong><p>Все возможности Free плюс расширенная персонализация, награды и эксклюзивы.</p><ul><li><AppIcon name="equip" size={15}/>+20% XP и монет</li><li><AppIcon name="equip" size={15}/>Анимированные медиа</li><li><AppIcon name="equip" size={15}/>Эксклюзивная косметика</li></ul><Link href="/app">В лист ожидания <AppIcon name="forward" size={15}/></Link></article>
         </div>
       </section>
 
