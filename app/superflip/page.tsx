@@ -74,8 +74,8 @@ export default function SuperFlipPage() {
       <section className={styles.section} id="new">
         <div className={styles.sectionTitle}><span>ЧТО НОВОГО</span><h2>SuperFlip становится частью вашего стиля</h2><p>Бонусы связаны с профилем, магазином и ежедневной активностью, а не живут отдельным экраном.</p></div>
         <div className={styles.newsGrid}>
-          {whatsNew.map(({icon:Icon,eyebrow,title,text,art})=><article key={title} className={styles.newsCard}>
-            <div className={styles.newsArt+" "+styles[art]}><Icon size={42}/><i/><i/><i/></div>
+          {whatsNew.map(({icon,eyebrow,title,text,art})=><article key={title} className={styles.newsCard}>
+            <div className={styles.newsArt+" "+styles[art]}><AppIcon name={icon} size={42}/><i/><i/><i/></div>
             <small>{eyebrow}</small><h3>{title}</h3><p>{text}</p>
           </article>)}
         </div>
