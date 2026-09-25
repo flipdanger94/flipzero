@@ -47,6 +47,8 @@ export function VoiceRoom({
   tokenUrl,
   stateUrl,
   tokenRequestBody,
+  sessionKind = "channel",
+  sessionTargetId,
 }: {
   channelId: string;
   channelName: string;
@@ -58,6 +60,8 @@ export function VoiceRoom({
   tokenUrl?: string;
   stateUrl?: string | null;
   tokenRequestBody?: Record<string, unknown>;
+  sessionKind?: "channel" | "clan";
+  sessionTargetId?: string;
 }) {
   const [status, setStatus] = useState<VoiceStatus>("idle");
   const [localPresence, setLocalPresence] = useState<VoicePresence[]>([]);
@@ -191,7 +195,7 @@ export function VoiceRoom({
   }
   function emitVoiceSession(connected: boolean, nextQuality = quality) {
     window.dispatchEvent(new CustomEvent("flipzero:voice-session", { detail: {
-      connected, channelId, channelName, spaceName, quality: qualityLabels[nextQuality] ?? "Проверка",
+      connected, channelId, channelName, spaceName, quality: qualityLabels[nextQuality] ?? "Проверка", sessionKind, sessionTargetId,
     } }));
   }
   function playVoiceCue(kind: "join" | "leave") {
