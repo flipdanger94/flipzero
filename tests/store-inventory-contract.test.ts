@@ -65,4 +65,42 @@ describe("store and inventory contracts", () => {
       expect(typeof item.previewImage).toBe("string");
     }
   });
+
+  it("builds the storefront and inventory UX from the product specification", async () => {
+    const [ui, styles] = await Promise.all([
+      readFile("components/personal-economy.tsx", "utf8"),
+      readFile("app/store.css", "utf8"),
+    ]);
+    expect(ui).toContain('setTab("store")');
+    expect(ui).toContain('setTab("inventory")');
+    expect(ui).toContain("НАДЕТО");
+    expect(ui).toContain("Все предметы");
+    expect(ui).toContain("В магазин");
+    expect(ui).toContain("Новый предмет автоматически заменяет старый");
+    expect(ui).toContain("onOpenSuperFlip");
+    expect(styles).toContain(".store-item-card:hover");
+    expect(styles).toContain("@media(prefers-reduced-motion:reduce)");
+  });
+
+  it("keeps animated previews lazy and supplies static fallbacks", async () => {
+    const preview = await readFile("components/cosmetic-art.tsx", "utf8");
+    expect(preview).toContain('/^(webm|mp4)$/');
+    expect(preview).toContain('mode === "json"');
+    expect(preview).toContain("previewImage");
+    expect(preview).toContain("onError={() => setFailed(true)}");
+    expect(preview).toContain("if (live) void video.play()");
+  });
+
+  it("ships the complete SuperFlip landing structure without inventing checkout", async () => {
+    const [page, styles] = await Promise.all([
+      readFile("app/superflip/page.tsx", "utf8"),
+      readFile("app/superflip/superflip.module.css", "utf8"),
+    ]);
+    for (const id of ['id="home"', 'id="new"', 'id="benefits"', 'id="plans"', 'id="compare"']) expect(page).toContain(id);
+    expect(page).toContain("Покупка ещё не запущена");
+    expect(page).toContain("лист ожидания");
+    expect(styles).toContain(".stickyCta");
+    expect(styles).toContain(".finalCta");
+  });
+
 });
