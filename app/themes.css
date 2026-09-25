@@ -415,7 +415,7 @@ html[data-theme] *::-webkit-scrollbar-button {
 }
 
 
-/* User-selected accent is shared by voice, clans and profile surfaces. */
+/* Theme-owned accent is shared by voice, clans and profile surfaces. */
 html[data-theme] :where(.clan-primary,.clan-discovery-toolbar form button,.clan-invite-form button,.profile-visit-card>header button) {
   background: color-mix(in srgb, var(--accent, #8f70ff) 24%, var(--theme-raised)) !important;
   border-color: var(--theme-accent-border) !important;
