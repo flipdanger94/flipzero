@@ -266,7 +266,7 @@
     "previewImage": "midnight",
     "superflipOnly": false,
     "isAnimated": false,
-    "isActive": true
+    "isActive": false
   },
   {
     "id": "theme-nebula",
