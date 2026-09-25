@@ -117,7 +117,7 @@ export function AccountSettingsDialog({ user, initialSection = "profile", onClos
         <a className="account-nav-link" href="/developers/console"><Code2 size={18}/>Платформа разработчиков</a>
         <small className="account-nav-label account-nav-group">FLIPZERO</small>
         <button type="button" className={`account-premium-nav ${section === "superflip" ? "active" : ""}`} onClick={() => openSection("superflip")}><Crown size={18} /> SuperFlip</button>
-        <button type="button" className={`account-superup-nav ${section === "superup" ? "active" : ""}`} onClick={() => openSection("superup")}><Gem size={18} /> О SuperUp</button>
+        <button type="button" className={`account-superup-nav ${section === "superup" ? "active" : ""}`} onClick={() => openSection("superup")}><Gem size={18} /> SuperUp</button>
         <div className="account-nav-spacer" />
         <button type="button" className="account-logout" onClick={signOut} disabled={busy}><LogOut size={18} /> Выйти из аккаунта</button>
         <div className="account-nav-user"><span>{media.avatarUrl ? <MediaImage src={media.avatarUrl} /> : initials}</span><div><strong>{user.displayName}</strong><small>@{user.username}</small></div></div>
