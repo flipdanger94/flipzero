@@ -78,7 +78,7 @@ describe("persistent application shell contract", () => {
     ]);
 
     expect(admin).toContain('className="admin-body"');
-    expect(platformCss).toContain("grid-template-columns: 248px minmax(0, 1fr)");
+    expect(platformCss).toContain("grid-template-columns: 272px minmax(0, 1fr)");
     expect(platformCss).toContain(".platform-pane-active .clan-member-view > .clan-tabs");
   });
 });
