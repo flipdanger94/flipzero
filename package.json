@@ -13,7 +13,9 @@
     "desktop:build": "tauri build",
     "db:seed-admin": "node scripts/seed-admin.mjs",
     "db:seed-test": "node scripts/seed-test-user.mjs",
-    "db:sync": "node scripts/migrate-if-configured.mjs"
+    "db:sync": "node scripts/migrate-if-configured.mjs",
+    "xp:audit": "node --experimental-strip-types scripts/xp-audit.ts",
+    "xp:reconcile": "node --experimental-strip-types scripts/xp-reconcile.ts"
   },
   "dependencies": {
     "@vercel/analytics": "^2.0.1",
