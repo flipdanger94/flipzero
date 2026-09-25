@@ -35,18 +35,45 @@ describe("clan system migration and server boundaries", () => {
     expect(events).toContain("getClanRole(user.id,clanId)");
   });
 
-  it("presents the clan leaderboard as responsive cards with an own-clan badge", async () => {
-    const [hub, styles] = await Promise.all([
+  it("presents the clan leaderboard with section navigation and no one-page clutter", async () => {
+    const [hub, styles, platform] = await Promise.all([
       readFile("components/clan-hub.tsx", "utf8"),
       readFile("app/clans.css", "utf8"),
+      readFile("app/platform-shell.css", "utf8"),
     ]);
-    expect(hub).toContain("clan-rank-card");
-    expect(hub).toContain("Ваш клан");
-    expect(hub).toContain("clan-rank-avatar");
-    expect(hub).toContain("clan-rank-short-hint");
+    expect(hub).toContain('className="clan-section-nav"');
+    expect(hub).toContain(">Рейтинг</button>");
+    expect(hub).toContain(">Мой клан</button>");
+    expect(hub).toContain(">Клановый чат</button>");
+    expect(hub).toContain(">Клановый войс</button>");
+    expect(hub).not.toContain("Мой клан / поиск");
+    expect(hub).toContain("myRank&&!rankRows.some");
+    expect(hub).toContain("rankTotal>20?");
+    expect(hub).not.toContain("clan-rank-short-hint");
     expect(styles).toContain(".clan-rank-card:hover");
-    expect(styles).toContain(".clan-rank-toolbar");
-    expect(styles).toContain(".clan-rank-pages");
+    expect(styles).toContain("width:min(100%,1180px)");
+    expect(styles).toContain(".clan-section-nav");
+    expect(platform).toContain(".platform-pane-active .clan-section-layout");
+  });
+
+  it("uses compact shared clan tags across members, profiles and voice", async () => {
+    const [tag, shell, profile, voice, theme] = await Promise.all([
+      readFile("components/clan-tag.tsx", "utf8"),
+      readFile("components/flipzero-app.tsx", "utf8"),
+      readFile("components/user-profile-popover.tsx", "utf8"),
+      readFile("components/voice-room.tsx", "utf8"),
+      readFile("app/runtime-theme.css", "utf8"),
+    ]);
+    expect(tag).toContain('type ClanTagVariant="inline"|"full"');
+    expect(tag).toContain('variant="inline"');
+    expect(tag).toContain('className="clan-tag-full"');
+    expect(shell).toContain('className="member-name-row"');
+    expect(shell).toContain('ClanTag tag={participant.clanTag}');
+    expect(profile).toContain('className="fz-mini-name-row"');
+    expect(profile).toContain('variant="full"');
+    expect(voice).toContain('className="voice-tile-name"');
+    expect(theme).toContain(".clan-tag-badge");
+    expect(theme).toContain("font-size:10px");
   });
 
   it("keeps developer platform reachable after replacing the rail icon", async () => {

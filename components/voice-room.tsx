@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { ConnectionQuality, Room, RoomEvent, Track } from "livekit-client";
 import { MediaImage } from "./media-image";
+import { ClanTag } from "./clan-tag";
 import { normalizeVoicePresence, type VoicePresence } from "@/lib/voice-presence";
 import { voiceGridLayout } from "@/lib/voice-layout";
 
@@ -932,7 +933,7 @@ export function VoiceRoom({
                 <div className="voice-tile-screen" data-voice-media-id={participant.id} data-voice-media-source="screen"/>
               </div>
               <div className="voice-tile-avatar">{participant.avatarUrl?<MediaImage src={participant.avatarUrl}/>:participant.name.slice(0,2).toLocaleUpperCase("ru")}</div>
-              <footer className="voice-tile-footer"><strong title={participant.name}>{participant.name}{participant.clanTag ? <em className="voice-clan-tag"> [{participant.clanTag}]</em> : null}</strong><span>{participant.streaming || participant.sharing ? <b className="voice-live-badge">LIVE</b> : null}{participant.muted?<MicOff size={14}/>:null}{participant.deafened?<Headphones size={14}/>:null}{participant.camera?<Video size={14}/>:null}</span></footer>
+              <footer className="voice-tile-footer"><span className="voice-tile-name"><strong title={participant.name}>{participant.name}</strong><ClanTag tag={participant.clanTag} variant="inline"/></span><span>{participant.streaming || participant.sharing ? <b className="voice-live-badge">LIVE</b> : null}{participant.muted?<MicOff size={14}/>:null}{participant.deafened?<Headphones size={14}/>:null}{participant.camera?<Video size={14}/>:null}</span></footer>
               {participant.streaming || participant.sharing ? selectedStreamId===participant.id ? <div className="voice-tile-stream-actions" aria-label={`Управление стримом ${participant.name}`}>
                 <label aria-label="Громкость стрима"><Volume2 size={14}/><input type="range" min="0" max="100" value={streamVolume} onChange={(event)=>setStreamVolume(Number(event.target.value))}/></label>
                 <button type="button" onClick={()=>setStreamMuted((value)=>!value)} aria-label={streamMuted ? "Включить звук стрима" : "Выключить звук стрима"}>{streamMuted?<VolumeX size={16}/>:<Volume2 size={16}/>}</button>
