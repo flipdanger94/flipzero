@@ -180,6 +180,7 @@ html[data-theme] .clan-message-list > article:hover {
 html[data-theme] .channel.active,
 html[data-theme] .channel-row.active,
 html[data-theme] .social-nav-rail > button.active,
+html[data-theme] .clan-section-nav > button.active,
 html[data-theme] .friends-tabs button.active {
   background: linear-gradient(90deg, var(--theme-accent-soft), color-mix(in srgb, var(--theme-raised) 54%, transparent)) !important;
   color: var(--theme-text) !important;
@@ -251,6 +252,7 @@ html[data-theme] .discovery-content {
 html[data-theme] .social-nav-rail,
 html[data-theme] .social-main-v2 > header,
 html[data-theme] .clan-tabs,
+html[data-theme] .clan-section-nav,
 html[data-theme] .voice-room-side,
 html[data-theme] .voice-stream-toolbar,
 html[data-theme] .voice-tile,
