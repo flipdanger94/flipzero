@@ -2,12 +2,11 @@ import { randomUUID } from "node:crypto";
 import { and, desc, eq, isNull, lt, or } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { getDatabase } from "@/db/client";
-import { clanMessages, users } from "@/db/schema";
+import { clanMessages, userProgress, users } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
 import { getClanRole, normalizeClanAttachments } from "@/lib/clans";
 import { getSuperFlipCapabilities } from "@/lib/superflip";
 import { isTrustedMutationRequest } from "@/lib/security-controls";
-import { levelFromXp } from "@/lib/gamification";
 import { presentationForUsers } from "@/lib/presentation";
 
 export async function GET(request:Request,{params}:{params:Promise<{clanId:string}>}) {
@@ -24,12 +23,12 @@ export async function GET(request:Request,{params}:{params:Promise<{clanId:strin
   const rows=await db.select({
     id:clanMessages.id,clanId:clanMessages.clanId,authorId:clanMessages.authorId,content:clanMessages.content,
     attachments:clanMessages.attachments,createdAt:clanMessages.createdAt,editedAt:clanMessages.editedAt,
-    username:users.username,displayName:users.displayName,avatarUrl:users.avatarUrl,globalXp:users.globalXp,
-  }).from(clanMessages).innerJoin(users,eq(users.id,clanMessages.authorId))
+    username:users.username,displayName:users.displayName,avatarUrl:users.avatarUrl,globalXp:userProgress.totalXp,globalLevel:userProgress.level,
+  }).from(clanMessages).innerJoin(users,eq(users.id,clanMessages.authorId)).leftJoin(userProgress,eq(userProgress.userId,users.id))
     .where(and(eq(clanMessages.clanId,clanId),isNull(clanMessages.deletedAt),...(before?[or(lt(clanMessages.createdAt,new Date(beforeDate)),and(eq(clanMessages.createdAt,new Date(beforeDate)),lt(clanMessages.id,beforeId)))!]:[])))
     .orderBy(desc(clanMessages.createdAt),desc(clanMessages.id)).limit(51);
   const presentation=await presentationForUsers(rows.map(row=>row.authorId));
-  return NextResponse.json({messages:rows.slice(0,50).reverse().map(({globalXp,...message})=>({...message,globalXp,globalLevel:levelFromXp(globalXp),cosmetics:presentation.get(message.authorId)?.cosmetics??{},badges:presentation.get(message.authorId)?.badges??[]})),nextCursor:rows.length>50?`${rows[49].createdAt.toISOString()}|${rows[49].id}`:null});
+  return NextResponse.json({messages:rows.slice(0,50).reverse().map(({globalXp,globalLevel,...message})=>({...message,globalXp:globalXp??0,globalLevel:globalLevel??1,cosmetics:presentation.get(message.authorId)?.cosmetics??{},badges:presentation.get(message.authorId)?.badges??[]})),nextCursor:rows.length>50?`${rows[49].createdAt.toISOString()}|${rows[49].id}`:null});
 }
 
 export async function POST(request:Request,{params}:{params:Promise<{clanId:string}>}) {
@@ -53,5 +52,6 @@ export async function POST(request:Request,{params}:{params:Promise<{clanId:stri
   const db=getDatabase();await db.transaction(async tx=>{
     await tx.insert(clanMessages).values({id,clanId,authorId:user.id,content:raw,attachments});
   });
-  return NextResponse.json({message:{id,clanId,authorId:user.id,content:raw,attachments,createdAt:now.toISOString(),editedAt:null,username:user.username,displayName:user.displayName,avatarUrl:user.avatarUrl,globalLevel:levelFromXp(user.globalXp)}},{status:201});
+  const [progress]=await db.select({globalXp:userProgress.totalXp,globalLevel:userProgress.level}).from(userProgress).where(eq(userProgress.userId,user.id)).limit(1);
+  return NextResponse.json({message:{id,clanId,authorId:user.id,content:raw,attachments,createdAt:now.toISOString(),editedAt:null,username:user.username,displayName:user.displayName,avatarUrl:user.avatarUrl,globalXp:progress?.globalXp??0,globalLevel:progress?.globalLevel??1}},{status:201});
 }
