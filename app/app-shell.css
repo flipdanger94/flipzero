@@ -1,4 +1,4 @@
-.mobile-tab-bar,.mobile-menu-button,.mobile-drawer-close,.mobile-drawer-backdrop,.mobile-space-switcher{display:none}
+.mobile-tab-bar,.mobile-menu-button,.mobile-drawer-close,.mobile-drawer-backdrop,.mobile-space-switcher,.mobile-voice-session{display:none}
 
 @media(max-width:767px){
   .app-shell.app-shell{display:block;grid-template-columns:none;min-height:100dvh;height:100dvh;padding-bottom:66px;background:radial-gradient(circle at 80% -10%,rgba(188,61,218,.16),transparent 34%),#0f0e13}
