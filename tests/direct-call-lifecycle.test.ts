@@ -29,4 +29,11 @@ describe("direct call lifecycle", () => {
     expect(source).toContain("2000");
     expect(source).toContain("visibilitychange");
   });
+
+  it("starts caller status polling after the server returns callId", async () => {
+    const source = await readFile("components/direct-call-overlay.tsx", "utf8");
+    expect(source).toContain("setCallId(created.callId");
+    expect(source).toContain("/api/v1/direct-calls/incoming?callId=");
+    expect(source).toContain("[callId,onClose]");
+  });
 });
