@@ -3,9 +3,8 @@ import { randomUUID } from "node:crypto";
 import { and, desc, eq, or } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { getDatabase } from "@/db/client";
-import { friendRequests, friends, notifications, userBlocks, userPrivacySettings, users } from "@/db/schema";
+import { friendRequests, friends, notifications, userBlocks, userPrivacySettings, userProgress, users } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
-import { levelFromXp } from "@/lib/gamification";
 import { presentationForUsers } from "@/lib/presentation";
 
 export async function GET() {
@@ -16,12 +15,12 @@ export async function GET() {
   const links = (await database.select().from(friends).where(eq(friends.userId, user.id))).filter(link=>!blockedIds.has(link.friendId));
   const pending = (await database.select().from(friendRequests).where(and(eq(friendRequests.toId, user.id), eq(friendRequests.status, "pending"))).orderBy(desc(friendRequests.createdAt))).filter(item=>!blockedIds.has(item.fromId));
   const outgoingPending = (await database.select().from(friendRequests).where(and(eq(friendRequests.fromId, user.id), eq(friendRequests.status, "pending"))).orderBy(desc(friendRequests.createdAt))).filter(item=>!blockedIds.has(item.toId));
-  const friendUsers = await Promise.all(links.map(async (link) => (await database.select({ id: users.id, username: users.username, displayName: users.displayName, avatarUrl: users.avatarUrl, presence: users.presence, globalXp:users.globalXp }).from(users).where(eq(users.id, link.friendId)).limit(1))[0]));
+  const friendUsers = await Promise.all(links.map(async (link) => (await database.select({ id: users.id, username: users.username, displayName: users.displayName, avatarUrl: users.avatarUrl, presence: users.presence, globalXp:userProgress.totalXp, globalLevel:userProgress.level }).from(users).leftJoin(userProgress,eq(userProgress.userId,users.id)).where(eq(users.id, link.friendId)).limit(1))[0]));
   const requests = await Promise.all(pending.map(async (request) => ({ ...request, from: (await database.select({ id: users.id, username: users.username, displayName: users.displayName, avatarUrl: users.avatarUrl, presence: users.presence }).from(users).where(eq(users.id, request.fromId)).limit(1))[0] })));
   const outgoingRequests = await Promise.all(outgoingPending.map(async (request) => ({ ...request, to: (await database.select({ id: users.id, username: users.username, displayName: users.displayName, avatarUrl: users.avatarUrl, presence: users.presence }).from(users).where(eq(users.id, request.toId)).limit(1))[0] })));
   const tags=await clanTagsForUsers([...friendUsers.map(item=>item?.id).filter((id):id is string=>Boolean(id)),...requests.map(item=>item.from?.id).filter((id):id is string=>Boolean(id)),...outgoingRequests.map(item=>item.to?.id).filter((id):id is string=>Boolean(id))]);
   const presentation=await presentationForUsers(friendUsers.map(item=>item?.id).filter((id):id is string=>Boolean(id)));
-  return NextResponse.json({ friends: friendUsers.filter(Boolean).map(item=>({...item,globalLevel:levelFromXp(item.globalXp),clan:tags.get(item.id)??null,cosmetics:presentation.get(item.id)?.cosmetics??{},badges:presentation.get(item.id)?.badges??[]})), requests:requests.map(item=>({...item,from:{...item.from,clan:tags.get(item.from?.id)??null}})), outgoingRequests: outgoingRequests.filter((item)=>Boolean(item.to)).map(item=>({...item,to:{...item.to,clan:tags.get(item.to.id)??null}})), unreadRequests: requests.length });
+  return NextResponse.json({ friends: friendUsers.filter(Boolean).map(item=>({...item,globalXp:item.globalXp??0,globalLevel:item.globalLevel??1,clan:tags.get(item.id)??null,cosmetics:presentation.get(item.id)?.cosmetics??{},badges:presentation.get(item.id)?.badges??[]})), requests:requests.map(item=>({...item,from:{...item.from,clan:tags.get(item.from?.id)??null}})), outgoingRequests: outgoingRequests.filter((item)=>Boolean(item.to)).map(item=>({...item,to:{...item.to,clan:tags.get(item.to.id)??null}})), unreadRequests: requests.length });
 }
 
 export async function POST(request: Request) {
