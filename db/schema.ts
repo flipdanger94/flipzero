@@ -138,6 +138,23 @@ export const notifications = pgTable("notifications", {
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 }, (table) => [index("notifications_user_created_idx").on(table.userId, table.createdAt), index("notifications_user_read_idx").on(table.userId, table.readAt)]);
 
+export const directCallSessions = pgTable("direct_call_sessions", {
+  id: text("id").primaryKey(),
+  roomName: text("room_name").notNull(),
+  callerId: text("caller_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  receiverId: text("receiver_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  video: boolean("video").default(false).notNull(),
+  status: text("status").default("ringing").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  answeredAt: timestamp("answered_at", { withTimezone: true }),
+  endedAt: timestamp("ended_at", { withTimezone: true }),
+}, (table) => [
+  index("direct_call_sessions_receiver_status_idx").on(table.receiverId, table.status, table.createdAt),
+  index("direct_call_sessions_caller_status_idx").on(table.callerId, table.status, table.createdAt),
+  index("direct_call_sessions_expires_idx").on(table.expiresAt),
+]);
+
 export const adminAuditLogs = pgTable("admin_audit_logs", {
   id: text("id").primaryKey(),
   adminId: text("admin_id").notNull().references(() => users.id, { onDelete: "restrict" }),
@@ -297,9 +314,22 @@ export const voiceStates = pgTable("voice_states", {
   selfDeafened: boolean("self_deafened").default(false).notNull(),
   streaming: boolean("streaming").default(false).notNull(),
   speaking: boolean("speaking").default(false).notNull(),
+  breakout: text("breakout").default("main").notNull(),
   joinedAt: timestamp("joined_at", { withTimezone: true }).defaultNow().notNull(),
+  lastHeartbeatAt: timestamp("last_heartbeat_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
-}, (table) => [index("voice_states_channel_idx").on(table.channelId)]);
+}, (table) => [
+  index("voice_states_channel_idx").on(table.channelId),
+  index("voice_states_channel_breakout_idx").on(table.channelId, table.breakout),
+  index("voice_states_heartbeat_idx").on(table.lastHeartbeatAt),
+]);
+
+export const livekitWebhookEvents = pgTable("livekit_webhook_events", {
+  id: text("id").primaryKey(),
+  eventType: text("event_type").notNull(),
+  roomName: text("room_name"),
+  receivedAt: timestamp("received_at", { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [index("livekit_webhook_events_received_idx").on(table.receivedAt)]);
 
 export const channelNotificationSettings = pgTable("channel_notification_settings", {
   userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
@@ -455,6 +485,14 @@ export const moderationFlags = pgTable("moderation_flags", {
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 }, (table) => [uniqueIndex("moderation_flags_message_unique").on(table.messageId), index("moderation_flags_space_status_idx").on(table.spaceId, table.status, table.createdAt)]);
 
+export const userProgress = pgTable("user_progress", {
+  userId: text("user_id").primaryKey().references(() => users.id, { onDelete: "cascade" }),
+  totalXp: bigint("total_xp", { mode: "number" }).default(0).notNull(),
+  level: integer("level").default(1).notNull(),
+  xpUpdatedAt: timestamp("xp_updated_at", { withTimezone: true }).defaultNow().notNull(),
+  lastLevelUpAt: timestamp("last_level_up_at", { withTimezone: true }),
+}, (table) => [index("user_progress_leaderboard_idx").on(table.totalXp, table.xpUpdatedAt)]);
+
 export const xpEvents = pgTable("xp_events", {
   id: text("id").primaryKey(),
   userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
@@ -462,8 +500,14 @@ export const xpEvents = pgTable("xp_events", {
   source: text("source").notNull(),
   amount: integer("amount").notNull(),
   idempotencyKey: text("idempotency_key").notNull(),
+  dedupeKey: text("dedupe_key").default("").notNull(),
+  meta: jsonb("meta").$type<Record<string, unknown>>().default({}).notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-}, (table) => [uniqueIndex("xp_events_idempotency_unique").on(table.idempotencyKey), index("xp_events_user_created_idx").on(table.userId, table.createdAt)]);
+}, (table) => [
+  uniqueIndex("xp_events_user_source_dedupe_unique").on(table.userId, table.source, table.dedupeKey),
+  index("xp_events_user_source_created_idx").on(table.userId, table.source, table.createdAt),
+  index("xp_events_user_created_idx").on(table.userId, table.createdAt),
+]);
 
 export const pathProgress = pgTable("path_progress", {
   userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
@@ -646,3 +690,20 @@ export const storyReactions=pgTable("story_reactions",{
 export const userPreferences=pgTable("user_preferences",{
  userId:text("user_id").primaryKey().references(()=>users.id,{onDelete:"cascade"}),theme:text("theme").default("midnight").notNull(),accentColor:text("accent_color").default("#8f70ff").notNull(),dndEnabled:boolean("dnd_enabled").default(false).notNull(),dndDays:jsonb("dnd_days").$type<number[]>().default([]).notNull(),dndStart:text("dnd_start").default("22:00").notNull(),dndEnd:text("dnd_end").default("08:00").notNull(),dndTimezone:text("dnd_timezone").default("UTC").notNull(),dndFavoriteIds:jsonb("dnd_favorite_ids").$type<string[]>().default([]).notNull(),dndClanException:boolean("dnd_clan_exception").default(false).notNull(),updatedAt:timestamp("updated_at",{withTimezone:true}).defaultNow().notNull(),
 });
+
+export const appThemes=pgTable("app_themes",{
+  id:text("id").primaryKey(),
+  label:text("label").notNull(),
+  access:text("access").default("free").notNull(),
+  surface:text("surface").notNull(),
+  panel:text("panel").notNull(),
+  deep:text("deep").notNull(),
+  raised:text("raised").notNull(),
+  accent:text("accent").notNull(),
+  textColor:text("text_color").default("#f7f4fb").notNull(),
+  muted:text("muted").default("#9aa1b6").notNull(),
+  createdBy:text("created_by").references(()=>users.id,{onDelete:"set null"}),
+  createdAt:timestamp("created_at",{withTimezone:true}).defaultNow().notNull(),
+  updatedAt:timestamp("updated_at",{withTimezone:true}).defaultNow().notNull(),
+},table=>[index("app_themes_updated_idx").on(table.updatedAt)]);
+
