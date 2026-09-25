@@ -222,7 +222,7 @@ export async function purchaseStoreItem(userId: string, itemId: string) {
 
   if (result === "already_owned") throw new StoreActionError("already_owned", "Предмет уже есть в инвентаре.", 409);
   if (result === "empty_bundle") throw new StoreActionError("empty_bundle", "В наборе пока нет предметов.", 409);
-  if (result === "insufficient_funds") throw new StoreActionError("insufficient_funds", "Недостаточно Orbs.", 409);
+  if (result === "insufficient_funds") throw new StoreActionError("insufficient_funds", "Недостаточно монет.", 409);
   return getInventorySnapshot(userId);
 }
 
