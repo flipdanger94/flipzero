@@ -66,6 +66,9 @@ export function VoiceRoom({
   const [cameraPreviewError, setCameraPreviewError] = useState("");
   const [cameraPreviewBusy, setCameraPreviewBusy] = useState(false);
   const [sharing, setSharing] = useState(false);
+  const [screenQuality, setScreenQuality] = useState<"720"|"1080">("1080");
+  const [screenFps, setScreenFps] = useState<15|30|60>(30);
+  const [screenAudio, setScreenAudio] = useState(true);
   const [remoteVideo, setRemoteVideo] = useState(false);
   const [selectedStreamId, setSelectedStreamId] = useState(initialStreamId);
   const [focusMode, setFocusMode] = useState(Boolean(initialStreamId));
@@ -734,7 +737,21 @@ export function VoiceRoom({
     if (!screenSupported) { setError("Демонстрация экрана недоступна в этом браузере. Откройте FlipZero на компьютере."); return; }
     const next = !sharing;
     try {
-      await room.localParticipant.setScreenShareEnabled(next);
+      if(next){
+        const safari=/^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+        const resolution=screenQuality==="720"
+          ? {width:1280,height:720,frameRate:screenFps}
+          : {width:1920,height:1080,frameRate:screenFps};
+        await room.localParticipant.setScreenShareEnabled(true,{
+          audio:screenAudio,
+          systemAudio:screenAudio?"include":"exclude",
+          contentHint:"detail",
+          surfaceSwitching:"include",
+          ...(safari?{}:{resolution}),
+        },{simulcast:true});
+      }else{
+        await room.localParticipant.setScreenShareEnabled(false);
+      }
       setSharing(next);
       void fetch(`/api/v1/channels/${channelId}/voice`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ streaming: next }) });
       if (next) attachLocal(Track.Source.ScreenShare, localScreenRef.current);
@@ -938,6 +955,7 @@ export function VoiceRoom({
           {settings ? <div className="voice-device-settings voice-inline-panel">
             <label className="device-picker"><span>Микрофон</span><select value={deviceId} onChange={(event)=>void chooseDevice(event.target.value)} disabled={!devices.length}>{!devices.length?<option value="">Микрофон недоступен</option>:devices.map((device,index)=><option key={device.deviceId} value={device.deviceId}>{device.label||`Микрофон ${index+1}`}</option>)}</select></label>
             <label className="device-picker"><span>Динамики / наушники</span><select value={outputDeviceId} onChange={(event)=>void chooseOutput(event.target.value)} disabled={!outputDevices.length}>{!outputDevices.length?<option value="">Системное устройство</option>:outputDevices.map((device,index)=><option key={device.deviceId} value={device.deviceId}>{device.label||`Устройство ${index+1}`}</option>)}</select></label>
+            <div className="voice-screen-options"><strong>Демонстрация экрана</strong><div><label><span>Качество</span><select value={screenQuality} onChange={(event)=>setScreenQuality(event.target.value as "720"|"1080")} disabled={sharing}><option value="720">720p</option><option value="1080">1080p</option></select></label><label><span>FPS</span><select value={screenFps} onChange={(event)=>setScreenFps(Number(event.target.value) as 15|30|60)} disabled={sharing}><option value="15">15</option><option value="30">30</option><option value="60">60</option></select></label><label className="voice-screen-audio"><input type="checkbox" checked={screenAudio} onChange={(event)=>setScreenAudio(event.target.checked)} disabled={sharing}/><span>Системный звук, если браузер поддерживает</span></label></div></div>
           </div>:null}
           {soundboard ? <div className="soundboard voice-inline-panel"><button disabled={soundPlaying} onClick={()=>playSound(330)}>✨ Магия</button><button disabled={soundPlaying} onClick={()=>playSound(520)}>🎉 Победа</button><button disabled={soundPlaying} onClick={()=>playSound(180)}>🥁 Удар</button><button disabled={soundPlaying} onClick={()=>playSound(760)}>🔔 Сигнал</button></div>:null}
           {consentPanel ? <div className="consent-panel voice-inline-panel"><strong>Согласие на запись</strong><span>{Object.values(consents).filter((value)=>value==="accepted").length} из {Object.keys(consents).length} подтвердили</span><div>{Object.entries(consents).map(([identity,value])=><small key={identity} className={`consent-${value}`}>{identity.slice(0,8)} · {value==="accepted"?"согласен":value==="declined"?"отказался":"ожидаем"}</small>)}</div></div>:null}
