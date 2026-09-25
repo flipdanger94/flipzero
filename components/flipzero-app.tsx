@@ -613,7 +613,7 @@ function Channel({
         onPointerDown={(event) => beginLongPress(participant, event)} onPointerUp={cancelLongPress} onPointerCancel={cancelLongPress} onPointerMove={cancelLongPress}>
         <button type="button" className="voice-participant-main" onClick={() => openParticipant(participant)} aria-label={participant.streaming || participant.sharing ? `Смотреть стрим ${participant.name}` : `Открыть профиль ${participant.name}`}>
           <span className="voice-sidebar-avatar">{participant.avatarUrl ? <MediaImage src={participant.avatarUrl} /> : participant.name.slice(0,2).toLocaleUpperCase("ru")}</span>
-          <span className="voice-sidebar-name"><strong title={participant.name}>{participant.name}</strong><ClanTag tag={participant.clanTag} variant="inline"/></span>
+          <strong title={participant.name}>{participant.name}</strong>
         </button>
         <span className="voice-sidebar-status" aria-label="Состояние участника">
           {participant.camera ? <Video size={12} aria-label="Камера включена" /> : null}
