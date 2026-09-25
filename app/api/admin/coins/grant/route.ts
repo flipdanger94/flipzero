@@ -4,10 +4,12 @@ import { NextResponse } from "next/server";
 import { getDatabase } from "@/db/client";
 import { adminAuditLogs, coinTransactions, notifications, users, userWallets } from "@/db/schema";
 import { requireAdmin } from "@/lib/admin";
+import { isTrustedMutationRequest } from "@/lib/security-controls";
 
 const MAX_COIN_GRANT = 2_147_483_647;
 
 export async function POST(request: Request) {
+  if (!isTrustedMutationRequest(request)) return NextResponse.json({ message: "Запрос отклонён." }, { status: 403 });
   const access = await requireAdmin();
   if ("error" in access) return access.error;
 
