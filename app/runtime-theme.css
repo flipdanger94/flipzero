@@ -243,7 +243,7 @@
 .platform-workspace.platform-workspace-background{display:block!important;position:fixed!important;inset:auto!important;width:1px!important;height:1px!important;overflow:hidden!important;clip-path:inset(50%)!important;pointer-events:none!important;opacity:0!important}
 
 
-/* Unified clan tag presentation across members, profiles and voice. */
+/* Unified clan tag presentation across member and profile surfaces. */
 .clan-tag-badge{
   display:inline-flex;align-items:center;justify-content:center;gap:3px;flex:0 0 auto;
   max-width:100%;min-height:18px;padding:1px 5px;border:1px solid;border-radius:5px;
@@ -253,17 +253,14 @@ button.clan-tag-badge{cursor:pointer}
 .clan-tag-badge svg{flex:0 0 auto;width:10px;height:10px}
 .clan-tag-full{display:inline-flex;align-items:center;gap:7px;min-width:0;max-width:100%;vertical-align:middle}
 .clan-tag-full>small{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted);font-size:10px;line-height:1.25}
-.member-name-row,.voice-sidebar-name,.clan-member-name,.clan-message-name,.fz-mini-name-row,.fz-full-name-row,.voice-tile-name{
+.member-name-row,.clan-member-name,.clan-message-name,.fz-mini-name-row,.fz-full-name-row{
   min-width:0;max-width:100%;display:flex;align-items:center;gap:5px;white-space:nowrap;
 }
-.member-name-row>strong,.voice-sidebar-name>strong,.clan-member-name>strong,.clan-message-name>strong,.fz-mini-name-row>strong,.fz-full-name-row>h2,.voice-tile-name>strong{
+.member-name-row>strong,.clan-member-name>strong,.clan-message-name>strong,.fz-mini-name-row>strong,.fz-full-name-row>h2{
   min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
 }
-.member-name-row>strong,.voice-sidebar-name>strong,.clan-member-name>strong,.clan-message-name>strong,.fz-mini-name-row>strong,.voice-tile-name>strong{flex:1 1 auto}
-.voice-sidebar-name{width:100%}
+.member-name-row>strong,.clan-member-name>strong,.clan-message-name>strong,.fz-mini-name-row>strong{flex:1 1 auto}
 .voice-participant-main{grid-template-columns:24px minmax(0,1fr)!important}
-.voice-tile-name{position:relative;z-index:4;min-width:0}
-.voice-tile-name>.clan-tag-badge{font-size:9px;min-height:17px}
 .fz-mini-name-row{width:100%}
 .fz-mini-name-row>strong{font-size:1.02rem}
 .fz-full-profile .clan-tag-full{margin-top:4px}
