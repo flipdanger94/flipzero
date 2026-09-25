@@ -213,6 +213,7 @@ export function AppIcon({
     <Icon
       className={`fz-icon ${className}`.trim()}
       size={size}
+      viewBox={APP_ICON_VIEWBOX}
       strokeWidth={1.8}
       color="currentColor"
       aria-hidden={label ? undefined : true}
