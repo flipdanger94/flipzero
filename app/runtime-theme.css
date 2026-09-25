@@ -115,3 +115,20 @@
 
 .voice-tile-grid{grid-template-columns:repeat(var(--voice-grid-columns,1),minmax(0,1fr))!important}
 @media(max-width:767px){.voice-tile-grid{grid-template-columns:1fr!important}}
+
+
+/* Final overflow/legibility guard for app and Personal views */
+.app-shell,.platform-workspace,.social-hub-embedded,.social-hub-v2,.direct-layout,.chat-panel,.channel-panel,.member-panel{min-width:0;max-width:100%;box-sizing:border-box}
+.app-shell{min-height:100dvh;height:100dvh;overflow:hidden}
+.platform-workspace,.social-hub-embedded,.social-hub-v2{overflow-x:hidden}
+.social-hub-v2 *{box-sizing:border-box}
+.social-hub-v2 .mobile-direct-list,.social-hub-v2 .social-main,.social-hub-v2 .direct-layout{min-width:0}
+.social-hub-v2 button,.social-hub-v2 input,.social-hub-v2 article{max-width:100%}
+@media(max-width:767px){
+  html,body{max-width:100vw;overflow-x:hidden}
+  .app-shell{width:100vw;max-width:100vw}
+  .platform-workspace{left:0!important;right:0!important;width:100%!important;max-width:100vw!important;padding-inline:0!important}
+  .social-hub-v2,.social-hub-embedded{width:100%!important;max-width:100%!important;margin:0!important}
+  .mobile-tab-bar{overflow:hidden}
+  .mobile-tab-bar button{min-width:0!important}
+}
