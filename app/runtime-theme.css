@@ -112,3 +112,6 @@
   .incoming-call-toast{left:8px;right:8px;top:max(8px,env(safe-area-inset-top));width:auto;grid-template-columns:46px minmax(0,1fr) 44px 44px;padding:10px}
   .incoming-call-avatar{width:46px;height:46px}.incoming-call-toast>button{width:44px;height:44px}
 }
+
+.voice-tile-grid{grid-template-columns:repeat(var(--voice-grid-columns,1),minmax(0,1fr))!important}
+@media(max-width:767px){.voice-tile-grid{grid-template-columns:1fr!important}}
