@@ -16,7 +16,7 @@ export const metadata: Metadata = {
 };
 
 const whatsNew: Array<{icon:AppIconName;eyebrow:string;title:string;text:string;art:string}> = [
-  { icon: "gift", eyebrow: "ORB BONUS", title: "Больше монет за активность", text: "Квесты с активным SuperFlip дают на 20% больше XP и монет — коллекция косметики растёт быстрее.", art: "orbs" },
+  { icon: "gift", eyebrow: "COIN BONUS", title: "Больше монет за активность", text: "Квесты с активным SuperFlip дают на 20% больше XP и монет — коллекция косметики растёт быстрее.", art: "orbs" },
   { icon: "user", eyebrow: "PROFILE", title: "Живой профиль", text: "Анимированные медиа, больше места для описания и косметика из магазина работают вместе.", art: "profile" },
   { icon: "appearance", eyebrow: "STYLE", title: "Эксклюзивные предметы", text: "Часть анимированных рамок, эффектов и наборов в магазине открывается только с SuperFlip.", art: "style" },
 ];
