@@ -1,6 +1,20 @@
 import { readFile } from "node:fs/promises";
 import { describe, expect, it } from "vitest";
 
+function luminance(hex:string){
+  const rgb=[1,3,5].map(index=>parseInt(hex.slice(index,index+2),16)/255).map(value=>value<=0.04045?value/12.92:((value+0.055)/1.055)**2.4);
+  return 0.2126*rgb[0]+0.7152*rgb[1]+0.0722*rgb[2];
+}
+function contrast(a:string,b:string){
+  const [hi,lo]=[luminance(a),luminance(b)].sort((x,y)=>y-x);
+  return (hi+0.05)/(lo+0.05);
+}
+function cssHex(source:string,name:string){
+  const match=source.match(new RegExp(`${name}:\\s*(#[0-9a-fA-F]{6})`));
+  if(!match)throw new Error(`Missing CSS token ${name}`);
+  return match[1];
+}
+
 describe("icon v2 and SuperFlip theme contracts",()=>{
   it("uses one semantic icon component with currentColor and a shared stroke width",async()=>{
     const source=await readFile("components/app-icon.tsx","utf8");
@@ -42,4 +56,27 @@ describe("icon v2 and SuperFlip theme contracts",()=>{
     expect(audit).toContain('data-theme="superflip"');
     expect(audit).toContain("Карта замены");
   });
+  it("keeps primary and secondary SuperFlip text at WCAG AA contrast",async()=>{
+    const styles=await readFile("app/superflip/superflip.module.css","utf8");
+    const primary=cssHex(styles,"--sf-text-primary");
+    const secondary=cssHex(styles,"--sf-text-secondary");
+    for(const background of ["--sf-bg-base","--sf-bg-elevated","--sf-bg-card","--sf-bg-card-strong"].map(name=>cssHex(styles,name))){
+      expect(contrast(primary,background),`primary on ${background}`).toBeGreaterThanOrEqual(4.5);
+      expect(contrast(secondary,background),`secondary on ${background}`).toBeGreaterThanOrEqual(4.5);
+    }
+    const page=await readFile("app/superflip/page.tsx","utf8");
+    expect(page).not.toContain("style={{");
+  });
+
+  it("covers every current inventory equipment slot with a semantic icon",async()=>{
+    const store=await readFile("components/personal-economy.tsx","utf8");
+    for(const slot of ["avatar_decoration","profile_effect","profile_banner","nameplate","chat_style","badge","app_theme"]){
+      expect(store).toContain(slot);
+    }
+    expect(store).toContain("const slotIcons:Record<string,AppIconName>");
+    expect(store).toContain('name="buy"');
+    expect(store).toContain('name="equip"');
+    expect(store).toContain('name="unequip"');
+  });
+
 });
