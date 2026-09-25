@@ -19,6 +19,8 @@ describe("icon v2 and SuperFlip theme contracts",()=>{
   it("uses one semantic icon component with currentColor and a shared stroke width",async()=>{
     const source=await readFile("components/app-icon.tsx","utf8");
     expect(source).toContain("export type AppIconName");
+    expect(source).toContain('viewBox={APP_ICON_VIEWBOX}');
+    expect(source).toContain('export const APP_ICON_VIEWBOX = "0 0 24 24"');
     expect(source).toContain('strokeWidth={1.8}');
     expect(source).toContain('color="currentColor"');
     expect(source).toContain('aria-hidden={label ? undefined : true}');
