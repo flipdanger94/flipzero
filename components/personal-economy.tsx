@@ -16,6 +16,7 @@ import {
   X,
 } from "lucide-react";
 import { CosmeticArt } from "./cosmetic-art";
+import { MediaImage } from "./media-image";
 
 type Ledger={id:string;amount:number;reason:string;createdAt:string};
 type Quest={key:string;title:string;description:string;period:"daily"|"weekly";target:number;progress:number;coins:number;xp:number;claimed:boolean};
@@ -119,6 +120,8 @@ export function PersonalEconomy({onOpenSuperFlip}:{onOpenSuperFlip?:()=>void}={}
       setLoading(false);
     }
   },[]);
+
+  useEffect(()=>{if(!preview)return;const handler=(event:KeyboardEvent)=>{if(event.key==="Escape")setPreview(null)};window.addEventListener("keydown",handler);return()=>window.removeEventListener("keydown",handler)},[preview]);
 
   useEffect(()=>{
     const timer=window.setTimeout(()=>void refresh(),0);
@@ -335,7 +338,7 @@ export function PersonalEconomy({onOpenSuperFlip}:{onOpenSuperFlip?:()=>void}={}
         <div className="store-preview-stage">
           <div className={`store-preview-profile cosmetic-${previewItem.preview}`}>
             <div className="store-preview-banner" style={identity?.bannerUrl?{backgroundImage:`url("${identity.bannerUrl}")`}:undefined}/>
-            <div className="store-preview-avatar">{identity?.avatarUrl?<img src={identity.avatarUrl} alt=""/>:(identity?.displayName??"FZ").slice(0,2)}</div>
+            <div className="store-preview-avatar">{identity?.avatarUrl?<MediaImage src={identity.avatarUrl} alt="" sizes="82px"/>:(identity?.displayName??"FZ").slice(0,2)}</div>
             <CosmeticArt live item={previewItem}/>
             <strong>{identity?.displayName??"Ваш профиль"}</strong><span>@flipzero</span>
           </div>
