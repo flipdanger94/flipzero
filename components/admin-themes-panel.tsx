@@ -8,7 +8,7 @@ const defaults={id:"",label:"",access:"free",surface:"#101622",panel:"#171d2b",d
 export function AdminThemesPanel(){
  const [themes,setThemes]=useState<Theme[]>([]),[draft,setDraft]=useState(defaults),[busy,setBusy]=useState(false),[notice,setNotice]=useState("");
  async function load(){const r=await fetch("/api/admin/themes",{cache:"no-store"});const d=await r.json();if(r.ok)setThemes(d.themes??[]);else setNotice(d.message??"Не удалось загрузить темы.")}
- useEffect(()=>{void load()},[]);
+ useEffect(()=>{const timer=window.setTimeout(()=>{void load()},0);return()=>window.clearTimeout(timer)},[]);
  async function submit(event:FormEvent){event.preventDefault();setBusy(true);setNotice("");try{const r=await fetch("/api/admin/themes",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(draft)}),d=await r.json();setNotice(r.ok?"Тема сохранена и доступна в «Внешний вид».":d.message??"Не удалось сохранить тему.");if(r.ok){setDraft(defaults);await load()}}finally{setBusy(false)}}
  async function remove(id:string){if(!window.confirm("Удалить пользовательскую тему? У пользователей с этой темой останется сохранённый id до следующего выбора."))return;const r=await fetch("/api/admin/themes",{method:"DELETE",headers:{"content-type":"application/json"},body:JSON.stringify({id})});const d=await r.json();setNotice(r.ok?"Тема удалена.":d.message??"Не удалось удалить.");if(r.ok)await load()}
  return <div className="admin-themes-panel"><header><div><Palette size={20}/><strong>Темы интерфейса</strong></div><p>Добавленная тема появляется в Настройки → Внешний вид. Цвета применяются ко всему интерфейсу через CSS-переменные.</p></header>
