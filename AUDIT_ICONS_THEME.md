@@ -20,7 +20,11 @@
 
 Следовательно, миграция — **структурная поверх существующей библиотеки**: вводится единый semantic `AppIcon`-компонент с фиксированными `24×24`, `currentColor` и `strokeWidth`, а ключевые продуктовые поверхности переводятся на семантические имена. Старые локальные SVG удалять не требуется — отдельного старого UI-pack нет.
 
-### Основные места использования
+### Инвентаризация
+
+Статический проход по `app/**/*.tsx` и `components/**/*.tsx` на этой ветке нашёл **146 уникальных импортируемых Lucide-компонентов**. В новый semantic-слой `AppIcon` сейчас сведена **51 продуктовая роль**; одна роль может намеренно выбирать другой glyph, поэтому это не 1:1 копия имён Lucide.
+
+Основные места использования:
 
 - глобальная/социальная навигация;
 - настройки аккаунта;
@@ -33,26 +37,26 @@
 
 ### Карта замены для текущего релиза
 
-| Модуль | Семантика | Было | Новый semantic icon |
-|---|---|---|---|
-| Навигация | Магазин | `ShoppingBag` напрямую | `store` |
-| Навигация | SuperFlip | `Crown` напрямую | `superflip` |
-| Магазин | Купить | текст / `ShoppingBag` | `buy` |
-| Магазин | Поиск | `Search` | `search` |
-| Магазин | Анимированный item | `Sparkles` | `animated` |
-| Инвентарь | Коллекция | `PackageOpen` | `inventory` |
-| Инвентарь | Надеть | `Check`/текст | `equip` |
-| Инвентарь | Снять | `X`/текст | `unequip` |
-| Инвентарь | Просмотр | `Eye` | `preview` |
-| SuperFlip | Premium | `Crown` | `superflip` |
-| SuperFlip | Upload | `FileUp` | `upload` |
-| SuperFlip | Messages | `MessageCircle` | `messages` |
-| SuperFlip | Style | `Palette` | `appearance` |
-| Системные | Закрыть | `X` | `close` |
-| Системные | Фильтр | разрозненно | `filter` |
-| Системные | Сортировка | native select | `sort` |
+| Модуль | Семантика | Было | Новый semantic icon | Статус |
+|---|---|---|---|---|
+| Навигация | Магазин | `ShoppingBag` напрямую | `store` | ✅ |
+| Навигация | SuperFlip | `Crown` напрямую | `superflip` | ✅ |
+| Магазин | Купить | текст / `ShoppingBag` | `buy` | ✅ |
+| Магазин | Поиск | `Search` | `search` | ✅ |
+| Магазин | Анимированный item | `Sparkles` | `animated` | ✅ |
+| Инвентарь | Коллекция | `PackageOpen` | `inventory` | ✅ |
+| Инвентарь | Надеть | `Check`/текст | `equip` | ✅ |
+| Инвентарь | Снять | `X`/текст | `unequip` | ✅ |
+| Инвентарь | Просмотр | `Eye` | `preview` | ✅ |
+| SuperFlip | Premium | `Crown` | `superflip` | ✅ |
+| SuperFlip | Upload | `FileUp` | `upload` | ✅ |
+| SuperFlip | Messages | `MessageCircle` | `messages` | ✅ |
+| SuperFlip | Style | `Palette` | `appearance` | ✅ |
+| Системные | Закрыть | `X` | `close` | ✅ на мигрированных поверхностях |
+| Системные | Фильтр | разрозненно | `filter` | ✅ semantic role |
+| Системные | Сортировка | native select | `sort` | ✅ semantic role |
 
-`AppIcon` является единой точкой смены визуального набора в дальнейшем. Все новые/переделываемые экраны в этом PR используют его вместо прямых imports из `lucide-react`.
+`AppIcon` является единой точкой смены визуального набора в дальнейшем. В этом PR через него уже проходят SuperFlip, Магазин, Инвентарь, Social navigation, global search, notification center, user dock и основная mobile/header navigation. Прямые Lucide-imports в старых специализированных экранах остаются совместимыми legacy-вызовами; отдельного старого asset-pack в bundle нет.
 
 ## 2. Accent color
 
