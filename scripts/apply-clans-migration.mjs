@@ -63,10 +63,6 @@ try {
       await applySqlToUrl(shardUrl, voiceWebhookSql, `voice shard ${index + 1}`);
     }
 
-    const userProgressSql = await readFile(new URL("../drizzle/0030_user_progress_ledger.sql", import.meta.url), "utf8");
-    await client.unsafe(userProgressSql);
-    console.log("[xp] 0030_user_progress_ledger applied");
-
     const customThemesSql = await readFile(new URL("../drizzle/0031_custom_themes.sql", import.meta.url), "utf8");
     await client.unsafe(customThemesSql);
     const directCallsSql = await readFile(new URL("../drizzle/0032_direct_call_sessions.sql", import.meta.url), "utf8");
