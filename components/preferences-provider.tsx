@@ -9,6 +9,7 @@ function applyTheme(root:HTMLElement,theme:RuntimeTheme|undefined,themeId:string
   root.dataset.theme=themeId;
   if(!theme)return;
   const accentColor=theme.accent;
+  root.style.setProperty("--accent-color",accentColor);
   root.style.setProperty("--accent",accentColor);
   root.style.setProperty("--pink",accentColor);
   root.style.setProperty("--theme-surface",theme.surface);
