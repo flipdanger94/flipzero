@@ -852,8 +852,8 @@ export function VoiceRoom({
     heartbeat();
     const timer = window.setInterval(heartbeat, 45_000);
     const pagehide = () => {
-      const payload = new Blob([], { type: "application/json" });
-      navigator.sendBeacon?.(`/api/v1/channels/${channelId}/voice`, payload);
+      const payload = new Blob([JSON.stringify({ leave: true })], { type: "application/json" });
+      navigator.sendBeacon?.(`/api/v1/channels/${channelId}/voice?leave=1`, payload);
     };
     window.addEventListener("pagehide", pagehide);
     return () => {
