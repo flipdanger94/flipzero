@@ -46,6 +46,19 @@ describe("persistent application shell contract", () => {
     expect(productCss).toContain(".video-grid>.local-screen:not(.visible)");
   });
 
+  it("keeps one wider desktop rail and account dock on platform views", async () => {
+    const [shell, runtime] = await Promise.all([
+      readFile("components/flipzero-app.tsx", "utf8"),
+      readFile("app/runtime-theme.css", "utf8"),
+    ]);
+
+    expect(shell.match(/<nav className="space-rail"/g)?.length).toBe(1);
+    expect(runtime).toContain("grid-template-columns:76px 272px");
+    expect(runtime).toContain(".app-shell.platform-view-active>.space-rail");
+    expect(runtime).toContain("left:76px;bottom:0;width:272px");
+    expect(runtime).toContain("grid-template-columns:minmax(96px,1fr) 50px 50px 38px");
+  });
+
   it("uses second-level desktop navigation for admin and clans", async () => {
     const [admin, platformCss] = await Promise.all([
       readFile("components/admin-dialog.tsx", "utf8"),
