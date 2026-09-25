@@ -80,7 +80,6 @@ export function VoiceRoom({
   const [screenQuality, setScreenQuality] = useState<"720"|"1080">("1080");
   const [screenFps, setScreenFps] = useState<15|30|60>(30);
   const [screenAudio, setScreenAudio] = useState(true);
-  const [remoteVideo, setRemoteVideo] = useState(false);
   const [selectedStreamId, setSelectedStreamId] = useState(initialStreamId);
   const [focusMode, setFocusMode] = useState(Boolean(initialStreamId));
   const [streamMuted, setStreamMuted] = useState(false);
@@ -111,11 +110,8 @@ export function VoiceRoom({
   const [error, setError] = useState("");
   const roomRef = useRef<Room | null>(null);
   const audioRef = useRef<HTMLDivElement | null>(null);
-  const remoteVideoRef = useRef<HTMLDivElement | null>(null);
-  const localCameraRef = useRef<HTMLDivElement | null>(null);
   const cameraPreviewRef = useRef<HTMLVideoElement | null>(null);
   const cameraPreviewStreamRef = useRef<MediaStream | null>(null);
-  const localScreenRef = useRef<HTMLDivElement | null>(null);
   const consentRequestRef = useRef("");
   const deafenedRef = useRef(false);
   const joinAttemptRef = useRef(0);
@@ -162,37 +158,36 @@ export function VoiceRoom({
       .catch(() => { if (!controller.signal.aborted) { setVoiceAvailable(true); setVoiceChecked(false); } });
     return () => controller.abort();
   }, [autoJoin, voiceCheckNonce]);
-  function clearMedia(container: HTMLDivElement | null) {
+  function clearMedia(container: HTMLElement | null) {
     container?.replaceChildren();
   }
-  function attachLocal(source: Track.Source, container: HTMLDivElement | null) {
-    clearMedia(container);
-    const track =
-      roomRef.current?.localParticipant.getTrackPublication(source)?.track;
-    if (track && container) container.appendChild(track.attach());
+  function mediaTarget(participantId: string, source: "camera"|"screen") {
+    return voiceRootRef.current?.querySelector<HTMLElement>(`[data-voice-media-id="${CSS.escape(participantId)}"][data-voice-media-source="${source}"]`) ?? null;
   }
-  function attachStreamPreview(participantId: string, track: Track) {
-    const attach = () => {
-      const targets = voiceRootRef.current?.querySelectorAll<HTMLDivElement>("[data-stream-preview-id]");
-      const target = targets ? [...targets].find((element) => element.dataset.streamPreviewId === participantId) : null;
-      if (!target) return false;
-      clearMedia(target);
-      const preview = track.attach();
-      preview.dataset.participantId = participantId;
-      preview.dataset.preview = "voice-tile";
-      if (preview instanceof HTMLVideoElement) {
-        preview.muted = true;
-        preview.playsInline = true;
-      }
-      target.appendChild(preview);
-      return true;
-    };
-    if (!attach()) window.setTimeout(attach, 120);
+  function attachParticipantVideo(participantId: string, source: "camera"|"screen", track: Track, attempt = 0) {
+    const target = mediaTarget(participantId, source);
+    if (!target) {
+      if (attempt < 8) window.setTimeout(() => attachParticipantVideo(participantId, source, track, attempt + 1), 80 + attempt * 30);
+      return;
+    }
+    clearMedia(target);
+    const element = track.attach();
+    element.dataset.participantId = participantId;
+    element.dataset.voiceMediaSource = source;
+    if (element instanceof HTMLVideoElement) {
+      element.playsInline = true;
+      if (participantId === roomRef.current?.localParticipant.identity) element.muted = true;
+    }
+    target.appendChild(element);
   }
-  function clearStreamPreview(participantId: string) {
-    const targets = voiceRootRef.current?.querySelectorAll<HTMLDivElement>("[data-stream-preview-id]");
-    const target = targets ? [...targets].find((element) => element.dataset.streamPreviewId === participantId) : null;
-    clearMedia(target ?? null);
+  function clearParticipantVideo(participantId: string, source: "camera"|"screen") {
+    clearMedia(mediaTarget(participantId, source));
+  }
+  function attachLocal(source: Track.Source) {
+    const room = roomRef.current;
+    const track = room?.localParticipant.getTrackPublication(source)?.track;
+    if (!room || !track) return;
+    attachParticipantVideo(room.localParticipant.identity, source === Track.Source.ScreenShare ? "screen" : "camera", track);
   }
   function emitVoiceSession(connected: boolean, nextQuality = quality) {
     window.dispatchEvent(new CustomEvent("flipzero:voice-session", { detail: {
@@ -354,38 +349,33 @@ export function VoiceRoom({
           audioRef.current?.appendChild(element);
         }
         if (track.kind === Track.Kind.Video) {
-          const element = track.attach();
-          element.dataset.source = track.source;
-          element.dataset.participantId = participant.identity;
-          remoteVideoRef.current?.appendChild(element);
-          if (track.source === Track.Source.ScreenShare) attachStreamPreview(participant.identity, track);
-          setRemoteVideo(true);
+          attachParticipantVideo(participant.identity, track.source === Track.Source.ScreenShare ? "screen" : "camera", track);
         }
       });
-      room.on(RoomEvent.TrackUnsubscribed, (track) => {
+      room.on(RoomEvent.TrackUnsubscribed, (track, publication, participant) => {
         track.detach().forEach((element) => element.remove());
-        setRemoteVideo(Boolean(remoteVideoRef.current?.childElementCount));
+        if (track.kind === Track.Kind.Video) {
+          clearParticipantVideo(participant.identity, publication.source === Track.Source.ScreenShare ? "screen" : "camera");
+        }
       });
       room.on(RoomEvent.LocalTrackPublished, (publication) => {
         if (publication.source === Track.Source.Camera) {
           setCamera(true);
-          attachLocal(Track.Source.Camera, localCameraRef.current);
+          attachLocal(Track.Source.Camera);
         }
         if (publication.source === Track.Source.ScreenShare) {
           setSharing(true);
-          attachLocal(Track.Source.ScreenShare, localScreenRef.current);
-          if (publication.track) attachStreamPreview(connectedRoom.localParticipant.identity, publication.track);
+          attachLocal(Track.Source.ScreenShare);
         }
       });
       room.on(RoomEvent.LocalTrackUnpublished, (publication) => {
         if (publication.source === Track.Source.Camera) {
           setCamera(false);
-          clearMedia(localCameraRef.current);
+          clearParticipantVideo(connectedRoom.localParticipant.identity, "camera");
         }
         if (publication.source === Track.Source.ScreenShare) {
           setSharing(false);
-          clearMedia(localScreenRef.current);
-          clearStreamPreview(connectedRoom.localParticipant.identity);
+          clearParticipantVideo(connectedRoom.localParticipant.identity, "screen");
         }
       });
       room.on(RoomEvent.Disconnected, () => {
@@ -394,7 +384,6 @@ export function VoiceRoom({
         setParticipantCount(0);
         setCamera(false);
         setSharing(false);
-        setRemoteVideo(false);
         setActiveSpeaker("");
         setLocalPresence([]);
         onPresenceChange?.([]);
@@ -731,7 +720,7 @@ export function VoiceRoom({
       closeCameraPreview();
       await room.localParticipant.setCameraEnabled(true);
       setCamera(true);
-      attachLocal(Track.Source.Camera, localCameraRef.current);
+      attachLocal(Track.Source.Camera);
       setError("");
     } catch {
       setCamera(false);
@@ -750,7 +739,7 @@ export function VoiceRoom({
     try {
       await room.localParticipant.setCameraEnabled(false);
       setCamera(false);
-      clearMedia(localCameraRef.current);
+      if (room) clearParticipantVideo(room.localParticipant.identity, "camera");
       setError("");
     } catch {
       setError("Не удалось выключить камеру.");
@@ -779,8 +768,8 @@ export function VoiceRoom({
       }
       setSharing(next);
       if (resolvedStateUrl) void fetch(resolvedStateUrl, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ streaming: next }) });
-      if (next) attachLocal(Track.Source.ScreenShare, localScreenRef.current);
-      else clearMedia(localScreenRef.current);
+      if (next) attachLocal(Track.Source.ScreenShare);
+      else clearParticipantVideo(room.localParticipant.identity, "screen");
       setError("");
     } catch {
       setError("Демонстрация экрана отменена или недоступна.");
@@ -797,14 +786,12 @@ export function VoiceRoom({
     if (resolvedStateUrl) void fetch(resolvedStateUrl, { method: "DELETE" });
     emitVoiceSession(false);
     playVoiceCue("leave");
-    [audioRef, remoteVideoRef, localCameraRef, localScreenRef].forEach((ref) =>
-      clearMedia(ref.current),
-    );
+    clearMedia(audioRef.current);
+    voiceRootRef.current?.querySelectorAll<HTMLElement>("[data-voice-media-id]").forEach((element) => clearMedia(element));
     setStatus("idle");
     setParticipantCount(0);
     setCamera(false);
     setSharing(false);
-    setRemoteVideo(false);
     setMuted(false);
     setAudioBlocked(false);
     setDeafened(false);
@@ -827,7 +814,6 @@ export function VoiceRoom({
   const gridLayout=voiceGridLayout(normalizedPresence.length,compactMode);
   const visibleParticipants = normalizedPresence.slice(0, gridLayout.visible);
   const hiddenParticipantCount = Math.max(0, normalizedPresence.length - visibleParticipants.length);
-  const showingVideo = camera || sharing || remoteVideo;
   const connected = status === "connected" || status === "reconnecting";
   const selectedStream = streamingParticipants.find((participant) => participant.id === selectedStreamId) ?? streamingParticipants[0] ?? null;
 
@@ -835,13 +821,16 @@ export function VoiceRoom({
     selectedStreamRef.current = participantId;
     setSelectedStreamId(participantId);
     setFocusMode(true);
-    roomRef.current?.remoteParticipants.get(participantId)?.trackPublications.forEach((publication) => {
-      if (publication.source === Track.Source.ScreenShare || publication.source === Track.Source.ScreenShareAudio) publication.setSubscribed(true);
+    const participant = roomRef.current?.remoteParticipants.get(participantId);
+    participant?.trackPublications.forEach((publication) => {
+      if (publication.source === Track.Source.ScreenShare || publication.source === Track.Source.ScreenShareAudio) {
+        publication.setSubscribed(true);
+        if (publication.track?.kind === Track.Kind.Video) attachParticipantVideo(participantId, "screen", publication.track);
+      }
     });
-    remoteVideoRef.current?.querySelectorAll<HTMLElement>("[data-participant-id]").forEach((element) => {
-      element.hidden = element.dataset.participantId !== participantId;
-    });
-    requestAnimationFrame(() => remoteVideoRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }));
+    window.setTimeout(() => {
+      voiceRootRef.current?.querySelector<HTMLElement>(`[data-participant-tile-id="${CSS.escape(participantId)}"]`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 80);
   }
   function minimizeStream() {
     setFocusMode(false);
@@ -854,7 +843,7 @@ export function VoiceRoom({
     roomRef.current?.remoteParticipants.get(previous)?.trackPublications.forEach((publication) => {
       if (publication.source === Track.Source.ScreenShare || publication.source === Track.Source.ScreenShareAudio) publication.setSubscribed(false);
     });
-    remoteVideoRef.current?.querySelectorAll<HTMLElement>("[data-participant-id]").forEach((element) => { element.hidden = false; });
+    if (previous) clearParticipantVideo(previous, "screen");
   }
   function applyStreamVolume() {
     if (!selectedStreamId) return;
@@ -898,12 +887,9 @@ export function VoiceRoom({
     return () => window.removeEventListener("keydown", onKeyDown);
   });
   useEffect(() => {
-    if (!initialStreamId || !remoteVideo) return;
-    remoteVideoRef.current?.querySelectorAll<HTMLElement>("[data-participant-id]").forEach((element) => {
-      element.hidden = element.dataset.participantId !== initialStreamId;
-    });
-    remoteVideoRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
-  }, [initialStreamId, remoteVideo]);
+    if (!initialStreamId || !connected) return;
+    focusStream(initialStreamId);
+  }, [initialStreamId, connected]);
   async function toggleFullscreen() {
     const root = voiceRootRef.current;
     if (!root) return;
@@ -913,8 +899,8 @@ export function VoiceRoom({
     } catch { setError("Полноэкранный режим недоступен в этом браузере."); }
   }
   async function openPictureInPicture() {
-    const selector = selectedStreamId ? `video[data-participant-id="${selectedStreamId}"]` : "video";
-    const video = remoteVideoRef.current?.querySelector<HTMLVideoElement>(selector);
+    const selector = `video[data-participant-id="${selectedStreamId}"][data-voice-media-source="screen"]`;
+    const video = voiceRootRef.current?.querySelector<HTMLVideoElement>(`.voice-tile[data-participant-tile-id="${CSS.escape(selectedStreamId)}"] ${selector}`);
     const pipVideo = video as (HTMLVideoElement & { requestPictureInPicture?: () => Promise<unknown> }) | null | undefined;
     if (!pipVideo || typeof pipVideo.requestPictureInPicture !== "function") { setError("Картинка в картинке недоступна для этого стрима."); return; }
     try { await pipVideo.requestPictureInPicture(); } catch { setError("Не удалось открыть картинку в картинке."); }
@@ -937,7 +923,7 @@ export function VoiceRoom({
   );
 
   return (
-    <div ref={voiceRootRef} className={`voice-room voice-room-connected ${focusMode ? "is-focus" : ""} ${selectedStreamId && !focusMode ? "has-mini-stream" : ""} ${showingVideo ? "has-video" : ""}`}>
+    <div ref={voiceRootRef} className={`voice-room voice-room-connected ${focusMode ? "is-focus" : ""} ${selectedStreamId && !focusMode ? "has-mini-stream" : ""}`}>
       <div ref={audioRef} className="remote-audio"/>
       <header className="voice-room-topbar">
         <div><small>ГОЛОСОВОЙ КАНАЛ</small><strong>{channelName}</strong>{spaceName ? <span>{spaceName}</span> : null}</div>
@@ -949,12 +935,6 @@ export function VoiceRoom({
 
       <main className="voice-stage-layout">
         <section className="voice-stage-main" aria-label="Сцена голосового канала" onTouchStart={(event)=>{swipeStartRef.current=event.touches[0]?.clientY??null}} onTouchEnd={(event)=>{const start=swipeStartRef.current;const end=event.changedTouches[0]?.clientY;if(focusMode&&start!==null&&typeof end==="number"&&end-start>80)minimizeStream();swipeStartRef.current=null}}>
-          {showingVideo ? <div className={`video-grid ${focusMode ? "focus-stream" : ""} ${camera && !sharing && !remoteVideo ? "camera-only" : ""}`}>
-            <div ref={remoteVideoRef} className="remote-video"/>
-            <div ref={localScreenRef} className={`local-screen ${sharing ? "visible" : ""}`}/>
-            <div ref={localCameraRef} className={`local-camera ${camera ? "visible" : ""}`}/>
-          </div> : null}
-
           {focusMode && selectedStream ? <div className="voice-stream-toolbar">
             <strong><span className="voice-live-badge">LIVE</span>{selectedStream.name}</strong>
             <label aria-label="Громкость стрима"><Volume2 size={15}/><input type="range" min="0" max="100" value={streamVolume} onChange={(event)=>setStreamVolume(Number(event.target.value))}/></label>
@@ -965,14 +945,16 @@ export function VoiceRoom({
             <button type="button" onClick={clearFocus} aria-label="Закрыть просмотр стрима">×</button>
           </div> : null}
 
-          {selectedStreamId && !focusMode ? <div className="voice-mini-stream-controls" aria-label="Мини-плеер стрима"><button type="button" onClick={()=>setFocusMode(true)} aria-label="Развернуть стрим"><Maximize2 size={16}/></button><button type="button" onClick={clearFocus} aria-label="Закрыть стрим">×</button></div>:null}
           {normalizedPresence.length === 0 ? <div className="voice-stage-empty voice-stage-empty-visible" role="status"><Users size={28}/><strong>В канале пока никого нет</strong><span>Участники появятся здесь после подключения.</span></div> : null}
           <div className="voice-tile-grid" role="list" aria-label="Участники" data-participant-count={normalizedPresence.length} style={{"--voice-grid-columns":gridLayout.columns,"--voice-grid-rows":gridLayout.rows} as CSSProperties}>
-            {visibleParticipants.map((participant)=><article key={participant.id} role="listitem" className={`voice-tile ${participant.speaking ? "speaking" : ""} ${participant.streaming || participant.sharing ? "is-streaming" : ""}`}>
-              {participant.streaming || participant.sharing ? <div className="voice-tile-stream-preview" data-stream-preview-id={participant.id} aria-hidden="true" /> : null}
+            {visibleParticipants.map((participant)=><article key={participant.id} role="listitem" data-participant-tile-id={participant.id} className={`voice-tile ${participant.speaking ? "speaking" : ""} ${participant.streaming || participant.sharing ? "is-streaming" : ""} ${participant.camera ? "has-camera" : ""} ${selectedStreamId===participant.id ? "is-stream-selected" : ""} ${focusMode&&selectedStreamId===participant.id ? "is-media-focus" : ""}`}>
+              <div className="voice-tile-media" aria-hidden="true">
+                <div className="voice-tile-camera" data-voice-media-id={participant.id} data-voice-media-source="camera"/>
+                <div className="voice-tile-screen" data-voice-media-id={participant.id} data-voice-media-source="screen"/>
+              </div>
               <div className="voice-tile-avatar">{participant.avatarUrl?<MediaImage src={participant.avatarUrl}/>:participant.name.slice(0,2).toLocaleUpperCase("ru")}</div>
               <footer className="voice-tile-footer"><strong title={participant.name}>{participant.name}{participant.clanTag ? <em className="voice-clan-tag"> [{participant.clanTag}]</em> : null}</strong><span>{participant.streaming || participant.sharing ? <b className="voice-live-badge">LIVE</b> : null}{participant.muted?<MicOff size={14}/>:null}{participant.deafened?<Headphones size={14}/>:null}{participant.camera?<Video size={14}/>:null}</span></footer>
-              {participant.streaming || participant.sharing ? <button type="button" className="voice-tile-watch" onClick={()=>focusStream(participant.id)} aria-label={`Смотреть стрим ${participant.name}`}>Смотреть стрим</button>:null}
+              {participant.streaming || participant.sharing ? selectedStreamId===participant.id ? <button type="button" className="voice-tile-watch is-watching" onClick={clearFocus} aria-label={`Закрыть стрим ${participant.name}`}>Закрыть стрим</button> : <button type="button" className="voice-tile-watch" onClick={()=>focusStream(participant.id)} aria-label={`Смотреть стрим ${participant.name}`}>Смотреть стрим</button> : null}
             </article>)}
             {hiddenParticipantCount ? <article className="voice-tile voice-tile-more" role="listitem"><strong>+{hiddenParticipantCount}</strong><span>ещё участников</span></article>:null}
           </div>
