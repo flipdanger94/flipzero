@@ -18,7 +18,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ use
   await db.insert(userProgress).values({ userId, totalXp: 0, level: 1 }).onConflictDoNothing({ target: userProgress.userId });
   const [user] = await db.select({
     id: users.id, username: users.username, displayName: users.displayName, avatarUrl: users.avatarUrl,
-    bannerUrl: users.bannerUrl, bio: users.bio, accentColor: users.accentColor, presence: users.presence, lastSeenAt: users.lastSeenAt,
+    bannerUrl: users.bannerUrl, bio: users.bio, presence: users.presence, lastSeenAt: users.lastSeenAt,
     globalXp: userProgress.totalXp, globalLevel: userProgress.level, xpUpdatedAt: userProgress.xpUpdatedAt, createdAt: users.createdAt,
     profileLocation: users.profileLocation, profileStatus: users.profileStatus, profileLinks: users.profileLinks,
     profileGames:users.profileGames,profileMusic:users.profileMusic,profileWidgets:users.profileWidgets,customStatusEmoji:users.customStatusEmoji,customStatusExpiresAt:users.customStatusExpiresAt,

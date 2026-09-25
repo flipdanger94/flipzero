@@ -66,3 +66,7 @@
 @keyframes profile-banner-orbit{50%{background-position:100% 30%,0 70%,0 0}}
 @keyframes profile-banner-void{50%{background-position:80% 60%,20% 30%,0 0;filter:saturate(1.15)}}
 @keyframes profile-frame-breathe{50%{filter:brightness(1.12);transform:scale(1.018)}}
+
+
+.equipped-slot-head>span{display:inline-flex;align-items:center;gap:6px;min-width:0}
+.fz-icon{display:inline-block;flex:0 0 auto;vertical-align:-.125em}

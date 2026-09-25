@@ -36,6 +36,7 @@ export const users = pgTable("users", {
   profileWidgets:jsonb("profile_widgets").$type<string[]>().default(["about","status","games","music","badges","clan","links"]).notNull(),
   customStatusEmoji:text("custom_status_emoji"),
   customStatusExpiresAt:timestamp("custom_status_expires_at",{withTimezone:true}),
+  // Deprecated: retained for rollback/backward compatibility; UI uses the active theme accent.
   accentColor: text("accent_color").default("#ff5c70").notNull(),
   presence: presenceStatus("presence").default("offline").notNull(),
   lastSeenAt: timestamp("last_seen_at", { withTimezone: true }),
@@ -719,7 +720,7 @@ export const storyReactions=pgTable("story_reactions",{
  storyId:text("story_id").notNull().references(()=>userStories.id,{onDelete:"cascade"}),userId:text("user_id").notNull().references(()=>users.id,{onDelete:"cascade"}),emoji:text("emoji").notNull(),createdAt:timestamp("created_at",{withTimezone:true}).defaultNow().notNull(),
 },table=>[primaryKey({columns:[table.storyId,table.userId]})]);
 export const userPreferences=pgTable("user_preferences",{
- userId:text("user_id").primaryKey().references(()=>users.id,{onDelete:"cascade"}),theme:text("theme").default("midnight").notNull(),accentColor:text("accent_color").default("#8f70ff").notNull(),dndEnabled:boolean("dnd_enabled").default(false).notNull(),dndDays:jsonb("dnd_days").$type<number[]>().default([]).notNull(),dndStart:text("dnd_start").default("22:00").notNull(),dndEnd:text("dnd_end").default("08:00").notNull(),dndTimezone:text("dnd_timezone").default("UTC").notNull(),dndFavoriteIds:jsonb("dnd_favorite_ids").$type<string[]>().default([]).notNull(),dndClanException:boolean("dnd_clan_exception").default(false).notNull(),updatedAt:timestamp("updated_at",{withTimezone:true}).defaultNow().notNull(),
+ userId:text("user_id").primaryKey().references(()=>users.id,{onDelete:"cascade"}),theme:text("theme").default("midnight").notNull(),/* deprecated: synchronized to theme accent only */accentColor:text("accent_color").default("#8f70ff").notNull(),dndEnabled:boolean("dnd_enabled").default(false).notNull(),dndDays:jsonb("dnd_days").$type<number[]>().default([]).notNull(),dndStart:text("dnd_start").default("22:00").notNull(),dndEnd:text("dnd_end").default("08:00").notNull(),dndTimezone:text("dnd_timezone").default("UTC").notNull(),dndFavoriteIds:jsonb("dnd_favorite_ids").$type<string[]>().default([]).notNull(),dndClanException:boolean("dnd_clan_exception").default(false).notNull(),updatedAt:timestamp("updated_at",{withTimezone:true}).defaultNow().notNull(),
 });
 
 export const appThemes=pgTable("app_themes",{

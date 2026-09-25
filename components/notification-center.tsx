@@ -1,7 +1,8 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { Bell, CheckCheck, Crown, MessageCircle, Swords, UserPlus, X } from "lucide-react";
+import { CheckCheck } from "lucide-react";
+import { AppIcon } from "./app-icon";
 
 type Item={
   id:string;
@@ -61,16 +62,16 @@ export function NotificationCenter({onOpenMessages,onOpenFriends,onOpenClans}:{o
    <section className="notification-popover" role="dialog" aria-modal="true" aria-label="Уведомления">
     <header>
      <div><small>FLIPZERO</small><h3>Уведомления</h3></div>
-     <button type="button" className="notification-close" onClick={()=>setOpen(false)} aria-label="Закрыть уведомления"><X size={18}/></button>
+     <button type="button" className="notification-close" onClick={()=>setOpen(false)} aria-label="Закрыть уведомления"><AppIcon name="close" size={18}/></button>
     </header>
     {unread?<button type="button" className="notification-read-all" onClick={()=>void readAll()}><CheckCheck size={15}/>Прочитать все</button>:null}
     <div className="notification-list" tabIndex={0}>
      {items.length?items.map(item=><article key={item.id} className={item.readAt?"":"unread"}>
       <button type="button" className="notification-open" onClick={()=>void read(item)}>
-       <i>{item.type==="friend_request"||item.type==="friend_accepted"?<UserPlus size={17}/>:item.type==="superflip_gift"?<Crown size={17}/>:item.type.startsWith("clan_")?<Swords size={17}/>:<MessageCircle size={17}/>}</i>
+       <i>{item.type==="friend_request"||item.type==="friend_accepted"?<AppIcon name="friends" size={17}/>:item.type==="superflip_gift"?<AppIcon name="superflip" size={17}/>:item.type.startsWith("clan_")?<AppIcon name="clans" size={17}/>:<AppIcon name="messages" size={17}/>}</i>
        <span><strong>{item.title}</strong><small>{item.body}</small><time>{new Date(item.createdAt).toLocaleString("ru-RU",{day:"2-digit",month:"short",hour:"2-digit",minute:"2-digit"})}</time></span>
       </button>
-      <button type="button" className="notification-dismiss" aria-label={`Удалить уведомление «${item.title}»`} title="Удалить уведомление" onClick={()=>void dismiss(item)}><X size={16}/></button>
+      <button type="button" className="notification-dismiss" aria-label={`Удалить уведомление «${item.title}»`} title="Удалить уведомление" onClick={()=>void dismiss(item)}><AppIcon name="close" size={16}/></button>
      </article>):<p>Новых событий пока нет.</p>}
     </div>
    </section>
@@ -78,5 +79,5 @@ export function NotificationCenter({onOpenMessages,onOpenFriends,onOpenClans}:{o
   document.body
  ):null;
 
- return <><div className="notification-center"><button type="button" className={open?"is-active":""} aria-label={quiet?"Уведомления · Не беспокоить":"Уведомления"} title={quiet?"Не беспокоить активно":"Уведомления"} aria-expanded={open} onClick={toggle}><Bell size={19}/>{quiet?<i className="quiet-dot" aria-hidden="true"/>:null}{unread?<b className="notification-badge">{unread>99?"99+":unread}</b>:null}</button></div>{overlay}</>;
+ return <><div className="notification-center"><button type="button" className={open?"is-active":""} aria-label={quiet?"Уведомления · Не беспокоить":"Уведомления"} title={quiet?"Не беспокоить активно":"Уведомления"} aria-expanded={open} onClick={toggle}><AppIcon name="notifications" size={19}/>{quiet?<i className="quiet-dot" aria-hidden="true"/>:null}{unread?<b className="notification-badge">{unread>99?"99+":unread}</b>:null}</button></div>{overlay}</>;
 }

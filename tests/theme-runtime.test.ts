@@ -24,20 +24,27 @@ describe("runtime appearance themes",()=>{
     for(const theme of themes)expect(theme.appBackground).toContain("gradient");
   });
 
-  it("applies theme background and account accent immediately without reload",async()=>{
-    const [provider,settings,route,css]=await Promise.all([
+  it("owns accent at theme level and ignores legacy user accent input",async()=>{
+    const [provider,settings,route,css,profile]=await Promise.all([
       readFile("components/preferences-provider.tsx","utf8"),
       readFile("components/personalization-settings.tsx","utf8"),
       readFile("app/api/v1/preferences/route.ts","utf8"),
       readFile("app/themes.css","utf8"),
+      readFile("components/user-profile-popover.tsx","utf8"),
     ]);
-    expect(provider).toContain('setProperty("--app-background"');
+    expect(provider).toContain('const accentColor=theme.accent');
+    expect(provider).toContain('setProperty("--accent-color",accentColor)');
     expect(provider).toContain('setProperty("--accent",accentColor)');
     expect(settings).toContain("applyPreview(value,themes)");
-    expect(settings).toContain('setProperty("--app-background"');
-    expect(settings).toContain('setProperty("--accent",value.accentColor)');
-    expect(route).toContain("accentColor:next.accentColor");
-    expect(css).toContain("User-selected accent is shared by voice, clans and profile surfaces");
+    expect(settings).toContain('setProperty("--accent-color",theme.accent)');
+    expect(settings).toContain('setProperty("--accent",theme.accent)');
+    expect(settings).not.toContain('type="color"');
+    expect(settings).not.toContain("HEX цвета");
+    expect(route).toContain("accentColor:theme.accent");
+    expect(route).toContain("const raw=body as Record<string,unknown>");
+    expect(route).not.toContain("Укажите цвет в формате #RRGGBB");
+    expect(css).toContain("Theme-owned accent is shared by voice, clans and profile surfaces");
+    expect(profile).toContain('"--profile-accent":"var(--accent,#8f70ff)"');
   });
 
   it("keeps primary and secondary text at WCAG AA contrast on built-in dark surfaces",async()=>{
