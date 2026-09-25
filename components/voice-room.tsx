@@ -809,13 +809,11 @@ export function VoiceRoom({
   }
 
   const normalizedPresence = normalizeVoicePresence(presence?.length ? presence : localPresence);
-  const streamingParticipants = normalizedPresence.filter((participant) => participant.streaming || participant.sharing);
   const compactMode=typeof document!=="undefined"&&document.documentElement.dataset.compact==="on";
   const gridLayout=voiceGridLayout(normalizedPresence.length,compactMode);
   const visibleParticipants = normalizedPresence.slice(0, gridLayout.visible);
   const hiddenParticipantCount = Math.max(0, normalizedPresence.length - visibleParticipants.length);
   const connected = status === "connected" || status === "reconnecting";
-  const selectedStream = streamingParticipants.find((participant) => participant.id === selectedStreamId) ?? streamingParticipants[0] ?? null;
 
   function focusStream(participantId: string) {
     selectedStreamRef.current = participantId;
@@ -831,9 +829,6 @@ export function VoiceRoom({
     window.setTimeout(() => {
       voiceRootRef.current?.querySelector<HTMLElement>(`[data-participant-tile-id="${CSS.escape(participantId)}"]`)?.scrollIntoView({ behavior: "smooth", block: "center" });
     }, 80);
-  }
-  function minimizeStream() {
-    setFocusMode(false);
   }
   function clearFocus() {
     const previous = selectedStreamRef.current;
@@ -934,17 +929,7 @@ export function VoiceRoom({
       </header>
 
       <main className="voice-stage-layout">
-        <section className="voice-stage-main" aria-label="Сцена голосового канала" onTouchStart={(event)=>{swipeStartRef.current=event.touches[0]?.clientY??null}} onTouchEnd={(event)=>{const start=swipeStartRef.current;const end=event.changedTouches[0]?.clientY;if(focusMode&&start!==null&&typeof end==="number"&&end-start>80)minimizeStream();swipeStartRef.current=null}}>
-          {focusMode && selectedStream ? <div className="voice-stream-toolbar">
-            <strong><span className="voice-live-badge">LIVE</span>{selectedStream.name}</strong>
-            <label aria-label="Громкость стрима"><Volume2 size={15}/><input type="range" min="0" max="100" value={streamVolume} onChange={(event)=>setStreamVolume(Number(event.target.value))}/></label>
-            <button type="button" onClick={()=>setStreamMuted((value)=>!value)} aria-label={streamMuted ? "Включить звук стрима" : "Выключить звук стрима"}>{streamMuted?<VolumeX size={17}/>:<Volume2 size={17}/>}</button>
-            <button type="button" onClick={()=>void openPictureInPicture()} aria-label="Картинка в картинке"><MonitorUp size={17}/></button>
-            <button type="button" onClick={()=>void toggleFullscreen()} aria-label="Полноэкранный режим"><Maximize2 size={17}/></button>
-            <button type="button" onClick={minimizeStream} aria-label="Свернуть стрим"><Minimize2 size={17}/></button>
-            <button type="button" onClick={clearFocus} aria-label="Закрыть просмотр стрима">×</button>
-          </div> : null}
-
+        <section className="voice-stage-main" aria-label="Сцена голосового канала" onTouchStart={(event)=>{swipeStartRef.current=event.touches[0]?.clientY??null}} onTouchEnd={(event)=>{const start=swipeStartRef.current;const end=event.changedTouches[0]?.clientY;if(focusMode&&start!==null&&typeof end==="number"&&end-start>80)clearFocus();swipeStartRef.current=null}}>
           {normalizedPresence.length === 0 ? <div className="voice-stage-empty voice-stage-empty-visible" role="status"><Users size={28}/><strong>В канале пока никого нет</strong><span>Участники появятся здесь после подключения.</span></div> : null}
           <div className="voice-tile-grid" role="list" aria-label="Участники" data-participant-count={normalizedPresence.length} style={{"--voice-grid-columns":gridLayout.columns,"--voice-grid-rows":gridLayout.rows} as CSSProperties}>
             {visibleParticipants.map((participant)=><article key={participant.id} role="listitem" data-participant-tile-id={participant.id} className={`voice-tile ${participant.speaking ? "speaking" : ""} ${participant.streaming || participant.sharing ? "is-streaming" : ""} ${participant.camera ? "has-camera" : ""} ${selectedStreamId===participant.id ? "is-stream-selected" : ""} ${focusMode&&selectedStreamId===participant.id ? "is-media-focus" : ""}`}>
@@ -954,11 +939,16 @@ export function VoiceRoom({
               </div>
               <div className="voice-tile-avatar">{participant.avatarUrl?<MediaImage src={participant.avatarUrl}/>:participant.name.slice(0,2).toLocaleUpperCase("ru")}</div>
               <footer className="voice-tile-footer"><strong title={participant.name}>{participant.name}{participant.clanTag ? <em className="voice-clan-tag"> [{participant.clanTag}]</em> : null}</strong><span>{participant.streaming || participant.sharing ? <b className="voice-live-badge">LIVE</b> : null}{participant.muted?<MicOff size={14}/>:null}{participant.deafened?<Headphones size={14}/>:null}{participant.camera?<Video size={14}/>:null}</span></footer>
-              {participant.streaming || participant.sharing ? selectedStreamId===participant.id ? <button type="button" className="voice-tile-watch is-watching" onClick={clearFocus} aria-label={`Закрыть стрим ${participant.name}`}>Закрыть стрим</button> : <button type="button" className="voice-tile-watch" onClick={()=>focusStream(participant.id)} aria-label={`Смотреть стрим ${participant.name}`}>Смотреть стрим</button> : null}
+              {participant.streaming || participant.sharing ? selectedStreamId===participant.id ? <div className="voice-tile-stream-actions" aria-label={`Управление стримом ${participant.name}`}>
+                <label aria-label="Громкость стрима"><Volume2 size={14}/><input type="range" min="0" max="100" value={streamVolume} onChange={(event)=>setStreamVolume(Number(event.target.value))}/></label>
+                <button type="button" onClick={()=>setStreamMuted((value)=>!value)} aria-label={streamMuted ? "Включить звук стрима" : "Выключить звук стрима"}>{streamMuted?<VolumeX size={16}/>:<Volume2 size={16}/>}</button>
+                <button type="button" onClick={()=>void openPictureInPicture()} aria-label="Картинка в картинке"><MonitorUp size={16}/></button>
+                <button type="button" onClick={()=>void toggleFullscreen()} aria-label="Полноэкранный режим"><Maximize2 size={16}/></button>
+                <button type="button" onClick={clearFocus} aria-label={`Закрыть стрим ${participant.name}`}>×</button>
+              </div> : <button type="button" className="voice-tile-watch" onClick={()=>focusStream(participant.id)} aria-label={`Смотреть стрим ${participant.name}`}>Смотреть стрим</button> : null}
             </article>)}
             {hiddenParticipantCount ? <article className="voice-tile voice-tile-more" role="listitem"><strong>+{hiddenParticipantCount}</strong><span>ещё участников</span></article>:null}
           </div>
-          {streamingParticipants.length > 1 ? <div className="voice-stream-switcher" aria-label="Активные стримы">{streamingParticipants.map((participant)=><button type="button" className={selectedStreamId===participant.id?"active":""} key={participant.id} onClick={()=>focusStream(participant.id)}><span className="voice-live-badge">LIVE</span>{participant.name}</button>)}</div>:null}
           {activeSpeaker || audioBlocked || error ? <div className="voice-stage-notices">{activeSpeaker ? <div className="active-speaker"><i/>Говорит: <b>{activeSpeaker}</b></div>:null}{audioBlocked ? <button className="voice-enable-audio" onClick={enableAudio}><Headphones size={18}/>Включить звук</button>:null}{error ? <div className="voice-error">{error}</div>:null}</div>:null}
 
           {settings ? <div className="voice-device-settings voice-inline-panel">
