@@ -101,6 +101,9 @@ export function VoiceRoom({
   const speakingRef = useRef(false);
   const speakingTimerRef = useRef<number | null>(null);
   const selectedStreamRef = useRef(initialStreamId);
+  const intentionalLeaveRef = useRef(false);
+  const reconnectAttemptsRef = useRef(0);
+  const reconnectTimerRef = useRef<number | null>(null);
   const joinRef = useRef<() => Promise<void>>(async () => {});
   const outputVolumeRef = useRef(1);
   const voiceRootRef = useRef<HTMLDivElement | null>(null);
@@ -108,8 +111,10 @@ export function VoiceRoom({
 
   useEffect(
     () => () => {
+      intentionalLeaveRef.current = true;
       joinAttemptRef.current++;
       if (speakingTimerRef.current) window.clearTimeout(speakingTimerRef.current);
+      if (reconnectTimerRef.current) window.clearTimeout(reconnectTimerRef.current);
       roomRef.current?.disconnect();
       roomRef.current = null;
     },
@@ -190,6 +195,7 @@ export function VoiceRoom({
 
   async function join() {
     if (status !== "idle") return;
+    intentionalLeaveRef.current = false;
     const attempt = ++joinAttemptRef.current;
     setStatus("connecting");
     setError("");
@@ -300,7 +306,7 @@ export function VoiceRoom({
         }
       });
       room.on(RoomEvent.Reconnecting, () => setStatus("reconnecting"));
-      room.on(RoomEvent.Reconnected, () => setStatus("connected"));
+      room.on(RoomEvent.Reconnected, () => { reconnectAttemptsRef.current = 0; setStatus("connected"); });
       room.on(RoomEvent.TrackSubscribed, (track, publication, participant) => {
         const isScreen = publication.source === Track.Source.ScreenShare || publication.source === Track.Source.ScreenShareAudio;
         if (isScreen && participant.identity !== selectedStreamRef.current) {
@@ -351,16 +357,34 @@ export function VoiceRoom({
       room.on(RoomEvent.Disconnected, () => {
         if (roomRef.current !== connectedRoom) return;
         roomRef.current = null;
-        setStatus("idle");
         setParticipantCount(0);
         setCamera(false);
         setSharing(false);
         setRemoteVideo(false);
         setActiveSpeaker("");
         onPresenceChange?.([]);
-        emitVoiceSession(false);
-        playVoiceCue("leave");
-        void fetch(`/api/v1/channels/${channelId}/voice`, { method: "DELETE" });
+        void fetch(`/api/v1/channels/${channelId}/voice`, { method: "DELETE" }).catch(() => undefined);
+        if (intentionalLeaveRef.current) {
+          setStatus("idle");
+          emitVoiceSession(false);
+          playVoiceCue("leave");
+          return;
+        }
+        const retry = reconnectAttemptsRef.current + 1;
+        reconnectAttemptsRef.current = retry;
+        if (retry > 3) {
+          setStatus("idle");
+          setError("Соединение потеряно. Нажмите «Подключиться», чтобы попробовать снова.");
+          emitVoiceSession(false);
+          return;
+        }
+        setStatus("reconnecting");
+        setError(`Переподключение… попытка ${retry} из 3`);
+        if (reconnectTimerRef.current) window.clearTimeout(reconnectTimerRef.current);
+        reconnectTimerRef.current = window.setTimeout(() => {
+          setStatus("idle");
+          window.setTimeout(() => void joinRef.current(), 0);
+        }, Math.min(1500 * retry, 4500));
       });
       room.on(RoomEvent.AudioPlaybackStatusChanged, () => setAudioBlocked(!connectedRoom.canPlaybackAudio));
       await Promise.race([
@@ -417,6 +441,7 @@ export function VoiceRoom({
       setOutputDevices(speakers);
       setOutputDeviceId(room.getActiveDevice("audiooutput") ?? preferredOutput ?? speakers[0]?.deviceId ?? "");
       refresh();
+      reconnectAttemptsRef.current = 0;
       setStatus("connected");
       emitVoiceSession(true);
       playVoiceCue("join");
@@ -654,6 +679,9 @@ export function VoiceRoom({
     }
   }
   function leave() {
+    intentionalLeaveRef.current = true;
+    reconnectAttemptsRef.current = 0;
+    if (reconnectTimerRef.current) window.clearTimeout(reconnectTimerRef.current);
     joinAttemptRef.current++;
     const room = roomRef.current;
     roomRef.current = null;
