@@ -14,7 +14,6 @@ const schema = z.object({
   profileLocation: z.string().trim().max(80),
   profileStatus: z.string().trim().max(120),
   profileLinks: z.array(z.string().url().max(300)).max(5),
-  accentColor: z.string().regex(/^#[0-9a-f]{6}$/i),
   profileGames:z.array(z.string().trim().min(1).max(40)).max(8).optional(),
   profileMusic:z.object({title:z.string().trim().max(80).optional(),artist:z.string().trim().max(80).optional(),url:z.union([z.literal(""),z.url().max(300)]).optional()}).optional(),
   profileWidgets:z.array(z.enum(["about","status","games","music","badges","clan","links"])).max(7).optional(),
