@@ -101,3 +101,28 @@ SuperFlip сейчас использует CSS Module, но его цвета �
 - API старых клиентов не должен падать, если они по-прежнему присылают `accentColor`.
 - `users.accent_color` сохраняется в данных, но становится визуально неактивным.
 - Brand/PWA SVG не относятся к UI icon migration и сохраняются.
+
+
+## 5. Финальный acceptance status
+
+### Иконки
+
+- ✅ Единый semantic `AppIcon` слой использует Lucide как источник glyphs, фиксированные `24×24`, `currentColor` и `strokeWidth=1.8`.
+- ✅ SuperFlip, Store/Inventory, social/global navigation, account settings, notification/search surfaces и profile surfaces переведены на semantic names.
+- ✅ Оставшиеся legacy Lucide SVG глобально нормализованы через `svg.lucide` до той же толщины линии и `currentColor`; отдельного старого SVG/icon-font pack в bundle нет.
+- ✅ Декоративные `AppIcon` получают `aria-hidden`, функциональные icon-only кнопки сохраняют собственные `aria-label`.
+
+### SuperFlip theme
+
+- ✅ `data-theme="superflip"` scoped только на route root.
+- ✅ Ключевые блоки используют `--sf-*` tokens и не читают `--accent` / `--theme-*`.
+- ✅ Primary/secondary contrast на базовых поверхностях проверяется automated WCAG AA contract test.
+- ✅ Палитра не задаётся inline-стилями в компоненте.
+
+### Accent color
+
+- ✅ Color picker/HEX UI удалён из пользовательских настроек.
+- ✅ Runtime accent берётся из выбранной темы.
+- ✅ Старые `accent_color` поля сохранены как deprecated для rollback.
+- ✅ GET API больше не отдаёт user accent; PATCH игнорирует legacy `accentColor` и сохраняет accent выбранной темы.
+- ✅ Старые пользовательские значения не мигрируются и визуально больше не применяются.
