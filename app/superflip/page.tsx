@@ -1,215 +1,124 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import {
-  ArrowLeft,
   ArrowRight,
   BadgeCheck,
   Crown,
   FileUp,
-  Gamepad2,
-  Image as ImageIcon,
+  Gift,
+  MessageCircle,
+  Orbit,
   Palette,
-  ShieldCheck,
   Sparkles,
-  Sticker,
+  Star,
   UserRound,
+  Zap,
 } from "lucide-react";
 import { BrandMark } from "@/components/brand-mark";
 import styles from "./superflip.module.css";
 
 export const metadata: Metadata = {
-  title: "SUPER FLIP",
-  description: "Возможности SuperFlip в FlipZero и запись в лист ожидания.",
+  title: "SuperFlip",
+  description: "SuperFlip — подписка FlipZero с расширенной персонализацией, лимитами и бонусами.",
   alternates: { canonical: "/superflip" },
   openGraph: {
-    title: "SUPER FLIP | FlipZero",
-    description: "Расширенные возможности FlipZero для общения, профиля и сообществ.",
+    title: "SuperFlip | FlipZero",
+    description: "Больше возможностей, больше персонализации и бонусов в FlipZero.",
     url: "/superflip",
   },
 };
 
-const perks = [
-  { icon: UserRound, title: "Больше места в профиле", text: "Описание профиля до 500 символов вместо 190." },
-  { icon: FileUp, title: "Медиа профиля", text: "Аватар до 8 МБ и баннер до 16 МБ; поддерживаются анимированные изображения." },
-  { icon: Sparkles, title: "Длинные сообщения", text: "До 4000 символов в личном сообщении вместо 1000." },
-  { icon: Gamepad2, title: "Бонус за квесты", text: "На 20% больше XP и монет за выполненные задания." },
-  { icon: BadgeCheck, title: "Витрина достижений", text: "Показывайте пять бейджей вместо трёх." },
-  { icon: Palette, title: "Эксклюзивный стиль", text: "Темы и косметика с пометкой SuperFlip доступны при активном статусе." },
-  { icon: BadgeCheck, title: "Статус SuperFlip", text: "Активный доступ отображается в настройках аккаунта." },
-  { icon: Crown, title: "Поддержка SuperUp", text: "Поддержите одно пространство; его уровень зависит от количества участников с активным SuperFlip." },
+const whatsNew = [
+  { icon: Star, eyebrow: "ORB BONUS", title: "Больше Orbs за активность", text: "Квесты с активным SuperFlip дают на 20% больше XP и Orbs — коллекция косметики растёт быстрее.", art: "orbs" },
+  { icon: UserRound, eyebrow: "PROFILE", title: "Живой профиль", text: "Анимированные медиа, больше места для описания и косметика из магазина работают вместе.", art: "profile" },
+  { icon: Palette, eyebrow: "STYLE", title: "Эксклюзивные предметы", text: "Часть анимированных рамок, эффектов и наборов в магазине открывается только с SuperFlip.", art: "style" },
 ];
+
+const benefits = [
+  { icon: UserRound, title: "Профиль до 500 символов", text: "Больше места для описания, статуса и собственной подачи." },
+  { icon: FileUp, title: "Больше медиа", text: "Аватар до 8 МБ, баннер до 16 МБ и анимированные изображения." },
+  { icon: MessageCircle, title: "Сообщения до 4000", text: "Длинные личные сообщения вместо базового лимита 1000 символов." },
+  { icon: Gift, title: "+20% к наградам", text: "Больше XP и Orbs за выполненные задания и серии активности." },
+  { icon: BadgeCheck, title: "5 бейджей в профиле", text: "Расширенная витрина наград и достижений." },
+  { icon: Crown, title: "SuperUp пространства", text: "Поддержка одного пространства и дополнительный вклад в его развитие." },
+];
+
 const comparison = [
   ["Описание профиля", "190 символов", "500 символов"],
   ["Аватар", "2 МБ", "8 МБ"],
-  ["Баннер профиля", "4 МБ", "16 МБ"],
+  ["Баннер", "4 МБ", "16 МБ"],
   ["Личное сообщение", "1000 символов", "4000 символов"],
-  ["Награды за квесты", "Базовые", "+20% XP и монет"],
+  ["Награды за квесты", "Базовые", "+20% XP и Orbs"],
   ["Бейджи в профиле", "3", "5"],
-  ["Анимированные медиа профиля", "Недоступно", "Доступно"],
-  ["Поддержка пространства SuperUp", "Недоступно", "Одно пространство"],
+  ["Анимированные медиа", "—", "Доступно"],
+  ["Эксклюзивная косметика", "Часть каталога", "Расширенный каталог"],
 ];
-
-function Availability({ value, premium = false }: { value: string; premium?: boolean }) {
-  const yes = value === "Доступно";
-  const no = value === "Недоступно";
-  return (
-    <span className={premium ? styles.premiumValue : undefined}>
-      {yes ? <BadgeCheck size={17} aria-hidden="true" /> : null}
-      {no ? <span className={styles.noIcon}>×</span> : null}
-      {value}
-    </span>
-  );
-}
 
 export default function SuperFlipPage() {
   return (
     <main className={styles.page}>
-      <div className={styles.ambientOne} />
-      <div className={styles.ambientTwo} />
-
-      <header className={styles.header}>
-        <div className={styles.headerInner}>
-          <Link className={styles.brand} href="/" aria-label="FlipZero — главная">
-            <BrandMark size={34} />
-            <span><strong>FlipZero</strong><small>SUPER FLIP</small></span>
-          </Link>
-
-          <nav aria-label="Навигация SUPER FLIP">
-            <a href="#benefits">Преимущества</a>
-            <a href="#compare">Free vs SUPER FLIP</a>
-            <Link href="/app">Открыть FlipZero</Link>
-          </nav>
-
-          <Link className={styles.backLink} href="/">
-            <ArrowLeft size={16} /> На главную
-          </Link>
-        </div>
+      <header className={styles.topbar}>
+        <Link href="/" className={styles.logo} aria-label="FlipZero — главная"><BrandMark size={31}/><span>FlipZero</span></Link>
+        <nav aria-label="Навигация SuperFlip">
+          <a href="#home">Главная</a><a href="#new">Что нового</a><a href="#benefits">Лучшие бонусы</a><a href="#plans">Тарифы</a><a href="#compare">Сравнить</a>
+        </nav>
+        <Link href="/app" className={styles.giftButton}><Gift size={16}/>Открыть FlipZero</Link>
       </header>
 
-      <section className={styles.hero}>
-        <div className={styles.heroGrid}>
-          <div className={styles.heroCopy}>
-            <span className={styles.draftBadge}><Sparkles size={15} /> Доступ по приглашению</span>
-            <div className={styles.crownOrb}><Crown size={48} /></div>
-            <p className={styles.kicker}>FLIPZERO PREMIUM</p>
-            <h1>FlipZero <em>SUPER FLIP</em></h1>
-            <p className={styles.lead}>
-              Расширенные возможности для общения, персонализации и сообществ в FlipZero.
-            </p>
-
-            <p className={styles.disclaimer}>Покупка ещё не запущена. Запишитесь в лист ожидания в приложении.</p>
-
-            <div className={styles.heroActions}>
-              <Link className={styles.primaryButton} href="/app">
-                <Crown size={18} /> Открыть лист ожидания <ArrowRight size={17} />
-              </Link>
-              <a className={styles.supportLink} href="#support">Просто хотите поддержать проект? Задонать</a>
-            </div>
-
-            <p className={styles.disclaimer}>
-              Действующий доступ выдают администраторы; оплата и стоимость пока не объявлены.
-            </p>
+      <section className={styles.hero} id="home">
+        <div className={styles.heroGlow}/>
+        <div className={styles.heroContent}>
+          <span className={styles.pill}><Sparkles size={14}/> SUPERFLIP</span>
+          <h1>Откройте больше<br/><em>возможностей FlipZero</em></h1>
+          <p>Персонализация, увеличенные лимиты, дополнительные награды и особые предметы магазина — в одном уровне.</p>
+          <div className={styles.heroActions}>
+            <Link href="/app" className={styles.primary}>Открыть лист ожидания <ArrowRight size={17}/></Link>
+            <a href="#benefits" className={styles.secondary}>Посмотреть бонусы</a>
           </div>
-
-          <div className={styles.premiumPreview} aria-label="Превью возможностей SUPER FLIP">
-            <div className={styles.previewGlow} />
-            <div className={styles.profileCard}>
-              <div className={styles.profileBanner}>
-                <span>SUPER FLIP</span>
-                <Sparkles size={20} />
-              </div>
-              <div className={styles.avatarWrap}>
-                <div className={styles.avatar}>FZ</div>
-                <span className={styles.crownMini}><Crown size={14} /></span>
-              </div>
-              <h2>Ваш профиль</h2>
-              <p>@username</p>
-              <div className={styles.badgeRow}>
-                <b><Crown size={13} /> SUPER FLIP</b>
-                <b><ShieldCheck size={13} /> Профиль</b>
-              </div>
-              <div className={styles.profileStats}>
-                <span><ImageIcon size={18} /><small>Анимированный<br />баннер</small></span>
-                <span><Palette size={18} /><small>Больше<br />медиа</small></span>
-                <span><Sticker size={18} /><small>Сообщения<br />4000</small></span>
-              </div>
-            </div>
-          </div>
+          <small>Покупка ещё не запущена. Сейчас доступ выдаётся приглашением или администратором.</small>
+        </div>
+        <div className={styles.heroArt} aria-hidden="true">
+          <div className={styles.heroOrb}><Orbit size={92}/><span>SUPER</span></div>
+          <div className={styles.floatStarA}>✦</div><div className={styles.floatStarB}>✦</div>
+          <div className={styles.floatCard}><div className={styles.fakeBanner}/><div className={styles.fakeAvatar}>FZ</div><strong>Ваш профиль</strong><span>+ анимированный стиль</span></div>
         </div>
       </section>
 
-      <section className={styles.benefits} id="benefits">
-        <div className={styles.sectionHeader}>
-          <span>КЛЮЧЕВЫЕ ПРЕИМУЩЕСТВА</span>
-          <h2>Больше возможностей.<br />Больше твоего стиля.</h2>
-          <p>Возможности, которые уже доступны при активном SuperFlip.</p>
-        </div>
-
-        <div className={styles.perkGrid}>
-          {perks.map(({ icon: Icon, title, text }, index) => (
-            <article key={title} className={styles.perkCard}>
-              <span className={styles.perkIndex}>0{index + 1}</span>
-              <i><Icon size={25} /></i>
-              <h3>{title}</h3>
-              <p>{text}</p>
-            </article>
-          ))}
+      <section className={styles.section} id="new">
+        <div className={styles.sectionTitle}><span>ЧТО НОВОГО</span><h2>SuperFlip становится частью вашего стиля</h2><p>Бонусы связаны с профилем, магазином и ежедневной активностью, а не живут отдельным экраном.</p></div>
+        <div className={styles.newsGrid}>
+          {whatsNew.map(({icon:Icon,eyebrow,title,text,art})=><article key={title} className={styles.newsCard}>
+            <div className={styles.newsArt+" "+styles[art]}><Icon size={42}/><i/><i/><i/></div>
+            <small>{eyebrow}</small><h3>{title}</h3><p>{text}</p>
+          </article>)}
         </div>
       </section>
 
-      <section className={styles.compareSection} id="compare">
-        <div className={styles.sectionHeader}>
-          <span>СРАВНЕНИЕ</span>
-          <h2>Free или SUPER FLIP?</h2>
-          <p>Сравнение действующих лимитов профиля и сообщений.</p>
-        </div>
+      <section className={styles.section} id="benefits">
+        <div className={styles.sectionTitle}><span>ЛУЧШИЕ БОНУСЫ SUPERFLIP</span><h2>Больше свободы внутри FlipZero</h2><p>Аккуратные улучшения поверх привычного интерфейса: без отдельного премиум-приложения и без разрыва основных сценариев.</p></div>
+        <div className={styles.benefitGrid}>{benefits.map(({icon:Icon,title,text})=><article key={title}><span><Icon size={23}/></span><h3>{title}</h3><p>{text}</p></article>)}</div>
+      </section>
 
-        <div className={styles.tableShell}>
-          <table className={styles.compareTable}>
-            <thead>
-              <tr>
-                <th>Возможность</th>
-                <th>Free</th>
-                <th className={styles.premiumHead}><Crown size={17} /> SUPER FLIP</th>
-              </tr>
-            </thead>
-            <tbody>
-              {comparison.map(([label, free, premium]) => (
-                <tr key={label}>
-                  <th scope="row">{label}</th>
-                  <td><Availability value={free} /></td>
-                  <td className={styles.premiumCell}><Availability premium value={premium} /></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      <section className={styles.plans} id="plans">
+        <div className={styles.sectionTitle}><span>ВЫБЕРИТЕ ТАРИФ</span><h2>Просто и прозрачно</h2><p>Платёжная система ещё не подключена, поэтому кнопка ведёт в текущий waitlist/status flow, а не на вымышленный checkout.</p></div>
+        <div className={styles.planGrid}>
+          <article className={styles.freePlan}><small>FLIPZERO FREE</small><h3>Базовый</h3><strong>$0</strong><p>Все основные чаты, голос, сообщества и базовая персонализация.</p><ul><li><BadgeCheck size={15}/>Основные функции FlipZero</li><li><BadgeCheck size={15}/>Базовые лимиты профиля</li><li><BadgeCheck size={15}/>Магазин и инвентарь</li></ul><Link href="/app">Открыть FlipZero</Link></article>
+          <article className={styles.premiumPlan}><div className={styles.recommended}><Crown size={13}/>SUPERFLIP</div><small>ОЖИДАЕМАЯ ЦЕНА</small><h3>SuperFlip</h3><strong>$4.99 <em>/ месяц</em></strong><p>Все возможности Free плюс расширенная персонализация, награды и эксклюзивы.</p><ul><li><BadgeCheck size={15}/>+20% XP и Orbs</li><li><BadgeCheck size={15}/>Анимированные медиа</li><li><BadgeCheck size={15}/>Эксклюзивная косметика</li></ul><Link href="/app">В лист ожидания <ArrowRight size={15}/></Link></article>
         </div>
       </section>
 
-      <section className={styles.support} id="support">
-        <div className={styles.supportCard}>
-          <Gamepad2 size={28} />
-          <div>
-            <span>ПОДДЕРЖКА ПРОЕКТА</span>
-            <h2>Хотите просто поддержать FlipZero?</h2>
-            <p>
-              Механика отдельного доната пока не настроена. Этот блок оставлен как часть концепта и не ведёт на вымышленную платёжную страницу.
-            </p>
-          </div>
-        </div>
+      <section className={styles.compare} id="compare">
+        <div className={styles.sectionTitle}><span>СРАВНИТЬ</span><h2>Free и SuperFlip</h2></div>
+        <div className={styles.tableWrap}><table><thead><tr><th>Возможность</th><th>Free</th><th><Crown size={15}/> SuperFlip</th></tr></thead><tbody>{comparison.map(([label,free,premium])=><tr key={label}><th>{label}</th><td>{free}</td><td>{premium}</td></tr>)}</tbody></table></div>
       </section>
 
       <section className={styles.finalCta}>
-        <div>
-          <span><Crown size={18} /> SUPER FLIP</span>
-          <h2>Больше от FlipZero.<br />В одном уровне.</h2>
-          <p>Перейдите в приложение, чтобы открыть раздел SUPER FLIP.</p>
-          <Link className={styles.primaryButton} href="/app">
-            Открыть лист ожидания <ArrowRight size={17} />
-          </Link>
-          <small>Покупка пока не открыта; запишитесь в лист ожидания.</small>
-        </div>
+        <div className={styles.finalArt}><Sparkles size={46}/><Star size={28}/><Zap size={34}/></div>
+        <span>SUPERFLIP</span><h2>Готовы открыть больше?</h2><p>Перейдите в FlipZero и присоединитесь к листу ожидания.</p>
+        <Link href="/app">Открыть SuperFlip <ArrowRight size={17}/></Link>
       </section>
+
+      <div className={styles.stickyCta}><div><Crown size={17}/><span><strong>SuperFlip</strong><small>лист ожидания открыт</small></span></div><Link href="/app">Подключить <ArrowRight size={15}/></Link></div>
     </main>
   );
 }

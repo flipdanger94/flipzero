@@ -11,6 +11,7 @@ import "./clans.css";
 import "./mobile.css";
 import "./runtime-theme.css";
 import "./themes.css";
+import "./store.css";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://flipzeroapp.vercel.app"),

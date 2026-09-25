@@ -68,8 +68,46 @@ try {
     const directCallsSql = await readFile(new URL("../drizzle/0032_direct_call_sessions.sql", import.meta.url), "utf8");
     await client.unsafe(directCallsSql);
   }
+  const storeInventorySql = await readFile(new URL("../drizzle/0033_store_inventory.sql", import.meta.url), "utf8");
+  await client.unsafe(storeInventorySql);
+
+  const slotForCategory = (category) => ({
+    avatar_frame: "avatar_decoration",
+    banner: "profile_banner",
+    nickname: "nameplate",
+    message_effect: "chat_style",
+    badge: "badge",
+    theme: "app_theme",
+    profile_effect: "profile_effect",
+  })[category] ?? category;
+
   const cosmetics = JSON.parse(await readFile(new URL("../config/cosmetics.json", import.meta.url), "utf8"));
-  for (const item of cosmetics) await client`INSERT INTO cosmetic_items(id,title,description,category,rarity,price,preview,superflip_only) VALUES(${item.id},${item.title},${item.description},${item.category},${item.rarity},${item.price},${item.preview},${item.superflipOnly}) ON CONFLICT (id) DO UPDATE SET title=EXCLUDED.title,description=EXCLUDED.description,category=EXCLUDED.category,rarity=EXCLUDED.rarity,price=EXCLUDED.price,preview=EXCLUDED.preview,superflip_only=EXCLUDED.superflip_only`;
+  for (const item of cosmetics) {
+    const slug = item.slug ?? item.id;
+    const type = item.type ?? item.category;
+    const slot = item.slot ?? slotForCategory(item.category);
+    const previewImage = item.previewImage ?? item.preview;
+    await client`INSERT INTO cosmetic_items(
+      id,slug,title,description,category,type,slot,rarity,price,price_money_cents,preview,preview_image,preview_animation,
+      superflip_only,is_bundle,is_animated,is_active,available_until,updated_at
+    ) VALUES(
+      ${item.id},${slug},${item.title},${item.description},${item.category},${type},${slot},${item.rarity},${item.price},
+      ${item.priceMoneyCents ?? null},${item.preview},${previewImage},${item.previewAnimation ?? null},
+      ${Boolean(item.superflipOnly)},${Boolean(item.isBundle)},${Boolean(item.isAnimated)},${item.isActive !== false},
+      ${item.availableUntil ? new Date(item.availableUntil) : null},now()
+    ) ON CONFLICT (id) DO UPDATE SET
+      slug=EXCLUDED.slug,title=EXCLUDED.title,description=EXCLUDED.description,category=EXCLUDED.category,type=EXCLUDED.type,
+      slot=EXCLUDED.slot,rarity=EXCLUDED.rarity,price=EXCLUDED.price,price_money_cents=EXCLUDED.price_money_cents,
+      preview=EXCLUDED.preview,preview_image=EXCLUDED.preview_image,preview_animation=EXCLUDED.preview_animation,
+      superflip_only=EXCLUDED.superflip_only,is_bundle=EXCLUDED.is_bundle,is_animated=EXCLUDED.is_animated,
+      is_active=EXCLUDED.is_active,available_until=EXCLUDED.available_until,updated_at=now()`;
+  }
+  for (const item of cosmetics.filter((entry) => Array.isArray(entry.bundleItems))) {
+    await client`DELETE FROM cosmetic_bundle_entries WHERE bundle_id=${item.id}`;
+    for (const itemId of item.bundleItems) {
+      await client`INSERT INTO cosmetic_bundle_entries(bundle_id,item_id) VALUES(${item.id},${itemId}) ON CONFLICT DO NOTHING`;
+    }
+  }
   const achievements = JSON.parse(await readFile(new URL("../config/achievements.json", import.meta.url), "utf8"));
   for (const item of achievements) await client`INSERT INTO achievement_definitions(id,space_id,key,name,description,icon,rarity,event_source,target,xp_reward,is_secret) VALUES(${item.id},NULL,${item.key},${item.name},${item.description},${item.icon},${item.rarity},${item.eventSource},${item.target},${item.xpReward},false) ON CONFLICT(id) DO UPDATE SET name=EXCLUDED.name,description=EXCLUDED.description,icon=EXCLUDED.icon,rarity=EXCLUDED.rarity,event_source=EXCLUDED.event_source,target=EXCLUDED.target,xp_reward=EXCLUDED.xp_reward`;
   const [result] = await client`SELECT to_regclass('public.clan_members') IS NOT NULL AS applied`;

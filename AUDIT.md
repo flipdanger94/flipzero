@@ -72,3 +72,39 @@
 - Исправлен IDOR при реакции и ссылках на другие сообщения канала. Без тестовой БД нельзя проверить живые права доступа и историю сообщений end-to-end.
 - Закрыты пропуски проверки источника запросов в личных сообщениях, медиа и голосовых состояниях.
 - Сканирование tracked файлов и добавленных строк истории Git по сигнатурам OpenAI/GitHub/AWS/Postgres URL и приватных ключей: 0 совпадений. Это ограниченная проверка типовых паттернов; специализированный сканер может найти иные форматы.
+
+
+---
+
+# SuperFlip / Store / Inventory audit — 25 сентября 2026
+
+## Архитектура, найденная до реализации
+
+- Backend: Next.js route handlers + PostgreSQL через `postgres` и Drizzle ORM; схема — `db/schema.ts`, SQL-миграции — `drizzle/`.
+- Frontend: Next.js 16 / React 19; проект использует собственные CSS-слои и CSS Modules, без обязательной UI-библиотеки.
+- Auth: `getCurrentUser()` уже используется в приватных API; mutation routes защищаются `isTrustedMutationRequest()`.
+- SuperFlip уже существует: `/superflip`, `/api/superflip/status`, waitlist purchase route, `superflip_purchases` и capability checks в `lib/superflip.ts`. Реального payment provider в репозитории нет.
+- Экономика уже существует: `user_wallets`, `coin_transactions`, transactional debit/credit в `lib/economy.ts`.
+- Магазин/инвентарь уже существуют в базовом виде: `cosmetic_items`, `cosmetic_inventory`, `cosmetic_equipped`, `/api/v1/shop`, `components/personal-economy.tsx`, seed `config/cosmetics.json`.
+- Equipped cosmetics уже попадают в профиль через `lib/presentation.ts`.
+- Специализированного CDN/object-storage для store assets нет; user media хранится в `media_assets` и отдаётся приложением.
+- Дизайн-система основана на CSS variables/tokens в `app/themes.css`, `app/runtime-theme.css`, `app/product-theme.css` и `app/mobile.css`.
+
+## Решения по ТЗ
+
+1. Не создавать параллельные `store_items/user_inventory/user_equipped_items`, а расширить существующий production-compatible cosmetics stack.
+2. `cosmetic_equipped` переводится с семантики category на явный `slot`; primary key `(user_id, slot)` уже обеспечивает один активный предмет на слот.
+3. В `cosmetic_items` добавляются slug/type/slot, animation/fallback metadata, bundle/active flags и timestamps.
+4. Добавляется только недостающая таблица bundle entries и source для inventory.
+5. В интерфейсе существующий внутренний balance показывается как Orbs; отдельный денежный checkout не выдумывается до появления billing provider.
+6. SuperFlip UI можно расширять, но его CTA остаётся waitlist/status flow, потому что реального card billing в коде нет.
+7. Animated store items реализуются с CSS animation и generic URL preview support/fallback; reduced-motion сохраняется.
+
+
+## Реализация по итогам аудита
+
+- Существующий cosmetics stack расширен миграцией `0033_store_inventory.sql`, без параллельных дублирующих таблиц магазина.
+- Покупка, equip и unequip проходят через общий `lib/store.ts`; замена предмета в одном слоте выполняется атомарным upsert внутри транзакции.
+- Деактивированные товары скрываются из витрины, но уже принадлежащие пользователю предметы остаются в inventory и могут быть экипированы.
+- Анимированные превью не загружаются постоянно для всего каталога: live-media включается только при hover/focus/предпросмотре, CSS-анимации уважают `prefers-reduced-motion`.
+- SuperFlip остаётся честным waitlist/status flow: реальный платёжный checkout не добавлялся, потому что billing provider в проекте отсутствует.

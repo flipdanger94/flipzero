@@ -6,7 +6,7 @@ export type Presentation={cosmetics:Record<string,string>;badges:Array<{id:strin
 export async function presentationForUsers(userIds:string[]){
   const ids=[...new Set(userIds)];const output=new Map<string,Presentation>();if(!ids.length)return output;
   const db=getDatabase();const [items,badges,seasonBadges]=await Promise.all([
-    db.select({userId:cosmeticEquipped.userId,category:cosmeticEquipped.category,preview:cosmeticItems.preview}).from(cosmeticEquipped).innerJoin(cosmeticItems,eq(cosmeticItems.id,cosmeticEquipped.itemId)).where(inArray(cosmeticEquipped.userId,ids)),
+    db.select({userId:cosmeticEquipped.userId,category:cosmeticItems.category,preview:cosmeticItems.preview}).from(cosmeticEquipped).innerJoin(cosmeticItems,eq(cosmeticItems.id,cosmeticEquipped.itemId)).where(inArray(cosmeticEquipped.userId,ids)),
     db.select({userId:userAchievements.userId,id:achievementDefinitions.id,name:achievementDefinitions.name,icon:achievementDefinitions.icon,rarity:achievementDefinitions.rarity,unlockedAt:userAchievements.unlockedAt}).from(userAchievements).innerJoin(achievementDefinitions,eq(achievementDefinitions.id,userAchievements.achievementId)).where(and(inArray(userAchievements.userId,ids),eq(userAchievements.isShowcased,true),isNotNull(userAchievements.unlockedAt))),
     db.select({userId:clanSeasonAwards.userId,seasonKey:clanSeasonAwards.seasonKey,rank:clanSeasonAwards.rank,awardedAt:clanSeasonAwards.awardedAt}).from(clanSeasonAwards).where(inArray(clanSeasonAwards.userId,ids)),
   ]);
