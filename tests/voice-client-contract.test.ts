@@ -49,6 +49,19 @@ describe("voice client reliability contract", () => {
     expect(theme).toContain("grid-template-rows:minmax(0,1fr) auto");
   });
 
+  it("expands the selected stream in-app instead of relying on browser fullscreen", async () => {
+    const [source, theme] = await Promise.all([
+      readFile("components/voice-room.tsx", "utf8"),
+      readFile("app/product-theme.css", "utf8"),
+    ]);
+    expect(source).toContain("expandedStreamId");
+    expect(source).toContain("toggleStreamExpanded");
+    expect(source).toContain("Развернуть стрим");
+    expect(source).not.toContain("requestFullscreen()");
+    expect(theme).toContain(".voice-tile.is-stream-expanded");
+    expect(theme).toContain("width:100vw!important;height:100dvh!important");
+  });
+
   it("offers camera preflight and screen quality settings", async () => {
     const source = await readFile("components/voice-room.tsx", "utf8");
     expect(source).toContain("ПРЕДПРОСМОТР КАМЕРЫ");
