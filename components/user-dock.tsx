@@ -2,9 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import {
-  Check, ChevronUp, Headphones, Mic, MicOff, PhoneOff, Settings, Signal, SlidersHorizontal, Volume2, VolumeX,
-} from "lucide-react";
+import { AppIcon } from "./app-icon";
 import { MediaImage } from "./media-image";
 
 type DockUser={id:string;displayName:string;avatarUrl?:string|null;globalLevel?:number};
@@ -92,9 +90,9 @@ export function UserDock({
 
   return <div ref={rootRef} className={`user-dock ${voiceSession?.connected?"has-voice-session":""} ${className}`.trim()}>
     {voiceSession?.connected?<section className="dock-voice-session" aria-label="Текущее голосовое соединение">
-      <div className="dock-voice-status"><Signal size={16}/><span><strong>Голосовая связь подключена</strong><small>{voiceSession.channelName}{voiceSession.spaceName?` · ${voiceSession.spaceName}`:""}</small></span></div>
+      <div className="dock-voice-status"><AppIcon name="signal" size={16}/><span><strong>Голосовая связь подключена</strong><small>{voiceSession.channelName}{voiceSession.spaceName?` · ${voiceSession.spaceName}`:""}</small></span></div>
       <span className="dock-voice-quality">{voiceSession.quality??"Проверка"}</span>
-      <button type="button" className="dock-voice-disconnect" aria-label="Отключиться от голосового канала" title="Отключиться" onClick={()=>emit({type:"leave"})}><PhoneOff size={16}/></button>
+      <button type="button" className="dock-voice-disconnect" aria-label="Отключиться от голосового канала" title="Отключиться" onClick={()=>emit({type:"leave"})}><AppIcon name="disconnect" size={16}/></button>
     </section>:null}
     <button className="dock-profile" type="button" onClick={onOpenProfile} aria-label="Открыть свой профиль" title="Открыть профиль">
       <span className="avatar avatar-coral">{user?.avatarUrl?<MediaImage src={user.avatarUrl}/>:user?.displayName.split(/\s+/).map((part)=>part[0]).join("").slice(0,2).toLocaleUpperCase("ru")??"FZ"}<span className="presence"/></span>
@@ -102,30 +100,30 @@ export function UserDock({
     </button>
 
     <div className="dock-audio-control">
-      <button type="button" className={muted?"is-muted":""} onClick={toggleMic} aria-label={muted?"Включить микрофон":"Выключить микрофон"} title={muted?"Включить микрофон":"Выключить микрофон"}>{muted?<MicOff size={17}/>:<Mic size={17}/>}</button>
-      <button ref={inputButton} type="button" className="dock-chevron" onClick={()=>setMenu(menu==="input"?null:"input")} aria-label="Настройки микрофона" title="Настройки микрофона" aria-expanded={menu==="input"}><ChevronUp size={13}/></button>
+      <button type="button" className={muted?"is-muted":""} onClick={toggleMic} aria-label={muted?"Включить микрофон":"Выключить микрофон"} title={muted?"Включить микрофон":"Выключить микрофон"}>{muted?<AppIcon name="microphone-off" size={17}/>:<AppIcon name="microphone" size={17}/>}</button>
+      <button ref={inputButton} type="button" className="dock-chevron" onClick={()=>setMenu(menu==="input"?null:"input")} aria-label="Настройки микрофона" title="Настройки микрофона" aria-expanded={menu==="input"}><AppIcon name="menu-up" size={13}/></button>
     </div>
 
     <div className="dock-audio-control">
-      <button type="button" className={deafened?"is-muted":""} onClick={toggleDeafen} aria-label={deafened?"Включить звук":"Отключить звук"} title={deafened?"Включить звук":"Отключить звук"}>{deafened?<VolumeX size={17}/>:<Headphones size={17}/>}</button>
-      <button ref={outputButton} type="button" className="dock-chevron" onClick={()=>setMenu(menu==="output"?null:"output")} aria-label="Настройки наушников" title="Настройки наушников" aria-expanded={menu==="output"}><ChevronUp size={13}/></button>
+      <button type="button" className={deafened?"is-muted":""} onClick={toggleDeafen} aria-label={deafened?"Включить звук":"Отключить звук"} title={deafened?"Включить звук":"Отключить звук"}>{deafened?<AppIcon name="audio-off" size={17}/>:<AppIcon name="headphones" size={17}/>}</button>
+      <button ref={outputButton} type="button" className="dock-chevron" onClick={()=>setMenu(menu==="output"?null:"output")} aria-label="Настройки наушников" title="Настройки наушников" aria-expanded={menu==="output"}><AppIcon name="menu-up" size={13}/></button>
     </div>
 
-    <button type="button" onClick={onOpenSettings} aria-label="Настройки аккаунта" title="Настройки аккаунта"><Settings size={17}/></button>
+    <button type="button" onClick={onOpenSettings} aria-label="Настройки аккаунта" title="Настройки аккаунта"><AppIcon name="settings" size={17}/></button>
 
     {menu==="input"?createPortal(<section ref={menuRef} style={position} className="dock-device-menu dock-device-menu-input dock-device-floating" role="dialog" aria-label="Настройки микрофона">
-      <header><Mic size={16}/><strong>Микрофон</strong></header>
-      <div className="dock-device-section"><span>Устройство ввода</span><div className="dock-device-list">{inputs.length?inputs.map((device,index)=><button type="button" key={device.deviceId||index} className={prefs.inputId===device.deviceId?"active":""} onClick={()=>chooseInput(device.deviceId)}><span>{device.label||`Микрофон ${index+1}`}</span>{prefs.inputId===device.deviceId?<Check size={14}/>:null}</button>):<small>Устройства появятся после разрешения доступа к микрофону.</small>}</div></div>
+      <header><AppIcon name="microphone" size={16}/><strong>Микрофон</strong></header>
+      <div className="dock-device-section"><span>Устройство ввода</span><div className="dock-device-list">{inputs.length?inputs.map((device,index)=><button type="button" key={device.deviceId||index} className={prefs.inputId===device.deviceId?"active":""} onClick={()=>chooseInput(device.deviceId)}><span>{device.label||`Микрофон ${index+1}`}</span>{prefs.inputId===device.deviceId?<AppIcon name="check" size={14}/>:null}</button>):<small>Устройства появятся после разрешения доступа к микрофону.</small>}</div></div>
       <label className="dock-range"><span>Громкость микрофона <b>{prefs.inputVolume??100}%</b></span><input type="range" min="0" max="100" value={prefs.inputVolume??100} onChange={(event)=>changeInputVolume(Number(event.target.value))}/></label>
       <label className="dock-select"><span>Профиль ввода</span><select value={prefs.inputProfile??"standard"} onChange={(event)=>changeProfile(event.target.value as AudioPrefs["inputProfile"])}><option value="standard">Стандартный</option><option value="noise">Шумоподавление</option><option value="raw">Без обработки</option></select></label>
-      <button className="dock-settings-link" type="button" onClick={()=>{setMenu(null);onOpenVoiceSettings()}}><SlidersHorizontal size={15}/>Настройки голоса</button>
+      <button className="dock-settings-link" type="button" onClick={()=>{setMenu(null);onOpenVoiceSettings()}}><AppIcon name="controls" size={15}/>Настройки голоса</button>
     </section>,document.body):null}
 
     {menu==="output"?createPortal(<section ref={menuRef} style={position} className="dock-device-menu dock-device-menu-output dock-device-floating" role="dialog" aria-label="Настройки наушников">
-      <header><Volume2 size={16}/><strong>Наушники</strong></header>
-      <div className="dock-device-section"><span>Устройство вывода</span><div className="dock-device-list">{outputs.length?outputs.map((device,index)=><button type="button" key={device.deviceId||index} className={prefs.outputId===device.deviceId?"active":""} onClick={()=>chooseOutput(device.deviceId)}><span>{device.label||`Динамик ${index+1}`}</span>{prefs.outputId===device.deviceId?<Check size={14}/>:null}</button>):<small>Выбор устройства вывода зависит от браузера и системы.</small>}</div></div>
+      <header><AppIcon name="audio" size={16}/><strong>Наушники</strong></header>
+      <div className="dock-device-section"><span>Устройство вывода</span><div className="dock-device-list">{outputs.length?outputs.map((device,index)=><button type="button" key={device.deviceId||index} className={prefs.outputId===device.deviceId?"active":""} onClick={()=>chooseOutput(device.deviceId)}><span>{device.label||`Динамик ${index+1}`}</span>{prefs.outputId===device.deviceId?<AppIcon name="check" size={14}/>:null}</button>):<small>Выбор устройства вывода зависит от браузера и системы.</small>}</div></div>
       <label className="dock-range"><span>Громкость звука <b>{prefs.outputVolume??100}%</b></span><input type="range" min="0" max="100" value={prefs.outputVolume??100} onChange={(event)=>changeOutputVolume(Number(event.target.value))}/></label>
-      <button className="dock-settings-link" type="button" onClick={()=>{setMenu(null);onOpenVoiceSettings()}}><SlidersHorizontal size={15}/>Настройки голоса</button>
+      <button className="dock-settings-link" type="button" onClick={()=>{setMenu(null);onOpenVoiceSettings()}}><AppIcon name="controls" size={15}/>Настройки голоса</button>
     </section>,document.body):null}
   </div>;
 }
