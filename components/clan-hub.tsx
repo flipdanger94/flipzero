@@ -2,7 +2,7 @@
 
 import { type FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  BadgeCheck, Ban, Check, CheckCircle2, Crown, Ellipsis, File as FileIcon, FilePlus2, Image as ImageIcon,
+  BadgeCheck, Ban, Check, CheckCircle2, Crown, Ellipsis, File as FileIcon, FilePlus2, Headphones, Image as ImageIcon,
   LoaderCircle, LogOut, MessageCircle, Search, SendHorizontal, Settings2, Shield, ShieldCheck, Smile,
   Swords, UserMinus, UserPlus, Users, X,
 } from "lucide-react";
@@ -15,6 +15,7 @@ import { ClanGovernance } from "./clan-governance";
 import { MediaImage } from "./media-image";
 import { UserProfilePopover } from "./user-profile-popover";
 import { ConfirmDialog } from "./action-dialogs";
+import { VoiceRoom } from "./voice-room";
 
 type ClanRole="leader"|"officer"|"member";
 type JoinType="open"|"application"|"closed";
@@ -29,7 +30,7 @@ type Attachment={type:"image"|"audio"|"file";url:string;name:string;mimeType:str
 type ClanMessage={id:string;clanId:string;authorId:string;content:string;attachments:Attachment[];createdAt:string;editedAt:string|null;username:string;displayName:string;avatarUrl:string|null;globalLevel:number;cosmetics?:Record<string,string>};
 type Detail={clan:Clan;tagUpgradeLevel?:number;seasonWinner?:boolean;role:ClanRole;members:Member[];requests:ClanRequest[];permissions:{moderate:boolean;manage:boolean}};
 type PendingFile={id:string;file:File;previewUrl:string|null};
-type Tab="chat"|"members"|"requests"|"settings"|"governance";
+type Tab="chat"|"voice"|"members"|"requests"|"settings"|"governance";
 
 const roleLabel:Record<ClanRole,string>={leader:"Лидер",officer:"Офицер",member:"Участник"};
 const joinTypeLabel:Record<JoinType,string>={open:"Открытый",application:"По заявке",closed:"По приглашению"};
@@ -289,7 +290,7 @@ export function ClanHub({currentUserId,onOpenDirect}:{currentUserId:string;onOpe
         <div><small>[{detail.clan.tag}]</small><h3>{detail.clan.name}</h3><p>{detail.clan.description||"Описание клана пока не заполнено."}</p><div><span><Users size={14}/>{detail.clan.memberCount}/50</span><span><ShieldCheck size={14}/>{joinTypeLabel[detail.clan.joinType]}</span></div></div>
         {detail.role!=="leader"?<button className="clan-danger-ghost" onClick={()=>setConfirm({kind:"leave"})}><LogOut size={15}/>Покинуть клан</button>:null}
       </div>
-      <nav className="clan-tabs"><button className={tab==="governance"?"active":""} onClick={()=>setTab("governance")}><Crown size={16}/>Клан</button><button className={tab==="chat"?"active":""} onClick={()=>setTab("chat")}><MessageCircle size={16}/>Клановый чат</button><button className={tab==="members"?"active":""} onClick={()=>setTab("members")}><Users size={16}/>Участники</button>{canModerate?<button className={tab==="requests"?"active":""} onClick={()=>setTab("requests")}><BadgeCheck size={16}/>Заявки{detail.requests.length?<b>{detail.requests.length}</b>:null}</button>:null}{canManage?<button className={tab==="settings"?"active":""} onClick={()=>setTab("settings")}><Settings2 size={16}/>Настройки клана</button>:null}</nav>
+      <nav className="clan-tabs"><button className={tab==="governance"?"active":""} onClick={()=>setTab("governance")}><Crown size={16}/>Клан</button><button className={tab==="chat"?"active":""} onClick={()=>setTab("chat")}><MessageCircle size={16}/>Клановый чат</button><button className={tab==="voice"?"active":""} onClick={()=>setTab("voice")}><Headphones size={16}/>Клановый войс</button><button className={tab==="members"?"active":""} onClick={()=>setTab("members")}><Users size={16}/>Участники</button>{canModerate?<button className={tab==="requests"?"active":""} onClick={()=>setTab("requests")}><BadgeCheck size={16}/>Заявки{detail.requests.length?<b>{detail.requests.length}</b>:null}</button>:null}{canManage?<button className={tab==="settings"?"active":""} onClick={()=>setTab("settings")}><Settings2 size={16}/>Настройки клана</button>:null}</nav>
 
       {tab==="governance"?<ClanGovernance key={detail.clan.id} clanId={detail.clan.id} role={detail.role} members={detail.members} welcomeText={detail.clan.welcomeText??"Добро пожаловать в клан!"}/>:null}
       {tab==="chat"?<ChatLayout className="clan-chat" feed={<div className="clan-message-list" ref={messagesRef} onScroll={event=>{if(event.currentTarget.scrollTop<100&&olderCursor&&!loadingOlder)void loadOlderMessages()}}>{olderCursor?<button type="button" className="direct-load-older" onClick={()=>void loadOlderMessages()} disabled={loadingOlder}>{loadingOlder?"Загружаем…":"Загрузить предыдущие сообщения"}</button>:null}{messages.length?messages.map(message=><article key={message.id} className={`${message.authorId===currentUserId?"mine":""} ${message.cosmetics?.message_effect?`effect-${message.cosmetics.message_effect}`:""}`}><button type="button" className={`clan-message-avatar frame-${message.cosmetics?.avatar_frame??"none"}`} onClick={()=>{const member=detail.members.find(item=>item.userId===message.authorId);if(member)setProfileUser(member)}} aria-label={`Открыть профиль ${message.displayName}`}>{message.avatarUrl?<MediaImage src={message.avatarUrl}/>:message.displayName.slice(0,2)}</button><div><header><strong className={message.cosmetics?.nickname?`nick-${message.cosmetics.nickname}`:""}>{message.displayName}</strong><ClanTag clan={detail.clan}/><span>LVL {message.globalLevel}</span><time>{new Date(message.createdAt).toLocaleTimeString("ru-RU",{hour:"2-digit",minute:"2-digit"})}</time></header>{gameMarker(message.content)?<ChatGameCard id={gameMarker(message.content)!} currentUserId={currentUserId}/>:message.content?<p>{message.content}</p>:null}{message.attachments?.length?<div className="clan-message-attachments">{message.attachments.map((attachment,index)=>attachment.type==="image"?<a key={attachment.url+index} href={attachment.url} target="_blank" rel="noreferrer"><MediaImage src={attachment.url} alt={attachment.name}/></a>:<a key={attachment.url+index} href={attachment.url} target="_blank" rel="noreferrer"><FileIcon size={16}/><span>{attachment.name}</span></a>)}</div>:null}</div></article>):<div className="clan-empty clan-chat-empty"><MessageCircle size={32}/><strong>Начните разговор</strong><span>Первое сообщение клана появится здесь.</span></div>}</div>
