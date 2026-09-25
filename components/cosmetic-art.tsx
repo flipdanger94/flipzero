@@ -50,7 +50,7 @@ export function CosmeticArt({
   const animation = failed ? null : item.previewAnimation;
   const cssToken = animation?.startsWith("css:") ? animation.slice(4) : null;
   const fallback = item.previewImage ?? item.preview;
-  const source = animation && !cssToken ? animation : null;
+  const source = live && animation && !cssToken ? animation : null;
   const mode = useMemo(() => source?.match(/\.([a-z0-9]+)(?:\?|$)/i)?.[1]?.toLowerCase() ?? "", [source]);
 
   useEffect(() => {
