@@ -92,3 +92,23 @@
 .profile-avatar-trigger{border:0!important;padding:0!important;cursor:pointer!important}
 .profile-avatar-trigger:focus-visible,.direct-title-profile-trigger:focus-visible,.friend-profile-trigger:focus-visible{outline:2px solid rgba(139,116,255,.85)!important;outline-offset:2px!important}
 .fz-mini-kebab:focus-visible,.fz-mini-full:focus-visible,.fz-profile-menu button:focus-visible,.fz-full-profile button:focus-visible{outline:2px solid rgba(139,116,255,.85)!important;outline-offset:2px!important}
+
+
+.superflip-store-link{
+  width:min(760px,100%);
+  margin:0 auto 22px;
+  display:grid;
+  grid-template-columns:auto minmax(0,1fr) auto;
+  align-items:center;
+  gap:12px;
+  padding:14px 16px;
+  border:1px solid color-mix(in srgb,var(--accent,#8f70ff) 26%,transparent);
+  border-radius:14px;
+  background:linear-gradient(135deg,color-mix(in srgb,var(--accent,#8f70ff) 11%,transparent),#ffffff04);
+  text-align:left
+}
+.superflip-store-link>svg{color:color-mix(in srgb,var(--accent,#8f70ff) 72%,white 28%)}
+.superflip-store-link span{min-width:0}.superflip-store-link strong,.superflip-store-link small{display:block}
+.superflip-store-link strong{font-size:.72rem;color:#f2efff}.superflip-store-link small{margin-top:4px;color:#8e96ad;font-size:.55rem;line-height:1.45}
+.superflip-store-link button{min-height:36px;border:0;border-radius:9px;background:var(--accent,#8f70ff);color:#fff;padding:0 11px;font-size:.55rem;font-weight:800;cursor:pointer}
+@media(max-width:767px){.superflip-store-link{grid-template-columns:auto 1fr}.superflip-store-link button{grid-column:1/-1;width:100%}}
