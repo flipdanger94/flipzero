@@ -52,6 +52,17 @@ describe("voice client reliability contract", () => {
     expect(theme).toContain("grid-template-rows:minmax(0,1fr) auto");
   });
 
+  it("keeps voice participant identity to avatar and nickname only", async () => {
+    const [room, shell] = await Promise.all([
+      readFile("components/voice-room.tsx", "utf8"),
+      readFile("components/flipzero-app.tsx", "utf8"),
+    ]);
+    expect(room).not.toContain('ClanTag tag={participant.clanTag}');
+    expect(shell).not.toContain('ClanTag tag={participant.clanTag}');
+    expect(room).toContain('<strong title={participant.name}>{participant.name}</strong>');
+    expect(shell).toContain('<strong title={participant.name}>{participant.name}</strong>');
+  });
+
   it("offers camera preflight and screen quality settings", async () => {
     const source = await readFile("components/voice-room.tsx", "utf8");
     expect(source).toContain("ПРЕДПРОСМОТР КАМЕРЫ");
