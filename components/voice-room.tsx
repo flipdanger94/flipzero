@@ -7,7 +7,6 @@ import {
   Maximize2,
   Mic,
   MicOff,
-  Minimize2,
   MonitorUp,
   Music2,
   PhoneOff,
@@ -883,7 +882,8 @@ export function VoiceRoom({
   });
   useEffect(() => {
     if (!initialStreamId || !connected) return;
-    focusStream(initialStreamId);
+    const timer = window.setTimeout(() => focusStream(initialStreamId), 0);
+    return () => window.clearTimeout(timer);
   }, [initialStreamId, connected]);
   async function toggleFullscreen() {
     const root = voiceRootRef.current;
