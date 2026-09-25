@@ -1,23 +1,5 @@
 [
-  {
-    "id": "midnight",
-    "label": "Классическая",
-    "access": "free",
-    "surface": "#0b1122",
-    "accent": "#8f70ff"
-  },
-  {
-    "id": "deep-space",
-    "label": "Глубокий космос",
-    "access": "shop:theme-midnight",
-    "surface": "#07112a",
-    "accent": "#6f8bff"
-  },
-  {
-    "id": "aurora",
-    "label": "Полярное сияние",
-    "access": "superflip",
-    "surface": "#0b1b17",
-    "accent": "#4dc9b2"
-  }
+  {"id":"midnight","label":"Классическая","access":"free","surface":"#101622","panel":"#171d2b","deep":"#080d18","raised":"#222a3b","accent":"#8f70ff","text":"#f5f6ff","muted":"#a1a8bd"},
+  {"id":"deep-space","label":"Глубокий космос","access":"shop:theme-midnight","surface":"#0c1020","panel":"#12172a","deep":"#060816","raised":"#1c2440","accent":"#6f8bff","text":"#f3f5ff","muted":"#99a4c4"},
+  {"id":"aurora","label":"Полярное сияние","access":"superflip","surface":"#111a24","panel":"#17252f","deep":"#081217","raised":"#213641","accent":"#4dc9b2","text":"#f0fffb","muted":"#9fc4bd"}
 ]
