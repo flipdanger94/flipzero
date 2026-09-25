@@ -17,7 +17,7 @@ describe("icon v2 and SuperFlip theme contracts",()=>{
       readFile("components/personal-economy.tsx","utf8"),
       readFile("app/superflip/page.tsx","utf8"),
     ]);
-    expect(store).toContain('import { AppIcon } from "./app-icon"');
+    expect(store).toContain('import { AppIcon, type AppIconName } from "./app-icon"');
     expect(store).not.toContain('from "lucide-react"');
     expect(superflip).toContain('import { AppIcon, type AppIconName } from "@/components/app-icon"');
     expect(superflip).not.toContain('from "lucide-react"');
