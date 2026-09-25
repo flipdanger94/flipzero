@@ -163,3 +163,12 @@
   .voice-camera-preview-video{margin:10px}
   .voice-camera-preview>footer{display:grid;grid-template-columns:1fr 1fr}
 }
+
+
+.voice-screen-options{display:grid;gap:8px;margin-top:10px;padding-top:10px;border-top:1px solid var(--border)}
+.voice-screen-options>strong{font-size:12px}.voice-screen-options>div{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.voice-screen-options label{display:grid;gap:5px;color:var(--muted);font-size:11px}
+.voice-screen-options select{min-height:38px;border:1px solid var(--border);border-radius:8px;background:var(--deep);color:var(--text);padding:0 9px}
+.voice-screen-options .voice-screen-audio{grid-column:1/-1;grid-template-columns:20px 1fr;align-items:center;min-height:38px}
+.voice-screen-options .voice-screen-audio input{width:18px;height:18px;accent-color:var(--accent)}
+@media(max-width:520px){.voice-screen-options>div{grid-template-columns:1fr}.voice-screen-options .voice-screen-audio{grid-column:1}}
