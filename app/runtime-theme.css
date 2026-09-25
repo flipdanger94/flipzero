@@ -55,22 +55,57 @@
 
 
 /* One persistent account dock for every authenticated desktop surface. */
+@media(min-width:768px){
+  .app-shell,
+  .app-shell.members-hidden{
+    grid-template-columns:76px 272px minmax(390px,1fr) 292px;
+  }
+  .app-shell.members-hidden{grid-template-columns:76px 272px minmax(390px,1fr)}
+  .app-shell>.space-rail{
+    width:76px;
+    min-width:76px;
+    box-sizing:border-box;
+  }
+  .app-shell.platform-view-active>.space-rail{
+    display:flex!important;
+    position:relative;
+    z-index:150;
+  }
+  .app-shell.has-voice-session>.channel-panel{grid-template-rows:70px minmax(0,1fr) 116px}
+}
+@media(min-width:768px) and (max-width:1120px){
+  .app-shell,
+  .app-shell.members-hidden{grid-template-columns:76px 272px minmax(360px,1fr)}
+}
+
 .global-user-dock{
-  position:fixed;z-index:145;left:72px;bottom:0;width:248px;
+  position:fixed;z-index:145;left:76px;bottom:0;width:272px;
   border:0;border-top:1px solid var(--border);border-right:1px solid var(--border);
   border-radius:0;background:var(--panel);box-shadow:none;backdrop-filter:none;overflow:visible;
 }
-.global-user-dock .user-dock{background:var(--panel)!important;border:0!important;border-radius:0}
-.global-user-dock .dock-profile{min-width:120px}
+.global-user-dock .user-dock{
+  display:grid!important;
+  grid-template-columns:minmax(96px,1fr) 50px 50px 38px;
+  align-items:center;
+  gap:2px;
+  width:100%;
+  box-sizing:border-box;
+  background:var(--panel)!important;
+  border:0!important;
+  border-radius:0;
+  overflow:visible!important;
+}
+.global-user-dock .dock-voice-session{grid-column:1/-1;border-radius:0}
+.global-user-dock .dock-profile{grid-column:auto!important;min-width:0!important}
+.global-user-dock .dock-copy{min-width:0}
+.global-user-dock .dock-copy strong,
+.global-user-dock .dock-copy small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .global-user-dock .dock-copy strong{font-size:12px}
 .global-user-dock .dock-copy small{font-size:11px}
-.global-user-dock .dock-voice-session{border-radius:0}
-@media(min-width:768px) and (max-width:1180px){
-  .global-user-dock{left:68px;width:246px}
-}
-@media(min-width:768px){
-  .app-shell.has-voice-session>.channel-panel{grid-template-rows:70px minmax(0,1fr) 116px}
-}
+.global-user-dock .dock-audio-control{min-width:0;width:50px}
+.global-user-dock .dock-audio-control>button:first-child{width:31px}
+.global-user-dock .dock-audio-control>.dock-chevron{width:19px}
+.global-user-dock .user-dock>button:not(.dock-profile){width:38px;min-width:38px;height:36px}
 
 /* Fast incoming direct-call surface */
 .incoming-call-toast{
