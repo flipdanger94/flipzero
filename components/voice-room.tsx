@@ -227,6 +227,8 @@ export function VoiceRoom({
       };
       room.on(RoomEvent.ParticipantConnected, refresh);
       room.on(RoomEvent.ParticipantDisconnected, refresh);
+      room.on(RoomEvent.ParticipantMetadataChanged, refresh);
+      room.on(RoomEvent.ParticipantAttributesChanged, refresh);
       room.on(RoomEvent.ActiveSpeakersChanged, (speakers) => {
         setActiveSpeaker(speakers[0]?.name || speakers[0]?.identity || "");
         const localSpeaking = speakers.some((participant) => participant.isLocal);
@@ -245,6 +247,13 @@ export function VoiceRoom({
       });
       room.on(RoomEvent.TrackMuted, refresh);
       room.on(RoomEvent.TrackUnmuted, refresh);
+      room.on(RoomEvent.MediaDevicesError, (mediaError) => {
+        const message=String(mediaError?.message??mediaError??"");
+        if(/permission|denied|notallowed/i.test(message)) setError("Нет разрешения на микрофон или камеру. Разрешите доступ в настройках браузера.");
+        else if(/notfound|device/i.test(message)) setError("Устройство не найдено или отключено.");
+        else setError("Не удалось использовать аудио- или видеоустройство.");
+      });
+      room.on(RoomEvent.TrackSubscriptionFailed, () => setError("Не удалось загрузить медиапоток. Попробуйте открыть его ещё раз."));
       room.on(RoomEvent.TrackPublished, (publication, participant) => {
         if (publication.source === Track.Source.ScreenShare || publication.source === Track.Source.ScreenShareAudio) {
           publication.setSubscribed(participant.identity === selectedStreamRef.current);
