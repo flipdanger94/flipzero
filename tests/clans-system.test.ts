@@ -49,6 +49,26 @@ describe("clan system migration and server boundaries", () => {
     expect(styles).toContain(".clan-rank-pages");
   });
 
+  it("uses compact shared clan tags across members, profiles and voice", async () => {
+    const [tag, shell, profile, voice, theme] = await Promise.all([
+      readFile("components/clan-tag.tsx", "utf8"),
+      readFile("components/flipzero-app.tsx", "utf8"),
+      readFile("components/user-profile-popover.tsx", "utf8"),
+      readFile("components/voice-room.tsx", "utf8"),
+      readFile("app/runtime-theme.css", "utf8"),
+    ]);
+    expect(tag).toContain('type ClanTagVariant="inline"|"full"');
+    expect(tag).toContain('variant="inline"');
+    expect(tag).toContain('className="clan-tag-full"');
+    expect(shell).toContain('className="member-name-row"');
+    expect(shell).toContain('ClanTag tag={participant.clanTag}');
+    expect(profile).toContain('className="fz-mini-name-row"');
+    expect(profile).toContain('variant="full"');
+    expect(voice).toContain('className="voice-tile-name"');
+    expect(theme).toContain(".clan-tag-badge");
+    expect(theme).toContain("font-size:10px");
+  });
+
   it("keeps developer platform reachable after replacing the rail icon", async () => {
     const settings = await readFile("components/account-settings-dialog.tsx", "utf8");
     const shell = await readFile("components/flipzero-app.tsx", "utf8");
