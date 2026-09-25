@@ -5,6 +5,7 @@ import {
   BadgeCheck,
   Backpack,
   Badge,
+  Bell,
   Check,
   ChevronDown,
   ChevronLeft,
@@ -31,9 +32,11 @@ import {
   ShoppingCart,
   Sparkles,
   Store,
+  Swords,
   Trophy,
   Type,
   Upload,
+  UserPlus,
   UserRound,
   Users,
   X,
@@ -64,9 +67,12 @@ export type AppIconName =
   | "loading"
   | "menu-down"
   | "messages"
+  | "notifications"
   | "microphone"
   | "next"
   | "people"
+  | "friends"
+  | "clans"
   | "profile-effect"
   | "plus"
   | "preview"
@@ -106,9 +112,12 @@ const ICONS: Record<AppIconName, LucideIcon> = {
   loading: LoaderCircle,
   "menu-down": ChevronDown,
   messages: MessageCircle,
+  notifications: Bell,
   microphone: Mic,
   next: ChevronRight,
   people: Users,
+  friends: UserPlus,
+  clans: Swords,
   "profile-effect": Sparkles,
   plus: Plus,
   preview: Eye,
