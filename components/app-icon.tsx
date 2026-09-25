@@ -1,7 +1,10 @@
 import {
+  ArrowDown,
   ArrowLeft,
   ArrowRight,
+  ArrowUp,
   ArrowUpDown,
+  Ban,
   BadgeCheck,
   Backpack,
   Badge,
@@ -14,7 +17,10 @@ import {
   CircleOff,
   Coins,
   Compass,
+  Copy,
+  Ellipsis,
   Eye,
+  Flag,
   Filter,
   Image,
   Gem,
@@ -27,7 +33,10 @@ import {
   MessageSquareText,
   MicOff,
   Mic,
+  Music2,
   Palette,
+  Pencil,
+  Phone,
   Paintbrush,
   PhoneOff,
   Plus,
@@ -40,19 +49,36 @@ import {
   Store,
   Swords,
   Trophy,
+  Gamepad2,
   Type,
   Upload,
+  UserMinus,
   UserPlus,
   UserRound,
+  Video,
   Volume2,
   VolumeX,
   Users,
   X,
+  Save,
   type LucideIcon,
 } from "lucide-react";
 
 export type AppIconName =
   | "animated"
+  | "block"
+  | "call"
+  | "copy"
+  | "edit"
+  | "game"
+  | "more"
+  | "music"
+  | "report"
+  | "save"
+  | "user-remove"
+  | "video"
+  | "move-up"
+  | "move-down"
   | "audio"
   | "audio-off"
   | "avatar-decoration"
@@ -106,6 +132,19 @@ export type AppIconName =
 
 const ICONS: Record<AppIconName, LucideIcon> = {
   animated: Sparkles,
+  block: Ban,
+  call: Phone,
+  copy: Copy,
+  edit: Pencil,
+  game: Gamepad2,
+  more: Ellipsis,
+  music: Music2,
+  report: Flag,
+  save: Save,
+  "user-remove": UserMinus,
+  video: Video,
+  "move-up": ArrowUp,
+  "move-down": ArrowDown,
   audio: Volume2,
   "audio-off": VolumeX,
   "avatar-decoration": UserRound,
