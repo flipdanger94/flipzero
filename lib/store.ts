@@ -91,7 +91,7 @@ function publicItem(
   };
 }
 
-function sortItems<T extends { price: number; createdAt: Date; rarity: string; title: string }>(items: T[], sort = "featured") {
+function sortItems<T extends { price: number; createdAt: Date; rarity: string; title: string; isBundle: boolean; isAnimated: boolean }>(items: T[], sort = "featured") {
   const rarityWeight: Record<string, number> = { common: 1, rare: 2, epic: 3, legendary: 4, limited: 5 };
   return [...items].sort((a, b) => {
     if (sort === "price_asc") return a.price - b.price || a.title.localeCompare(b.title, "ru");
