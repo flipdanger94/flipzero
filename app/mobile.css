@@ -2479,3 +2479,19 @@ html[data-motion="off"] *::after {
   .voice-secondary-toolbar button{min-width:max-content!important;min-height:44px!important}
   .voice-inline-panel{width:100%!important}
 }
+
+/* Unified mobile finishing pass: account/profile/shop surfaces */
+@media(max-width:767px){
+  .app-shell .channel-panel>.user-dock{grid-template-columns:minmax(0,1fr) auto auto auto!important;gap:3px!important;padding:7px 8px calc(7px + env(safe-area-inset-bottom))!important;min-height:62px!important}
+  .app-shell .dock-profile{display:grid!important;grid-template-columns:38px minmax(0,1fr)!important;min-width:0!important}
+  .app-shell .dock-copy{display:block!important}
+  .app-shell .dock-copy strong{font-size:.72rem!important}.app-shell .dock-copy small{font-size:.58rem!important}
+  .account-settings{grid-template-columns:1fr!important;border-radius:0!important}
+  .account-settings.mobile-section-list .account-settings-main{display:none!important}
+  .account-settings.mobile-section-open .account-settings-nav{display:none!important}
+  .account-settings.mobile-section-list .account-settings-nav{display:flex!important;flex-direction:column!important;overflow-y:auto!important;overflow-x:hidden!important;padding:calc(16px + env(safe-area-inset-top)) 12px calc(18px + env(safe-area-inset-bottom))!important}
+  .account-settings.mobile-section-list .account-settings-nav>button,.account-settings.mobile-section-list .account-nav-link{width:100%!important;min-width:0!important;justify-content:flex-start!important}
+  .account-settings.mobile-section-open .account-settings-main{display:block!important;min-width:0!important;overflow:auto!important}
+  .account-profile-preview,.account-media-controls,.account-settings-form,.settings-list,.audio-device-grid,.premium-settings-grid,.superup-levels{max-width:100%!important}
+  .audio-device-grid,.premium-settings-grid,.superup-levels{grid-template-columns:1fr!important}
+}

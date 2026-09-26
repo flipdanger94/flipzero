@@ -5,7 +5,7 @@ import { createPortal } from "react-dom";
 import { AppIcon } from "./app-icon";
 import { MediaImage } from "./media-image";
 
-type DockUser={id:string;displayName:string;avatarUrl?:string|null;globalLevel?:number};
+type DockUser={id:string;displayName:string;avatarUrl?:string|null;globalLevel?:number;presence?:"online"|"idle"|"dnd"|"offline"};
 type AudioPrefs={inputId?:string;outputId?:string;inputVolume?:number;outputVolume?:number;inputProfile?:"standard"|"noise"|"raw"};
 
 function readPrefs():AudioPrefs{
@@ -96,7 +96,7 @@ export function UserDock({
     </section>:null}
     <button className="dock-profile" type="button" onClick={onOpenProfile} aria-label="Открыть свой профиль" title="Открыть профиль">
       <span className="avatar avatar-coral">{user?.avatarUrl?<MediaImage src={user.avatarUrl}/>:user?.displayName.split(/\s+/).map((part)=>part[0]).join("").slice(0,2).toLocaleUpperCase("ru")??"FZ"}<span className="presence"/></span>
-      <span className="dock-copy"><strong>{user?.displayName??"Профиль"}</strong><small>Уровень {user?.globalLevel??1}</small></span>
+      <span className="dock-copy"><strong>{user?.displayName??"Профиль"}</strong><small>{user?.presence==="idle"?"Неактивен":user?.presence==="dnd"?"Не беспокоить":user?.presence==="offline"?"Не в сети":"В сети"}</small></span>
     </button>
 
     <div className="dock-audio-control">
