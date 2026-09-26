@@ -37,7 +37,7 @@ export function UserProfilePopover({
   onClose:()=>void;
   onOpenDirect?:(userId:string)=>void;
 }) {
-  const miniRef=useRef<HTMLDivElement|null>(null);
+  const miniRef=useRef<HTMLElement|null>(null);
   const [profile,setProfile]=useState<Profile|null>(null);
   const [error,setError]=useState("");
   const [menu,setMenu]=useState(false);
