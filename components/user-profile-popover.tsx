@@ -139,6 +139,7 @@ export function UserProfilePopover({
       rootRef={miniRef}
       profile={p}
       className="fz-mini-profile-live"
+      style={position}
       bannerActions={<button className="fz-mini-kebab" type="button" aria-label="Дополнительные действия" title="Дополнительные действия" aria-expanded={menu} onClick={()=>setMenu(value=>!value)}><AppIcon name="more" size={19}/></button>}
       actions={!p.isOwnProfile?<div className="fz-profile-icon-actions">
         <button type="button" onClick={message} aria-label="Написать сообщение" title="Написать сообщение"><AppIcon name="messages" size={17}/></button>
