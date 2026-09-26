@@ -35,6 +35,7 @@ export function ProfileAppearanceSurface({
   bannerActions,
   afterBody,
   rootRef,
+  showMessagePreview = false,
 }:{
   profile: ProfileAppearanceData;
   cosmetics?: Record<string,string>;
@@ -45,6 +46,7 @@ export function ProfileAppearanceSurface({
   bannerActions?: ReactNode;
   afterBody?: ReactNode;
   rootRef?: Ref<HTMLElement>;
+  showMessagePreview?: boolean;
 }){
   const level=profile.globalLevel??1;
   const xp=profile.globalXp??0;
@@ -94,7 +96,7 @@ export function ProfileAppearanceSurface({
         {profile.isFriend?<span>ДРУГ</span>:null}
         {profile.presence==="online"?<span>ONLINE</span>:null}
       </div>
-      <div className={`profile-appearance-message message-effect-${chat}`}><span>{profile.displayName}</span><p>Так будет выглядеть стиль сообщения в чате.</p></div>
+      {showMessagePreview?<div className={`profile-appearance-message message-effect-${chat}`}><span>{profile.displayName}</span><p>Так будет выглядеть стиль сообщения в чате.</p></div>:null}
       {footer}
     </div>
     {afterBody}
