@@ -57,10 +57,11 @@ describe("clan system migration and server boundaries", () => {
   });
 
   it("uses compact clan tags on member and profile surfaces but not in voice participants", async () => {
-    const [tag, shell, profile, voice, theme] = await Promise.all([
+    const [tag, shell, profile, profileSurface, voice, theme] = await Promise.all([
       readFile("components/clan-tag.tsx", "utf8"),
       readFile("components/flipzero-app.tsx", "utf8"),
       readFile("components/user-profile-popover.tsx", "utf8"),
+      readFile("components/profile-appearance-surface.tsx", "utf8"),
       readFile("components/voice-room.tsx", "utf8"),
       readFile("app/runtime-theme.css", "utf8"),
     ]);
@@ -69,7 +70,8 @@ describe("clan system migration and server boundaries", () => {
     expect(tag).toContain('className="clan-tag-full"');
     expect(shell).toContain('className="member-name-row"');
     expect(shell).not.toContain('ClanTag tag={participant.clanTag}');
-    expect(profile).toContain('className="fz-mini-name-row"');
+    expect(profileSurface).toContain('className="fz-mini-name-row"');
+    expect(profileSurface).toContain('variant="inline"');
     expect(profile).toContain('variant="full"');
     expect(voice).not.toContain('ClanTag tag={participant.clanTag}');
     expect(theme).toContain(".clan-tag-badge");

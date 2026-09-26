@@ -327,8 +327,10 @@ export function VoiceRoom({
           attachLocal(Track.Source.Camera);
         }
         if (publication.source === Track.Source.ScreenShare) {
+          // Do not render our own screen-share track back into the shared surface.
+          // Showing it locally creates the recursive "screen inside screen" tunnel.
           setSharing(true);
-          attachLocal(Track.Source.ScreenShare);
+          clearParticipantVideo(connectedRoom.localParticipant.identity, "screen");
         }
       });
       room.on(RoomEvent.LocalTrackUnpublished, (publication) => {
@@ -692,8 +694,9 @@ export function VoiceRoom({
       }
       setSharing(next);
       if (resolvedStateUrl) void fetch(resolvedStateUrl, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ streaming: next }) });
-      if (next) attachLocal(Track.Source.ScreenShare);
-      else clearParticipantVideo(room.localParticipant.identity, "screen");
+      // The broadcaster does not need a local screen-share preview in the room.
+      // Viewers receive the remote LiveKit track; the broadcaster only sees a status.
+      clearParticipantVideo(room.localParticipant.identity, "screen");
       setError("");
     } catch {
       setError("Демонстрация экрана отменена или недоступна.");
@@ -732,17 +735,21 @@ export function VoiceRoom({
   const normalizedPresence = normalizeVoicePresence(presence?.length ? presence : localPresence);
   const compactMode=typeof document!=="undefined"&&document.documentElement.dataset.compact==="on";
   const gridLayout=voiceGridLayout(normalizedPresence.length,compactMode);
+  const selfParticipantId = roomRef.current?.localParticipant.identity ?? "";
   const activeStreams = normalizedPresence.filter((participant) => participant.streaming || participant.sharing);
-  const selectedStream = activeStreams.find((participant) => participant.id === selectedStreamId) ?? null;
+  const viewableStreams = activeStreams.filter((participant) => participant.id !== selfParticipantId);
+  const selectedStream = viewableStreams.find((participant) => participant.id === selectedStreamId) ?? null;
   const visibleParticipants = focusMode && selectedStream ? [selectedStream] : normalizedPresence.slice(0, gridLayout.visible);
   const hiddenParticipantCount = focusMode ? 0 : Math.max(0, normalizedPresence.length - visibleParticipants.length);
   const connected = status === "connected" || status === "reconnecting";
 
   function focusStream(participantId: string) {
+    const room = roomRef.current;
+    if (!participantId || participantId === room?.localParticipant.identity) return;
     selectedStreamRef.current = participantId;
     setSelectedStreamId(participantId);
     setFocusMode(true);
-    const participant = roomRef.current?.remoteParticipants.get(participantId);
+    const participant = room?.remoteParticipants.get(participantId);
     participant?.trackPublications.forEach((publication) => {
       if (publication.source === Track.Source.ScreenShare || publication.source === Track.Source.ScreenShareAudio) {
         publication.setSubscribed(true);
@@ -806,7 +813,7 @@ export function VoiceRoom({
     return () => window.removeEventListener("keydown", onKeyDown);
   });
   useEffect(() => {
-    if (!initialStreamId || !connected) return;
+    if (!initialStreamId || !connected || initialStreamId === roomRef.current?.localParticipant.identity) return;
     const timer = window.setTimeout(() => focusStream(initialStreamId), 0);
     return () => window.clearTimeout(timer);
   }, [initialStreamId, connected]);
@@ -852,7 +859,7 @@ export function VoiceRoom({
           {normalizedPresence.length === 0 ? <div className="voice-stage-empty voice-stage-empty-visible" role="status"><Users size={28}/><strong>В канале пока никого нет</strong><span>Участники появятся здесь после подключения.</span></div> : null}
           {focusMode && selectedStream ? <div className="voice-stream-fullscreen-bar" role="toolbar" aria-label="Полноэкранный просмотр стрима">
             <div className="voice-stream-fullscreen-title"><small>ДЕМОНСТРАЦИЯ ЭКРАНА</small><strong>{selectedStream.name}</strong></div>
-            {activeStreams.length > 1 ? <div className="voice-stream-switcher" aria-label="Переключение между стримами">{activeStreams.map((stream)=><button key={stream.id} type="button" className={stream.id===selectedStreamId?"active":""} onClick={()=>focusStream(stream.id)}>{stream.name}</button>)}</div> : null}
+            {viewableStreams.length > 1 ? <div className="voice-stream-switcher" aria-label="Переключение между стримами">{viewableStreams.map((stream)=><button key={stream.id} type="button" className={stream.id===selectedStreamId?"active":""} onClick={()=>focusStream(stream.id)}>{stream.name}</button>)}</div> : null}
             <div className="voice-stream-fullscreen-actions">
               <button type="button" onClick={toggleMute} aria-label={muted?"Включить микрофон":"Выключить микрофон"}>{muted?<MicOff size={17}/>:<Mic size={17}/>}</button>
               <button type="button" onClick={()=>void toggleFullscreen(selectedStream.id)} aria-label="Системный полноэкранный режим"><Maximize2 size={17}/></button>
@@ -860,20 +867,24 @@ export function VoiceRoom({
             </div>
           </div> : null}
           <div className="voice-tile-grid" role="list" aria-label="Участники" data-participant-count={normalizedPresence.length} style={{"--voice-grid-columns":gridLayout.columns,"--voice-grid-rows":gridLayout.rows} as CSSProperties}>
-            {visibleParticipants.map((participant)=><article key={participant.id} role="listitem" data-participant-tile-id={participant.id} className={`voice-tile ${participant.speaking ? "speaking" : ""} ${participant.streaming || participant.sharing ? "is-streaming" : ""} ${participant.camera ? "has-camera" : ""} ${selectedStreamId===participant.id ? "is-stream-selected" : ""} ${focusMode&&selectedStreamId===participant.id ? "is-media-focus" : ""}`} onDoubleClick={participant.streaming || participant.sharing ? ()=>{if(selectedStreamId!==participant.id)focusStream(participant.id);window.setTimeout(()=>void toggleFullscreen(participant.id),0)} : undefined}>
+            {visibleParticipants.map((participant)=><article key={participant.id} role="listitem" data-participant-tile-id={participant.id} className={`voice-tile ${participant.speaking ? "speaking" : ""} ${participant.streaming || participant.sharing ? "is-streaming" : ""} ${participant.id===selfParticipantId ? "is-self" : ""} ${participant.camera ? "has-camera" : ""} ${selectedStreamId===participant.id ? "is-stream-selected" : ""} ${focusMode&&selectedStreamId===participant.id ? "is-media-focus" : ""}`} onDoubleClick={(participant.streaming || participant.sharing) && participant.id!==selfParticipantId ? ()=>{if(selectedStreamId!==participant.id)focusStream(participant.id);window.setTimeout(()=>void toggleFullscreen(participant.id),0)} : undefined}>
               <div className="voice-tile-media" aria-hidden="true">
                 <div className="voice-tile-camera" data-voice-media-id={participant.id} data-voice-media-source="camera"/>
                 <div className="voice-tile-screen" data-voice-media-id={participant.id} data-voice-media-source="screen"/>
               </div>
               <div className="voice-tile-avatar">{participant.avatarUrl?<MediaImage src={participant.avatarUrl}/>:participant.name.slice(0,2).toLocaleUpperCase("ru")}</div>
               <footer className="voice-tile-footer"><strong title={participant.name}>{participant.name}</strong><span>{participant.streaming || participant.sharing ? <b className="voice-live-badge">LIVE</b> : null}{participant.deafened?<Headphones size={14}/>:participant.muted?<MicOff size={14}/>:null}{participant.camera?<Video size={14}/>:null}</span></footer>
-              {participant.streaming || participant.sharing ? selectedStreamId===participant.id ? <div className="voice-tile-stream-actions" aria-label={`Управление стримом ${participant.name}`}>
-                <label aria-label="Громкость стрима"><Volume2 size={14}/><input type="range" min="0" max="100" value={streamVolume} onChange={(event)=>setStreamVolume(Number(event.target.value))}/></label>
-                <button type="button" onClick={()=>setStreamMuted((value)=>!value)} aria-label={streamMuted ? "Включить звук стрима" : "Выключить звук стрима"}>{streamMuted?<VolumeX size={16}/>:<Volume2 size={16}/>}</button>
-                <button type="button" onClick={()=>void openPictureInPicture()} aria-label="Картинка в картинке"><MonitorUp size={16}/></button>
-                <button type="button" onClick={()=>void toggleFullscreen()} aria-label="Развернуть стрим на весь экран" title="На весь экран"><Maximize2 size={16}/></button>
-                <button type="button" onClick={clearFocus} aria-label={`Закрыть стрим ${participant.name}`}>×</button>
-              </div> : <button type="button" className="voice-tile-watch" onClick={()=>focusStream(participant.id)} aria-label={`Смотреть стрим ${participant.name}`}>Открыть на весь экран</button> : null}
+              {participant.streaming || participant.sharing ? participant.id===selfParticipantId
+                ? <div className="voice-self-stream-status" role="status"><span>Вы ведёте стрим</span><button type="button" onClick={()=>void toggleScreen()}>Остановить демонстрацию</button></div>
+                : selectedStreamId===participant.id ? <div className="voice-tile-stream-actions" aria-label={`Управление стримом ${participant.name}`}>
+                    <label aria-label="Громкость стрима"><Volume2 size={14}/><input type="range" min="0" max="100" value={streamVolume} onChange={(event)=>setStreamVolume(Number(event.target.value))}/></label>
+                    <button type="button" onClick={()=>setStreamMuted((value)=>!value)} aria-label={streamMuted ? "Включить звук стрима" : "Выключить звук стрима"}>{streamMuted?<VolumeX size={16}/>:<Volume2 size={16}/>}</button>
+                    <button type="button" onClick={()=>void openPictureInPicture()} aria-label="Картинка в картинке"><MonitorUp size={16}/></button>
+                    <button type="button" onClick={()=>void toggleFullscreen()} aria-label="Развернуть стрим на весь экран" title="На весь экран"><Maximize2 size={16}/></button>
+                    <button type="button" onClick={clearFocus} aria-label={`Закрыть стрим ${participant.name}`}>×</button>
+                  </div>
+                : <button type="button" className="voice-tile-watch" onClick={()=>focusStream(participant.id)} aria-label={`Смотреть стрим ${participant.name}`}>Смотреть стрим</button>
+                : null}
             </article>)}
             {hiddenParticipantCount ? <article className="voice-tile voice-tile-more" role="listitem"><strong>+{hiddenParticipantCount}</strong><span>ещё участников</span></article>:null}
           </div>

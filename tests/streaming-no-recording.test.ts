@@ -13,7 +13,19 @@ describe("streaming without recording", () => {
 
   it("keeps fullscreen stream viewer and multi-stream switching", () => {
     expect(source).toContain("voice-stream-fullscreen-bar");
-    expect(source).toContain("activeStreams.map");
+    expect(source).toContain("viewableStreams.map");
     expect(source).toContain('event.key === "Escape"');
+  });
+
+  it("never offers the local broadcaster a stream viewer", () => {
+    expect(source).toContain('participant.id===selfParticipantId');
+    expect(source).toContain("Вы ведёте стрим");
+    expect(source).toContain("Остановить демонстрацию");
+    expect(source).toContain('participantId === room?.localParticipant.identity');
+  });
+
+  it("does not attach the local screen-share track back into the room UI", () => {
+    expect(source).toContain('clearParticipantVideo(connectedRoom.localParticipant.identity, "screen")');
+    expect(source).not.toContain('if (next) attachLocal(Track.Source.ScreenShare)');
   });
 });
