@@ -99,3 +99,75 @@
 @keyframes feather-fall{0%{transform:translateY(-34px) rotate(0);opacity:0}12%{opacity:.9}85%{opacity:.75}100%{transform:translateY(180px) rotate(220deg);opacity:0}}
 @keyframes bird-cross{0%{transform:translateX(-140px);opacity:0}14%{opacity:.72}86%{opacity:.72}100%{transform:translateX(180px);opacity:0}}
 @keyframes wing-idle{0%,100%{transform:translate(-50%,-50%) rotate(-32deg) scale(1)}50%{transform:translate(-50%,-50%) rotate(-26deg) scale(1.06)}}
+
+
+/* WYSIWYG profile cosmetic preview */
+.store-preview-dialog{width:min(1040px,calc(100vw - 32px));grid-template-columns:minmax(430px,1.25fr) minmax(300px,.75fr)}
+.store-preview-stage{min-width:0;min-height:610px;padding:48px;overflow:auto;background:radial-gradient(circle at 50% 16%,color-mix(in srgb,var(--accent,#8f70ff) 18%,transparent),transparent 38%),#060b15}
+.store-profile-live-preview{
+  position:relative!important;left:auto!important;top:auto!important;right:auto!important;bottom:auto!important;
+  width:min(390px,100%)!important;max-height:none!important;margin:auto!important;overflow:visible!important;
+  box-shadow:0 28px 90px rgba(0,0,0,.58),0 0 0 1px rgba(255,255,255,.03)!important
+}
+.store-profile-live-preview .fz-mini-body{min-height:330px}
+.store-profile-live-preview .fz-mini-banner{overflow:hidden}
+.profile-appearance-preview-label{
+  position:absolute;z-index:4;left:12px;top:12px;display:inline-flex;align-items:center;min-height:24px;padding:0 8px;
+  border:1px solid rgba(255,255,255,.13);border-radius:999px;background:rgba(5,10,20,.72);backdrop-filter:blur(10px);
+  color:#eef2ff;font-size:8px;font-weight:900;letter-spacing:.11em
+}
+.profile-appearance-message{margin-top:12px;padding:10px 11px;border:1px solid rgba(255,255,255,.08);border-radius:10px;background:#101a2c}
+.profile-appearance-message span{display:block;color:#f2f5ff;font-size:10px;font-weight:850}.profile-appearance-message p{margin:4px 0 0!important;color:#aeb8cf!important;font-size:10px!important}
+.message-effect-comet{border-left:3px solid #b583ff;background:linear-gradient(90deg,#9461ea21,transparent 70%),#101a2c;box-shadow:inset 18px 0 30px -26px #ad78ff}
+.message-effect-spark{border-left:3px solid #8fdcff;background:linear-gradient(90deg,#5ecfff1f,transparent 72%),#101a2c;box-shadow:inset 18px 0 30px -26px #70d8ff}
+.store-preview-impact{margin-top:20px;padding:12px;border:1px solid var(--border,#ffffff12);border-radius:12px;background:#ffffff04}
+.store-preview-impact>strong{display:block;color:#eef2ff;font-size:11px}.store-preview-impact>div{display:flex;flex-wrap:wrap;gap:6px;margin-top:9px}
+.store-preview-impact span{display:inline-flex;align-items:center;gap:5px;min-height:27px;padding:0 8px;border:1px solid color-mix(in srgb,var(--accent,#8f70ff) 28%,transparent);border-radius:999px;background:color-mix(in srgb,var(--accent,#8f70ff) 10%,transparent);color:#bdc7dc;font-size:9px}
+.store-preview-loading{display:grid;place-items:center;align-content:center;gap:10px;min-height:320px;color:#9ea9c0;font-size:12px}
+
+/* Real profile rendering for Birds collection */
+.fz-mini-avatar.frame-skybird,.fz-full-avatar.frame-skybird,.fz-profile-equipped-avatar.frame-skybird{
+  box-shadow:0 0 0 3px #bcecff,0 0 26px rgba(84,196,255,.62)!important
+}
+.fz-mini-avatar.frame-skybird:before,.fz-full-avatar.frame-skybird:before,.fz-profile-equipped-avatar.frame-skybird:before{
+  content:"";position:absolute;z-index:4;left:50%;top:50%;width:126%;height:62%;transform:translate(-50%,-50%);
+  background:linear-gradient(135deg,#edfaff,#7ad4ff 58%,#907dff);
+  clip-path:polygon(0 58%,31% 31%,48% 48%,66% 25%,100% 53%,72% 67%,52% 59%,32% 74%);
+  opacity:.82;filter:drop-shadow(0 0 8px rgba(119,211,255,.5));pointer-events:none;animation:profile-bird-wing 3.8s ease-in-out infinite
+}
+.fz-mini-banner.cosmetic-dawnflight,.fz-full-banner.cosmetic-dawnflight,.fz-profile-equipped-banner.cosmetic-dawnflight{
+  background-image:linear-gradient(180deg,#8d73bd 0%,#e99bb7 45%,#f4c592 72%,#26344d 100%)!important;position:relative
+}
+.fz-mini-banner.cosmetic-dawnflight:after,.fz-full-banner.cosmetic-dawnflight:after,.fz-profile-equipped-banner.cosmetic-dawnflight:after{
+  content:"";position:absolute;left:18%;top:34%;width:46px;height:14px;border-top:3px solid rgba(17,30,52,.68);border-radius:50%;
+  box-shadow:72px 10px 0 -5px rgba(17,30,52,.6),138px -2px 0 -7px rgba(17,30,52,.52);animation:profile-birds-cross 9s linear infinite
+}
+.fz-mini-profile.effect-featherfall:after,.fz-full-profile.effect-featherfall:after{
+  content:"";position:absolute;z-index:1;inset:0;border-radius:inherit;pointer-events:none;
+  background:
+    radial-gradient(ellipse at 22% 12%,rgba(201,241,255,.65) 0 2px,transparent 3px),
+    radial-gradient(ellipse at 72% 28%,rgba(178,162,255,.55) 0 2px,transparent 3px),
+    radial-gradient(ellipse at 48% 70%,rgba(214,246,255,.48) 0 2px,transparent 3px);
+  animation:profile-feather-drift 5.5s linear infinite
+}
+.fz-mini-profile.effect-featherfall>*,.fz-full-profile.effect-featherfall>*{position:relative;z-index:2}
+.badge-bluewing{color:#bfeeff!important;filter:drop-shadow(0 0 8px rgba(94,203,255,.75));animation:profile-bluewing 2.8s ease-in-out infinite}
+@keyframes profile-bird-wing{50%{transform:translate(-50%,-53%) scale(1.04);opacity:1}}
+@keyframes profile-birds-cross{0%{transform:translateX(-80px);opacity:0}15%{opacity:.75}85%{opacity:.75}100%{transform:translateX(220px);opacity:0}}
+@keyframes profile-feather-drift{0%{background-position:0 -40px,0 -80px,0 -120px;opacity:.45}50%{opacity:.8}100%{background-position:15px 280px,-12px 250px,10px 300px;opacity:.45}}
+@keyframes profile-bluewing{50%{transform:translateY(-1px) scale(1.08)}}
+
+@media(max-width:1050px){
+  .store-preview-dialog{grid-template-columns:1fr;grid-template-rows:minmax(430px,1fr) auto}
+  .store-preview-stage{min-height:430px;padding:34px}
+}
+@media(max-width:767px){
+  .store-preview-dialog{grid-template-rows:minmax(0,58dvh) minmax(0,42dvh)}
+  .store-preview-stage{min-height:0;padding:max(18px,env(safe-area-inset-top)) 12px 18px;align-items:start}
+  .store-profile-live-preview{width:min(360px,calc(100vw - 24px))!important;transform-origin:top center}
+  .store-preview-copy{max-height:none!important;overflow-y:auto;padding:18px 14px calc(var(--mobile-bottom-nav,66px) + env(safe-area-inset-bottom) + 14px)}
+  .store-preview-close{position:fixed;right:max(10px,env(safe-area-inset-right));top:max(10px,env(safe-area-inset-top))}
+}
+@media(max-width:390px){
+  .store-profile-live-preview{transform:scale(.92);margin-top:-10px!important;margin-bottom:-28px!important}
+}
