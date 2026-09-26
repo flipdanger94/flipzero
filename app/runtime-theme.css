@@ -79,13 +79,12 @@
 }
 
 @media(min-width:768px){
-  .app-shell>.space-rail .rail-bottom{margin-bottom:54px!important}
+  .app-shell>.space-rail .rail-bottom{margin-bottom:69px!important}
 }
 
 .global-user-dock{
-  position:fixed;z-index:145;left:0;bottom:0;width:348px;height:54px;min-height:54px;
-  border:0;border-top:1px solid var(--border);border-right:1px solid var(--border);
-  border-radius:0;background:var(--panel);box-shadow:none;backdrop-filter:none;overflow:visible;
+  position:fixed;z-index:145;left:0;bottom:15px;width:348px;height:54px;min-height:54px;
+  border:0;border-radius:0;background:transparent;box-shadow:none;backdrop-filter:none;overflow:visible;
 }
 .global-user-dock .user-dock{
   display:grid!important;
@@ -97,9 +96,10 @@
   min-height:54px;
   box-sizing:border-box;
   padding:5px 8px 5px 84px!important;
-  background:var(--panel)!important;
-  border:0!important;
-  border-radius:0;
+  background:color-mix(in srgb,var(--panel) 94%,transparent)!important;
+  border:1px solid color-mix(in srgb,var(--accent) 22%,var(--border))!important;
+  border-radius:15px;
+  box-shadow:0 10px 26px rgba(0,0,0,.16),inset 0 1px rgba(255,255,255,.025);
   overflow:visible!important;
 }
 .global-user-dock .dock-voice-session{grid-column:1/-1;border-radius:0}
