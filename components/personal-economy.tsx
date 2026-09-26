@@ -352,7 +352,11 @@ export function PersonalEconomy({onOpenSuperFlip}:{onOpenSuperFlip?:()=>void}={}
         <div className="store-preview-stage">
           {profile?<ProfileAppearanceSurface profile={profile} cosmetics={previewCosmetics} className="store-profile-live-preview" previewLabel="ПРЕДПРОСМОТР ОФОРМЛЕНИЯ" showMessagePreview/>:<div className="store-preview-loading"><AppIcon name="loading" className="spin"/><span>Загружаем ваш профиль…</span></div>}
         </div>
-        <div className="store-preview-copy"><ItemBadges item={previewItem}/><small>{rarityLabels[previewItem.rarity]??previewItem.rarity}</small><h3>{previewItem.title}</h3><p>{previewItem.description}</p><div className="store-preview-impact"><strong>На вашем профиле изменится</strong><div>{previewChangedSlots.length?previewChangedSlots.map((label,index)=><span key={`${label}-${index}`}><AppIcon name="check" size={12}/>{label}</span>):<span>Предмет не меняет профиль напрямую.</span>}</div></div><div className="store-preview-price">{previewItem.priceOrbs} монет</div><div className="store-card-actions">{actionFor(previewItem)}</div></div>
+        <div className="store-preview-copy"><ItemBadges item={previewItem}/><small>{rarityLabels[previewItem.rarity]??previewItem.rarity}</small><h3>{previewItem.title}</h3><p>{previewItem.description}</p><div className="store-preview-impact"><strong>На вашем профиле изменится</strong><div>{previewChangedSlots.length?previewChangedSlots.map((label,index)=><span key={`${label}-${index}`}><AppIcon name="check" size={12}/>{label}</span>):<span>Предмет не меняет профиль напрямую.</span>}</div></div><div className="store-preview-price">{previewItem.priceOrbs} монет</div>
+          <div className="store-card-actions store-preview-actions">
+            {previewItem.state==="equipped"&&!previewItem.isBundle?<button className="secondary" disabled={!!busy} onClick={()=>void unequip(previewItem)}><AppIcon name="unequip" size={14}/>{busy===previewItem.id?"Снимаем…":"Снять с профиля"}</button>:actionFor(previewItem)}
+            <button className="preview" type="button" onClick={()=>setPreview(null)}><AppIcon name="close" size={14}/>Закрыть просмотр</button>
+          </div></div>
       </section>
     </div>:null}
   </div>;
