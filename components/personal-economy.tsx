@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AppIcon, type AppIconName } from "./app-icon";
 import { CosmeticArt } from "./cosmetic-art";
-import { MediaImage } from "./media-image";
+import { ProfileAppearanceSurface, type ProfileAppearanceData } from "./profile-appearance-surface";
 
 type Ledger={id:string;amount:number;reason:string;createdAt:string};
 type Quest={key:string;title:string;description:string;period:"daily"|"weekly";target:number;progress:number;coins:number;xp:number;claimed:boolean};
@@ -17,7 +17,7 @@ type StoreItem={
 type InventoryItem=StoreItem&{source:string;acquiredAt:string};
 type StoreResponse={items:StoreItem[];balance:number;superflipActive:boolean;equipped:Record<string,string>;categories:string[];slots:string[];rarities:string[]};
 type InventoryResponse={items:InventoryItem[];equipped:Record<string,string>;slots:string[]};
-type Identity={displayName:string;avatarUrl?:string|null;bannerUrl?:string|null};
+type StoreProfile=ProfileAppearanceData&{id:string};
 
 const slotLabels:Record<string,string>={
   avatar_decoration:"Рамка аватара",
@@ -63,7 +63,7 @@ export function PersonalEconomy({onOpenSuperFlip}:{onOpenSuperFlip?:()=>void}={}
   const [ledger,setLedger]=useState<Ledger[]>([]);
   const [quests,setQuests]=useState<Quest[]>([]);
   const [streak,setStreak]=useState(0);
-  const [identity,setIdentity]=useState<Identity|null>(null);
+  const [profile,setProfile]=useState<StoreProfile|null>(null);
   const [storeItems,setStoreItems]=useState<StoreItem[]>([]);
   const [inventory,setInventory]=useState<InventoryResponse>({items:[],equipped:{},slots:[]});
   const [busy,setBusy]=useState("");
@@ -115,7 +115,14 @@ export function PersonalEconomy({onOpenSuperFlip}:{onOpenSuperFlip?:()=>void}={}
     const timer=window.setTimeout(()=>void refresh(),0);
     void fetch("/api/v1/auth/me",{cache:"no-store"})
       .then(response=>response.ok?response.json():null)
-      .then(data=>{if(data?.user)setIdentity(data.user)})
+      .then(async data=>{
+        const user=data?.user;
+        if(!user?.id)return;
+        const response=await fetch(`/api/v1/users/${user.id}/profile`,{cache:"no-store"});
+        const result=await response.json().catch(()=>null);
+        if(response.ok&&result?.profile)setProfile(result.profile);
+        else setProfile({id:user.id,username:user.username??"flipzero",displayName:user.displayName??user.username??"Ваш профиль",avatarUrl:user.avatarUrl??null,bannerUrl:user.bannerUrl??null,presence:"online",globalLevel:1,globalXp:0,cosmetics:{}});
+      })
       .catch(()=>undefined);
     return()=>window.clearTimeout(timer);
   },[refresh]);
@@ -209,6 +216,20 @@ export function PersonalEconomy({onOpenSuperFlip}:{onOpenSuperFlip?:()=>void}={}
   const featuredBundles=storeItems.filter(item=>item.isBundle).slice(0,2);
   const equippedItems=Object.entries(inventory.equipped).map(([slot,itemId])=>({slot,item:inventory.items.find(item=>item.id===itemId)??null}));
   const previewItem=preview?(storeItems.find(item=>item.id===preview.id)??inventory.items.find(item=>item.id===preview.id)??preview):null;
+  const previewAppliedItems=useMemo(()=>{
+    if(!previewItem)return [] as StoreItem[];
+    const all=[...storeItems,...inventory.items];
+    if(previewItem.isBundle)return previewItem.bundleItems.map(id=>all.find(item=>item.id===id)).filter((item):item is StoreItem=>Boolean(item));
+    return [previewItem];
+  },[previewItem,storeItems,inventory.items]);
+  const previewCosmetics=useMemo(()=>{
+    const resolved={...(profile?.cosmetics??{})};
+    for(const item of previewAppliedItems){
+      if(["avatar_frame","profile_effect","banner","nickname","message_effect","badge"].includes(item.category))resolved[item.category]=item.preview;
+    }
+    return resolved;
+  },[profile?.cosmetics,previewAppliedItems]);
+  const previewChangedSlots=previewAppliedItems.map(item=>slotLabels[item.slot]??categoryLabels[item.category]??item.category);
 
   function actionFor(item:StoreItem){
     if(item.isBundle){
@@ -324,14 +345,9 @@ export function PersonalEconomy({onOpenSuperFlip}:{onOpenSuperFlip?:()=>void}={}
       <section className="store-preview-dialog" role="dialog" aria-modal="true" aria-label={`Предпросмотр: ${previewItem.title}`} onClick={event=>event.stopPropagation()}>
         <button className="store-preview-close" onClick={()=>setPreview(null)} aria-label="Закрыть"><AppIcon name="close" size={20}/></button>
         <div className="store-preview-stage">
-          <div className={`store-preview-profile cosmetic-${previewItem.preview}`}>
-            <div className="store-preview-banner" style={identity?.bannerUrl?{backgroundImage:`url("${identity.bannerUrl}")`}:undefined}/>
-            <div className="store-preview-avatar">{identity?.avatarUrl?<MediaImage src={identity.avatarUrl} alt="" sizes="82px"/>:(identity?.displayName??"FZ").slice(0,2)}</div>
-            <CosmeticArt live item={previewItem}/>
-            <strong>{identity?.displayName??"Ваш профиль"}</strong><span>@flipzero</span>
-          </div>
+          {profile?<ProfileAppearanceSurface profile={profile} cosmetics={previewCosmetics} className="store-profile-live-preview" previewLabel="ПРЕДПРОСМОТР ОФОРМЛЕНИЯ"/>:<div className="store-preview-loading"><AppIcon name="loading" className="spin"/><span>Загружаем ваш профиль…</span></div>}
         </div>
-        <div className="store-preview-copy"><ItemBadges item={previewItem}/><small>{rarityLabels[previewItem.rarity]??previewItem.rarity}</small><h3>{previewItem.title}</h3><p>{previewItem.description}</p><div className="store-preview-price">{previewItem.priceOrbs} монет</div><div className="store-card-actions">{actionFor(previewItem)}</div></div>
+        <div className="store-preview-copy"><ItemBadges item={previewItem}/><small>{rarityLabels[previewItem.rarity]??previewItem.rarity}</small><h3>{previewItem.title}</h3><p>{previewItem.description}</p><div className="store-preview-impact"><strong>На вашем профиле изменится</strong><div>{previewChangedSlots.length?previewChangedSlots.map((label,index)=><span key={`${label}-${index}`}><AppIcon name="check" size={12}/>{label}</span>):<span>Предмет не меняет профиль напрямую.</span>}</div></div><div className="store-preview-price">{previewItem.priceOrbs} монет</div><div className="store-card-actions">{actionFor(previewItem)}</div></div>
       </section>
     </div>:null}
   </div>;
