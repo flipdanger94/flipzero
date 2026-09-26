@@ -1,0 +1,2 @@
+Manual production deployment trigger.
+Base application commit: 53579bac46bc74d18a768c411b0f1c3abbe8c105
