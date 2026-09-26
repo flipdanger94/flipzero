@@ -70,3 +70,32 @@
 
 .equipped-slot-head>span{display:inline-flex;align-items:center;gap:6px;min-width:0}
 .fz-icon{display:inline-block;flex:0 0 auto;vertical-align:-.125em}
+
+
+/* Birds collection: CSS animation with static first-frame fallback */
+.visual-skybird,.visual-featherfall,.visual-dawnflight,.visual-bluewing,.visual-birds-bundle{
+  background:
+    radial-gradient(circle at 20% 18%,rgba(137,220,255,.32),transparent 24%),
+    radial-gradient(circle at 78% 78%,rgba(151,119,255,.24),transparent 28%),
+    linear-gradient(145deg,#101d35,#0a1326 58%,#11152b);
+}
+.visual-skybird:before,.visual-birds-bundle:before{
+  content:"";position:absolute;z-index:2;left:50%;top:44%;width:96px;height:42px;transform:translate(-50%,-50%);
+  border-radius:70% 20% 70% 20%;background:linear-gradient(135deg,#d9f6ff,#72c9ff 55%,#8a79ff);
+  clip-path:polygon(0 56%,34% 30%,49% 48%,64% 24%,100% 50%,70% 65%,52% 58%,35% 72%);
+  filter:drop-shadow(0 0 18px rgba(112,203,255,.42));
+}
+.visual-featherfall:before,.visual-featherfall:after,.visual-dawnflight:before,.visual-bluewing:before{
+  content:"";position:absolute;z-index:2;width:18px;height:34px;border-radius:80% 20% 80% 20%;background:linear-gradient(145deg,#e7fbff,#84d5ff 62%,#8777ff);box-shadow:38px 28px 0 -5px rgba(184,235,255,.72),-42px 46px 0 -7px rgba(151,135,255,.55);
+}
+.visual-featherfall:before{left:25%;top:18%}.visual-featherfall:after{right:24%;top:34%;transform:rotate(46deg)}
+.visual-dawnflight{background:linear-gradient(180deg,#9d76c8 0%,#ed99b5 46%,#f1bd8f 70%,#23304a 100%)}.visual-dawnflight:before{left:48%;top:34%;width:48px;height:16px;background:transparent;border-top:3px solid rgba(23,34,57,.76);border-radius:50%;box-shadow:38px 9px 0 -6px rgba(23,34,57,.7),-48px 14px 0 -6px rgba(23,34,57,.62)}
+.visual-bluewing:before{left:50%;top:50%;transform:translate(-50%,-50%) rotate(-32deg);box-shadow:0 0 20px rgba(108,207,255,.55)}
+.cosmetic-art.is-live.visual-skybird:before,.cosmetic-art.is-live.visual-birds-bundle:before{animation:bird-float 3.8s var(--ease-standard,ease-in-out) infinite}
+.cosmetic-art.is-live.visual-featherfall:before{animation:feather-fall 4.8s linear infinite}.cosmetic-art.is-live.visual-featherfall:after{animation:feather-fall 5.8s linear -2.2s infinite}
+.cosmetic-art.is-live.visual-dawnflight:before{animation:bird-cross 8s linear infinite}
+.cosmetic-art.is-live.visual-bluewing:before{animation:wing-idle 2.8s ease-in-out infinite}
+@keyframes bird-float{0%,100%{transform:translate(-50%,-50%) translateY(0) rotate(-2deg)}50%{transform:translate(-50%,-50%) translateY(-8px) rotate(2deg)}}
+@keyframes feather-fall{0%{transform:translateY(-34px) rotate(0);opacity:0}12%{opacity:.9}85%{opacity:.75}100%{transform:translateY(180px) rotate(220deg);opacity:0}}
+@keyframes bird-cross{0%{transform:translateX(-140px);opacity:0}14%{opacity:.72}86%{opacity:.72}100%{transform:translateX(180px);opacity:0}}
+@keyframes wing-idle{0%,100%{transform:translate(-50%,-50%) rotate(-32deg) scale(1)}50%{transform:translate(-50%,-50%) rotate(-26deg) scale(1.06)}}

@@ -164,7 +164,7 @@ export function UserProfilePopover({
       </>}
     </section>
 
-    {p&&full?<div className="fz-full-profile-backdrop" role="presentation" onMouseDown={(event)=>{if(event.target===event.currentTarget)setFull(false)}}><section ref={fullRef} tabIndex={-1} className={`fz-full-profile effect-${p.cosmetics?.profile_effect??"none"}`} role="dialog" aria-modal="true" aria-label={`Полный профиль ${p.displayName}`} style={{"--profile-accent":"var(--accent,#8f70ff)"} as CSSProperties}>
+    {p&&full?<div className="fz-full-profile-backdrop" role="presentation" onMouseDown={(event)=>{if(event.target===event.currentTarget)setFull(false)}}><section ref={fullRef} tabIndex={-1} className={`fz-full-profile effect-${p.cosmetics?.profile_effect??"none"} chat-${p.cosmetics?.message_effect??"none"}`} role="dialog" aria-modal="true" aria-label={`Полный профиль ${p.displayName}`} style={{"--profile-accent":"var(--accent,#8f70ff)"} as CSSProperties}>
       <button className="fz-full-close" type="button" onClick={()=>setFull(false)} aria-label="Закрыть полный профиль"><AppIcon name="close" size={20}/></button>
       <aside>
         <div className={`fz-full-banner cosmetic-${p.cosmetics?.banner??"none"}`} style={p.bannerUrl?{backgroundImage:`linear-gradient(180deg,transparent,#08101e),url("${p.bannerUrl}")`}:undefined}/>
@@ -176,6 +176,14 @@ export function UserProfilePopover({
       </aside>
       <main>
         <ProfileVisitCard key={p.id} profile={p} onSaved={updates=>setProfile(current=>current?{...current,...updates}:current)}/>
+        <section className="fz-profile-equipped-showcase" aria-label="Экипированное оформление профиля">
+          <article><small>Рамка аватара</small><div className={`fz-profile-equipped-avatar frame-${p.cosmetics?.avatar_frame??"none"}`}>{p.avatarUrl?<MediaImage src={p.avatarUrl}/>:p.displayName.slice(0,2)}</div></article>
+          <article className={`effect-${p.cosmetics?.profile_effect??"none"}`}><small>Эффект профиля</small><strong>{p.cosmetics?.profile_effect?"Активен":"Не выбран"}</strong></article>
+          <article><small>Баннер</small><div className={`fz-profile-equipped-banner cosmetic-${p.cosmetics?.banner??"none"}`}/></article>
+          <article><small>Стиль имени</small><strong className={p.cosmetics?.nickname?`nick-${p.cosmetics.nickname}`:""}>{p.displayName}</strong></article>
+          <article><small>Значок</small><strong>{p.cosmetics?.badge?<span className={`store-profile-badge badge-${p.cosmetics.badge}`}>✦ Экипирован</span>:"Не выбран"}</strong></article>
+          <article><small>Стиль сообщений</small><div className={`fz-profile-equipped-message message-effect-${p.cosmetics?.message_effect??"none"}`}>Пример сообщения</div></article>
+        </section>
         <nav><button className={fullTab==="activity"?"active":""} onClick={()=>setFullTab("activity")}>Активность</button><button className={fullTab==="friends"?"active":""} onClick={()=>setFullTab("friends")}>Общие друзья <b>{p.commonFriends.length}</b></button><button className={fullTab==="servers"?"active":""} onClick={()=>setFullTab("servers")}>Общие серверы <b>{p.commonServers.length}</b></button></nav>
         {fullTab==="activity"?<div className="fz-full-empty"><strong>{p.presence==="online"?"Сейчас в сети":"Сейчас не в сети"}</strong><p>{p.profileStatus||"Публичной активности пока нет."}</p><div className="fz-activity-cards"><span><b>{p.globalXp}</b><small>XP аккаунта</small></span><span><b>{p.globalLevel}</b><small>уровень</small></span><span><b>{new Date(p.createdAt).toLocaleDateString("ru-RU")}</b><small>в FlipZero с</small></span></div><div className="fz-profile-xp-progress"><span>{p.globalLevel>=100?"Уровень 100":`Прогресс до уровня ${p.globalLevel+1}`}<b>{p.globalLevel>=100?"MAX":`${p.xpToNextLevel} XP осталось`}</b></span><i><b style={{width:`${p.globalLevel>=100?100:Math.max(0,Math.min(100,((p.globalXp-p.currentLevelXp)/Math.max(1,p.nextLevelXp-p.currentLevelXp))*100))}%`}}/></i></div></div>:null}
         {fullTab==="friends"?<div className="fz-full-list">{p.commonFriends.length?p.commonFriends.map(friend=><article key={friend.id}><i>{friend.avatarUrl?<MediaImage src={friend.avatarUrl}/>:friend.displayName.slice(0,2)}</i><span><strong>{friend.displayName}</strong><small>@{friend.username}</small></span></article>):<div className="fz-full-empty"><strong>Нет общих друзей</strong><p>Когда появятся общие контакты, они будут показаны здесь.</p></div>}</div>:null}
