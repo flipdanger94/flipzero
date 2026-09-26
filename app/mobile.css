@@ -2495,3 +2495,28 @@ html[data-motion="off"] *::after {
   .account-profile-preview,.account-media-controls,.account-settings-form,.settings-list,.audio-device-grid,.premium-settings-grid,.superup-levels{max-width:100%!important}
   .audio-device-grid,.premium-settings-grid,.superup-levels{grid-template-columns:1fr!important}
 }
+
+/* Mobile app chrome: the desktop-style user dock is not shown on phones. */
+@media(max-width:767px){
+  .app-shell .channel-panel>.user-dock,
+  .app-shell .channel-panel.has-server-banner>.user-dock{
+    display:none!important;
+  }
+  .app-shell .channel-panel,
+  .app-shell .channel-panel.has-server-banner{
+    grid-template-rows:auto minmax(0,1fr)!important;
+  }
+  .app-shell .channel-panel.has-server-banner{
+    grid-template-rows:auto auto minmax(0,1fr)!important;
+  }
+  .app-shell .channel-panel.has-server-banner>.channel-scroll{
+    grid-row:3!important;
+  }
+  .platform-workspace,
+  .personal-economy,
+  .store-shell{
+    min-width:0!important;
+    max-width:100vw!important;
+    overflow-x:hidden!important;
+  }
+}
