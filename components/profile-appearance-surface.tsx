@@ -1,6 +1,6 @@
 "use client";
 
-import type { CSSProperties, ReactNode } from "react";
+import type { CSSProperties, ReactNode, Ref } from "react";
 import { MediaImage } from "./media-image";
 import { ClanTag, type ClanTagData } from "./clan-tag";
 
@@ -32,6 +32,9 @@ export function ProfileAppearanceSurface({
   footer,
   className = "",
   previewLabel,
+  bannerActions,
+  afterBody,
+  rootRef,
 }:{
   profile: ProfileAppearanceData;
   cosmetics?: Record<string,string>;
@@ -39,6 +42,9 @@ export function ProfileAppearanceSurface({
   footer?: ReactNode;
   className?: string;
   previewLabel?: string;
+  bannerActions?: ReactNode;
+  afterBody?: ReactNode;
+  rootRef?: Ref<HTMLElement>;
 }){
   const level=profile.globalLevel??1;
   const xp=profile.globalXp??0;
@@ -53,9 +59,10 @@ export function ProfileAppearanceSurface({
   const badge=cosmetics.badge??"";
   const chat=cosmetics.message_effect??"none";
 
-  return <section className={`fz-mini-profile profile-appearance-surface effect-${effect} chat-${chat} ${className}`.trim()} style={{"--profile-accent":"var(--accent,#8f70ff)"} as CSSProperties}>
+  return <section ref={rootRef} className={`fz-mini-profile profile-appearance-surface effect-${effect} chat-${chat} ${className}`.trim()} style={{"--profile-accent":"var(--accent,#8f70ff)"} as CSSProperties}>
     <div className={`fz-mini-banner cosmetic-${banner}`} style={profile.bannerUrl?{backgroundImage:`linear-gradient(180deg,transparent,rgba(7,12,25,.5)),url("${profile.bannerUrl}")`}:undefined}>
       {previewLabel?<span className="profile-appearance-preview-label">{previewLabel}</span>:null}
+      {bannerActions}
     </div>
     <div className="fz-mini-body">
       <div className={`fz-mini-avatar frame-${frame}`}>
@@ -90,5 +97,6 @@ export function ProfileAppearanceSurface({
       <div className={`profile-appearance-message message-effect-${chat}`}><span>{profile.displayName}</span><p>Так будет выглядеть стиль сообщения в чате.</p></div>
       {footer}
     </div>
+    {afterBody}
   </section>;
 }
