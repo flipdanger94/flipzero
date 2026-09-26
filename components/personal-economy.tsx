@@ -345,7 +345,7 @@ export function PersonalEconomy({onOpenSuperFlip}:{onOpenSuperFlip?:()=>void}={}
       <section className="store-preview-dialog" role="dialog" aria-modal="true" aria-label={`Предпросмотр: ${previewItem.title}`} onClick={event=>event.stopPropagation()}>
         <button className="store-preview-close" onClick={()=>setPreview(null)} aria-label="Закрыть"><AppIcon name="close" size={20}/></button>
         <div className="store-preview-stage">
-          {profile?<ProfileAppearanceSurface profile={profile} cosmetics={previewCosmetics} className="store-profile-live-preview" previewLabel="ПРЕДПРОСМОТР ОФОРМЛЕНИЯ"/>:<div className="store-preview-loading"><AppIcon name="loading" className="spin"/><span>Загружаем ваш профиль…</span></div>}
+          {profile?<ProfileAppearanceSurface profile={profile} cosmetics={previewCosmetics} className="store-profile-live-preview" previewLabel="ПРЕДПРОСМОТР ОФОРМЛЕНИЯ" showMessagePreview/>:<div className="store-preview-loading"><AppIcon name="loading" className="spin"/><span>Загружаем ваш профиль…</span></div>}
         </div>
         <div className="store-preview-copy"><ItemBadges item={previewItem}/><small>{rarityLabels[previewItem.rarity]??previewItem.rarity}</small><h3>{previewItem.title}</h3><p>{previewItem.description}</p><div className="store-preview-impact"><strong>На вашем профиле изменится</strong><div>{previewChangedSlots.length?previewChangedSlots.map((label,index)=><span key={`${label}-${index}`}><AppIcon name="check" size={12}/>{label}</span>):<span>Предмет не меняет профиль напрямую.</span>}</div></div><div className="store-preview-price">{previewItem.priceOrbs} монет</div><div className="store-card-actions">{actionFor(previewItem)}</div></div>
       </section>
