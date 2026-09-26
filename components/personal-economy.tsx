@@ -224,11 +224,16 @@ export function PersonalEconomy({onOpenSuperFlip}:{onOpenSuperFlip?:()=>void}={}
   },[previewItem,storeItems,inventory.items]);
   const previewCosmetics=useMemo(()=>{
     const resolved={...(profile?.cosmetics??{})};
+    const all=[...storeItems,...inventory.items];
+    for(const itemId of Object.values(inventory.equipped)){
+      const equippedItem=all.find(item=>item.id===itemId);
+      if(equippedItem&&["avatar_frame","profile_effect","banner","nickname","message_effect","badge"].includes(equippedItem.category))resolved[equippedItem.category]=equippedItem.preview;
+    }
     for(const item of previewAppliedItems){
       if(["avatar_frame","profile_effect","banner","nickname","message_effect","badge"].includes(item.category))resolved[item.category]=item.preview;
     }
     return resolved;
-  },[profile?.cosmetics,previewAppliedItems]);
+  },[profile?.cosmetics,previewAppliedItems,storeItems,inventory.items,inventory.equipped]);
   const previewChangedSlots=previewAppliedItems.map(item=>slotLabels[item.slot]??categoryLabels[item.category]??item.category);
 
   function actionFor(item:StoreItem){
