@@ -12,7 +12,6 @@ import {
   PhoneOff,
   Radio,
   Settings2,
-  ShieldCheck,
   Signal,
   Users,
   Video,
@@ -98,20 +97,11 @@ export function VoiceRoom({
   const [soundboard, setSoundboard] = useState(false);
   const [soundPlaying, setSoundPlaying] = useState(false);
   const screenSupported = typeof navigator === "undefined" || Boolean(navigator.mediaDevices?.getDisplayMedia);
-  const [consentPanel, setConsentPanel] = useState(false);
-  const [incomingConsent, setIncomingConsent] = useState<{
-    id: string;
-    requester: string;
-  } | null>(null);
-  const [consents, setConsents] = useState<
-    Record<string, "pending" | "accepted" | "declined">
-  >({});
   const [error, setError] = useState("");
   const roomRef = useRef<Room | null>(null);
   const audioRef = useRef<HTMLDivElement | null>(null);
   const cameraPreviewRef = useRef<HTMLVideoElement | null>(null);
   const cameraPreviewStreamRef = useRef<MediaStream | null>(null);
-  const consentRequestRef = useRef("");
   const deafenedRef = useRef(false);
   const joinAttemptRef = useRef(0);
   const soundPlayingRef = useRef(false);
@@ -306,32 +296,6 @@ export function VoiceRoom({
       });
       room.on(RoomEvent.ConnectionQualityChanged, (next, participant) => {
         if (participant.isLocal) { setQuality(next); emitVoiceSession(true, next); }
-      });
-      room.on(RoomEvent.DataReceived, (payload, participant, _kind, topic) => {
-        if (topic !== "recording-consent") return;
-        try {
-          const message = JSON.parse(new TextDecoder().decode(payload));
-          if (message.action === "request")
-            setIncomingConsent({
-              id: String(message.requestId),
-              requester: String(
-                message.requester || participant?.name || "Участник",
-              ),
-            });
-          if (
-            message.action === "response" &&
-            message.requestId === consentRequestRef.current &&
-            participant
-          )
-            setConsents((current) => ({
-              ...current,
-              [participant.identity]: message.accepted
-                ? "accepted"
-                : "declined",
-            }));
-        } catch {
-          return;
-        }
       });
       room.on(RoomEvent.Reconnecting, () => setStatus("reconnecting"));
       room.on(RoomEvent.Reconnected, () => { reconnectAttemptsRef.current = 0; setStatus("connected"); });
@@ -606,45 +570,6 @@ export function VoiceRoom({
       setSoundPlaying(false);
     }
   }
-  async function requestRecordingConsent() {
-    const room = roomRef.current;
-    if (!room) return;
-    const requestId = crypto.randomUUID();
-    const statuses: Record<string, "pending" | "accepted"> = {
-      [room.localParticipant.identity]: "accepted",
-    };
-    room.remoteParticipants.forEach((participant) => {
-      statuses[participant.identity] = "pending";
-    });
-    consentRequestRef.current = requestId;
-    setConsents(statuses);
-    setConsentPanel(true);
-    await room.localParticipant.publishData(
-      new TextEncoder().encode(
-        JSON.stringify({
-          action: "request",
-          requestId,
-          requester: room.localParticipant.name || "Организатор",
-        }),
-      ),
-      { reliable: true, topic: "recording-consent" },
-    );
-  }
-  async function respondToConsent(accepted: boolean) {
-    const room = roomRef.current;
-    if (!room || !incomingConsent) return;
-    await room.localParticipant.publishData(
-      new TextEncoder().encode(
-        JSON.stringify({
-          action: "response",
-          requestId: incomingConsent.id,
-          accepted,
-        }),
-      ),
-      { reliable: true, topic: "recording-consent" },
-    );
-    setIncomingConsent(null);
-  }
   async function toggleMute() {
     const room = roomRef.current;
     if (!room) return;
@@ -800,9 +725,6 @@ export function VoiceRoom({
     setQuality(ConnectionQuality.Unknown);
     setSettings(false);
     setSoundboard(false);
-    setConsentPanel(false);
-    setIncomingConsent(null);
-    setConsents({});
     setLocalPresence([]);
     onPresenceChange?.([]);
   }
@@ -810,8 +732,10 @@ export function VoiceRoom({
   const normalizedPresence = normalizeVoicePresence(presence?.length ? presence : localPresence);
   const compactMode=typeof document!=="undefined"&&document.documentElement.dataset.compact==="on";
   const gridLayout=voiceGridLayout(normalizedPresence.length,compactMode);
-  const visibleParticipants = normalizedPresence.slice(0, gridLayout.visible);
-  const hiddenParticipantCount = Math.max(0, normalizedPresence.length - visibleParticipants.length);
+  const activeStreams = normalizedPresence.filter((participant) => participant.streaming || participant.sharing);
+  const selectedStream = activeStreams.find((participant) => participant.id === selectedStreamId) ?? null;
+  const visibleParticipants = focusMode && selectedStream ? [selectedStream] : normalizedPresence.slice(0, gridLayout.visible);
+  const hiddenParticipantCount = focusMode ? 0 : Math.max(0, normalizedPresence.length - visibleParticipants.length);
   const connected = status === "connected" || status === "reconnecting";
 
   function focusStream(participantId: string) {
@@ -874,6 +798,7 @@ export function VoiceRoom({
     const onKeyDown = (event: KeyboardEvent) => {
       const target = event.target as HTMLElement | null;
       if (target?.closest("input, textarea, select, [contenteditable='true']") || event.repeat) return;
+      if (event.key === "Escape" && focusMode) { event.preventDefault(); clearFocus(); return; }
       if (event.key.toLowerCase() === "m") { event.preventDefault(); void toggleMute(); }
       if (event.key.toLowerCase() === "d") { event.preventDefault(); void toggleDeafen(); }
     };
@@ -925,6 +850,15 @@ export function VoiceRoom({
       <main className="voice-stage-layout">
         <section className="voice-stage-main" aria-label="Сцена голосового канала" onTouchStart={(event)=>{swipeStartRef.current=event.touches[0]?.clientY??null}} onTouchEnd={(event)=>{const start=swipeStartRef.current;const end=event.changedTouches[0]?.clientY;if(focusMode&&start!==null&&typeof end==="number"&&end-start>80)clearFocus();swipeStartRef.current=null}}>
           {normalizedPresence.length === 0 ? <div className="voice-stage-empty voice-stage-empty-visible" role="status"><Users size={28}/><strong>В канале пока никого нет</strong><span>Участники появятся здесь после подключения.</span></div> : null}
+          {focusMode && selectedStream ? <div className="voice-stream-fullscreen-bar" role="toolbar" aria-label="Полноэкранный просмотр стрима">
+            <div className="voice-stream-fullscreen-title"><small>ДЕМОНСТРАЦИЯ ЭКРАНА</small><strong>{selectedStream.name}</strong></div>
+            {activeStreams.length > 1 ? <div className="voice-stream-switcher" aria-label="Переключение между стримами">{activeStreams.map((stream)=><button key={stream.id} type="button" className={stream.id===selectedStreamId?"active":""} onClick={()=>focusStream(stream.id)}>{stream.name}</button>)}</div> : null}
+            <div className="voice-stream-fullscreen-actions">
+              <button type="button" onClick={toggleMute} aria-label={muted?"Включить микрофон":"Выключить микрофон"}>{muted?<MicOff size={17}/>:<Mic size={17}/>}</button>
+              <button type="button" onClick={()=>void toggleFullscreen(selectedStream.id)} aria-label="Системный полноэкранный режим"><Maximize2 size={17}/></button>
+              <button type="button" onClick={clearFocus} aria-label="Закрыть полноэкранный просмотр">×</button>
+            </div>
+          </div> : null}
           <div className="voice-tile-grid" role="list" aria-label="Участники" data-participant-count={normalizedPresence.length} style={{"--voice-grid-columns":gridLayout.columns,"--voice-grid-rows":gridLayout.rows} as CSSProperties}>
             {visibleParticipants.map((participant)=><article key={participant.id} role="listitem" data-participant-tile-id={participant.id} className={`voice-tile ${participant.speaking ? "speaking" : ""} ${participant.streaming || participant.sharing ? "is-streaming" : ""} ${participant.camera ? "has-camera" : ""} ${selectedStreamId===participant.id ? "is-stream-selected" : ""} ${focusMode&&selectedStreamId===participant.id ? "is-media-focus" : ""}`} onDoubleClick={participant.streaming || participant.sharing ? ()=>{if(selectedStreamId!==participant.id)focusStream(participant.id);window.setTimeout(()=>void toggleFullscreen(participant.id),0)} : undefined}>
               <div className="voice-tile-media" aria-hidden="true">
@@ -939,7 +873,7 @@ export function VoiceRoom({
                 <button type="button" onClick={()=>void openPictureInPicture()} aria-label="Картинка в картинке"><MonitorUp size={16}/></button>
                 <button type="button" onClick={()=>void toggleFullscreen()} aria-label="Развернуть стрим на весь экран" title="На весь экран"><Maximize2 size={16}/></button>
                 <button type="button" onClick={clearFocus} aria-label={`Закрыть стрим ${participant.name}`}>×</button>
-              </div> : <button type="button" className="voice-tile-watch" onClick={()=>focusStream(participant.id)} aria-label={`Смотреть стрим ${participant.name}`}>Смотреть стрим</button> : null}
+              </div> : <button type="button" className="voice-tile-watch" onClick={()=>focusStream(participant.id)} aria-label={`Смотреть стрим ${participant.name}`}>Открыть на весь экран</button> : null}
             </article>)}
             {hiddenParticipantCount ? <article className="voice-tile voice-tile-more" role="listitem"><strong>+{hiddenParticipantCount}</strong><span>ещё участников</span></article>:null}
           </div>
@@ -951,7 +885,6 @@ export function VoiceRoom({
             <div className="voice-screen-options"><strong>Демонстрация экрана</strong><div><label><span>Качество</span><select value={screenQuality} onChange={(event)=>setScreenQuality(event.target.value as "720"|"1080")} disabled={sharing}><option value="720">720p</option><option value="1080">1080p</option></select></label><label><span>FPS</span><select value={screenFps} onChange={(event)=>setScreenFps(Number(event.target.value) as 15|30|60)} disabled={sharing}><option value="15">15</option><option value="30">30</option><option value="60">60</option></select></label><label className="voice-screen-audio"><input type="checkbox" checked={screenAudio} onChange={(event)=>setScreenAudio(event.target.checked)} disabled={sharing}/><span>Системный звук, если браузер поддерживает</span></label></div></div>
           </div>:null}
           {soundboard ? <div className="soundboard voice-inline-panel"><button disabled={soundPlaying} onClick={()=>playSound(330)}>✨ Магия</button><button disabled={soundPlaying} onClick={()=>playSound(520)}>🎉 Победа</button><button disabled={soundPlaying} onClick={()=>playSound(180)}>🥁 Удар</button><button disabled={soundPlaying} onClick={()=>playSound(760)}>🔔 Сигнал</button></div>:null}
-          {consentPanel ? <div className="consent-panel voice-inline-panel"><strong>Согласие на запись</strong><span>{Object.values(consents).filter((value)=>value==="accepted").length} из {Object.keys(consents).length} подтвердили</span><div>{Object.entries(consents).map(([identity,value])=><small key={identity} className={`consent-${value}`}>{identity.slice(0,8)} · {value==="accepted"?"согласен":value==="declined"?"отказался":"ожидаем"}</small>)}</div></div>:null}
         </section>
       </main>
 
@@ -962,7 +895,6 @@ export function VoiceRoom({
         <button className={sharing?"is-active":""} onClick={toggleScreen} disabled={!screenSupported} aria-label={sharing?"Остановить демонстрацию экрана":"Демонстрация экрана"}><MonitorUp size={20}/><span>Экран</span></button>
         <button className={settings?"is-active":""} onClick={()=>setSettings((value)=>!value)} aria-label="Устройства" title="Устройства"><Settings2 size={20}/><span>Устройства</span></button>
         <button className={soundboard?"is-active":""} onClick={()=>setSoundboard((value)=>!value)} aria-label="Soundboard" title="Soundboard"><Music2 size={20}/><span>Soundboard</span></button>
-        <button onClick={requestRecordingConsent} aria-label="Запросить согласие на запись" title="Согласие на запись"><ShieldCheck size={20}/><span>Запись</span></button>
         <button className="voice-leave" onClick={leave} aria-label="Отключиться"><PhoneOff size={20}/><span>Выйти</span></button>
       </nav>
 
@@ -973,7 +905,6 @@ export function VoiceRoom({
           <footer><button type="button" onClick={closeCameraPreview}>Отмена</button><button type="button" className="primary" onClick={()=>void confirmCamera()} disabled={cameraPreviewBusy||Boolean(cameraPreviewError)}>Включить камеру</button></footer>
         </section>
       </div> : null}
-      {incomingConsent ? <div className="consent-request"><ShieldCheck size={20}/><div><strong>{incomingConsent.requester} запрашивает запись</strong><span>Подтвердите согласие на запись и транскрипцию комнаты.</span></div><button onClick={()=>respondToConsent(true)}>Согласен</button><button onClick={()=>respondToConsent(false)}>Отказаться</button></div>:null}
     </div>
   );
 }
