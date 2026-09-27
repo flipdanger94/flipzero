@@ -83,7 +83,7 @@
 }
 
 .global-user-dock{
-  position:fixed;z-index:145;left:0;bottom:15px;width:348px;height:54px;min-height:54px;
+  position:fixed;z-index:180;left:0;bottom:15px;width:348px;height:54px;min-height:54px;
   border:0;border-radius:0;background:transparent;box-shadow:none;backdrop-filter:none;overflow:visible;
 }
 .global-user-dock .user-dock{
@@ -284,5 +284,19 @@ button.clan-tag-badge{cursor:pointer}
     overflow:hidden!important;
     text-overflow:ellipsis!important;
     white-space:nowrap!important;
+  }
+}
+
+/* Keep the desktop account dock visually identical in Channels, Personal and Clans. */
+@media(min-width:768px){
+  .app-shell.platform-view-active>.global-user-dock{
+    z-index:180!important;
+  }
+  .app-shell.platform-view-active>.space-rail{
+    z-index:150!important;
+  }
+  .app-shell.platform-view-active .social-nav-rail,
+  .app-shell.platform-view-active .clan-section-nav{
+    padding-bottom:92px!important;
   }
 }
