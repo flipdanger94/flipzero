@@ -88,7 +88,7 @@
 }
 .global-user-dock .user-dock{
   display:grid!important;
-  grid-template-columns:minmax(96px,1fr) 50px 50px 38px;
+  grid-template-columns:minmax(150px,1fr) 44px 44px 34px;
   align-items:center;
   gap:2px;
   width:100%;
@@ -109,10 +109,10 @@
 .global-user-dock .dock-copy small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .global-user-dock .dock-copy strong{font-size:12px}
 .global-user-dock .dock-copy small{font-size:11px}
-.global-user-dock .dock-audio-control{min-width:0;width:50px}
-.global-user-dock .dock-audio-control>button:first-child{width:31px}
-.global-user-dock .dock-audio-control>.dock-chevron{width:19px}
-.global-user-dock .user-dock>button:not(.dock-profile){width:38px;min-width:38px;height:36px}
+.global-user-dock .dock-audio-control{min-width:0;width:44px}
+.global-user-dock .dock-audio-control>button:first-child{width:27px}
+.global-user-dock .dock-audio-control>.dock-chevron{width:17px}
+.global-user-dock .user-dock>button:not(.dock-profile){width:34px;min-width:34px;height:36px}
 
 /* Fast incoming direct-call surface */
 .incoming-call-toast{
@@ -275,4 +275,26 @@ button.clan-tag-badge{cursor:pointer}
 @media(max-width:767px){
   .clan-tag-badge{font-size:9px;min-height:17px;padding-inline:4px}
   .clan-tag-full>small{font-size:9px}
+}
+
+@media(min-width:768px){
+  .global-user-dock .dock-profile{
+    display:grid!important;
+    grid-template-columns:38px minmax(0,1fr)!important;
+    gap:8px!important;
+    align-items:center!important;
+  }
+  .global-user-dock .dock-copy{
+    display:block!important;
+    min-width:0!important;
+    overflow:hidden!important;
+  }
+  .global-user-dock .dock-copy strong,
+  .global-user-dock .dock-copy small{
+    display:block!important;
+    max-width:100%!important;
+    overflow:hidden!important;
+    text-overflow:ellipsis!important;
+    white-space:nowrap!important;
+  }
 }
