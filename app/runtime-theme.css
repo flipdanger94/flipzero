@@ -300,3 +300,38 @@ button.clan-tag-badge{cursor:pointer}
     padding-bottom:92px!important;
   }
 }
+
+/* Desktop dock profile must fill its grid track; generic user-dock button sizing otherwise collapses it. */
+@media(min-width:768px){
+  .global-user-dock .user-dock>.dock-profile{
+    width:100%!important;
+    max-width:none!important;
+    height:44px!important;
+    min-height:44px!important;
+    justify-self:stretch!important;
+    overflow:hidden!important;
+  }
+  .global-user-dock .user-dock>.dock-profile .avatar{
+    width:38px!important;
+    min-width:38px!important;
+    height:38px!important;
+  }
+  .global-user-dock .user-dock>.dock-profile .dock-copy{
+    display:block!important;
+    width:100%!important;
+    min-width:0!important;
+    opacity:1!important;
+    visibility:visible!important;
+  }
+  .global-user-dock .user-dock>.dock-profile .dock-copy strong{
+    color:var(--text)!important;
+    font-size:12px!important;
+    line-height:1.15!important;
+  }
+  .global-user-dock .user-dock>.dock-profile .dock-copy small{
+    color:var(--muted)!important;
+    font-size:10px!important;
+    line-height:1.15!important;
+    margin-top:2px!important;
+  }
+}
