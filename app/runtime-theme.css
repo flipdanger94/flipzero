@@ -139,28 +139,16 @@
 .mobile-tab-bar button span{font-size:11px!important;line-height:1.15!important}
 
 @media(max-width:767px){
-  .global-user-dock{display:none}
+  .global-user-dock,
   .app-shell.platform-view-active .global-user-dock,
-  .app-shell.mobile-channels-open .global-user-dock{
-    display:block;left:8px;right:8px;bottom:calc(var(--mobile-bottom-nav,66px) + env(safe-area-inset-bottom) + 6px);
-    width:auto;min-height:54px;border:1px solid color-mix(in srgb,var(--accent) 22%,var(--border));border-radius:13px;
-    box-shadow:0 16px 48px rgba(0,0,0,.42);backdrop-filter:blur(18px);
-  }
+  .app-shell.mobile-channels-open .global-user-dock,
   .app-shell.mobile-channels-open:not(.platform-view-active) .global-user-dock{
-    left:0;right:auto;bottom:var(--mobile-bottom-nav,66px);width:min(88vw,360px);border-left:0;border-bottom:0;border-radius:0;
+    display:none!important;
   }
-  .global-user-dock .user-dock{padding:6px 7px!important;flex-wrap:nowrap!important}
-  .global-user-dock .dock-profile{min-width:0!important}
-  .global-user-dock .dock-copy{display:none!important}
-  .global-user-dock .user-dock.has-voice-session .dock-voice-session{display:none!important}
-  .global-user-dock .dock-audio-control{height:42px!important}
-  .global-user-dock .dock-audio-control>button:first-child{width:40px!important}
-  .global-user-dock .dock-audio-control>.dock-chevron{width:28px!important}
-  .global-user-dock .user-dock>button:not(.dock-profile){min-width:44px!important;min-height:44px!important}
   .app-shell.platform-view-active .platform-workspace{
-    bottom:calc(var(--mobile-bottom-nav,66px) + 60px + env(safe-area-inset-bottom))!important;
-    height:calc(100dvh - var(--mobile-bottom-nav,66px) - 60px - env(safe-area-inset-bottom))!important;
-    max-height:calc(100dvh - var(--mobile-bottom-nav,66px) - 60px - env(safe-area-inset-bottom))!important;
+    bottom:var(--mobile-bottom-nav,66px)!important;
+    height:calc(100dvh - var(--mobile-bottom-nav,66px))!important;
+    max-height:calc(100dvh - var(--mobile-bottom-nav,66px))!important;
   }
   .incoming-call-toast{left:8px;right:8px;top:max(8px,env(safe-area-inset-top));width:auto;grid-template-columns:46px minmax(0,1fr) 44px 44px;padding:10px}
   .incoming-call-avatar{width:46px;height:46px}.incoming-call-toast>button{width:44px;height:44px}
