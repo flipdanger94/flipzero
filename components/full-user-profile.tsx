@@ -1,6 +1,6 @@
 "use client";
 
-import { type CSSProperties } from "react";
+import { type CSSProperties, type RefObject } from "react";
 import { AppIcon } from "./app-icon";
 import { MediaImage } from "./media-image";
 import { ClanTag, type ClanTagData } from "./clan-tag";
@@ -25,6 +25,7 @@ type Tab = "activity"|"friends"|"servers";
 
 export function FullUserProfile({
   profile:p,
+  rootRef,
   tab,
   busy,
   onTab,
@@ -36,6 +37,7 @@ export function FullUserProfile({
   onSaved,
 }:{
   profile:FullProfileData;
+  rootRef:RefObject<HTMLElement|null>;
   tab:Tab;
   busy:boolean;
   onTab:(tab:Tab)=>void;
@@ -51,7 +53,7 @@ export function FullUserProfile({
   const joined=new Date(p.createdAt).toLocaleDateString("ru-RU",{month:"long",year:"numeric"});
   const location=p.profileLocation||"Местоположение не указано";
 
-  return <section className={`fz-profile-v2 effect-${p.cosmetics?.profile_effect??"none"}`} role="dialog" aria-modal="true" aria-label={`Полный профиль ${p.displayName}`} style={{"--profile-accent":"var(--accent,#8f70ff)"} as CSSProperties}>
+  return <section ref={rootRef} tabIndex={-1} className={`fz-profile-v2 effect-${p.cosmetics?.profile_effect??"none"}`} role="dialog" aria-modal="true" aria-label={`Полный профиль ${p.displayName}`} style={{"--profile-accent":"var(--accent,#8f70ff)"} as CSSProperties}>
     <button className="fz-profile-v2-close" type="button" onClick={onClose} aria-label="Закрыть профиль"><AppIcon name="close" size={20}/></button>
 
     <header className="fz-profile-v2-hero">
