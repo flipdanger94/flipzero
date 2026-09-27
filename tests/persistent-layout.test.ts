@@ -55,9 +55,9 @@ describe("persistent application shell contract", () => {
     expect(shell.match(/<nav className="space-rail"/g)?.length).toBe(1);
     expect(runtime).toContain("grid-template-columns:76px 272px");
     expect(runtime).toContain(".app-shell.platform-view-active>.space-rail");
-    expect(runtime).toContain("left:76px;bottom:0;width:272px");
-    expect(runtime).toContain("grid-template-columns:minmax(96px,1fr) 50px 50px 38px");
-    expect(runtime).toContain("width:272px");
+    expect(runtime).toContain(".app-shell.platform-view-active>.global-user-dock");
+    expect(runtime).toContain("position:fixed;z-index:180;left:0;bottom:15px;width:348px");
+    expect(runtime).toContain("grid-template-columns:minmax(150px,1fr) 44px 44px 34px");
   });
 
   it("uses second-level desktop navigation for admin and clans", async () => {
