@@ -1,6 +1,6 @@
 import { ImageResponse } from "next/og";
 
-export const runtime = "edge";
+export const runtime = "nodejs";
 export const alt = "FlipZero — чаты, голос и сообщества";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
@@ -19,7 +19,7 @@ export default function Image() {
           <div style={{ width:64, height:64, borderRadius:18, display:"flex", alignItems:"center", justifyContent:"center", background:"linear-gradient(135deg,#4d72ff,#d83bf2)", fontSize:34, fontWeight:800 }}>F</div>
           <div style={{ fontSize:34, fontWeight:800 }}>FlipZero</div>
         </div>
-        <div style={{ fontSize:72, lineHeight:1.02, fontWeight:900, letterSpacing:-3 }}>Ваши люди.<br />Ваше место.</div>
+        <div style={{ display:"flex", flexDirection:"column", fontSize:72, lineHeight:1.02, fontWeight:900, letterSpacing:-3 }}><span>Ваши люди.</span><span>Ваше место.</span></div>
         <div style={{ marginTop:26, maxWidth:760, fontSize:28, color:"#b8c5e6", lineHeight:1.35 }}>Чаты, голос, видео и сообщества в одном пространстве.</div>
       </div>
     </div>,
