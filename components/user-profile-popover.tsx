@@ -5,8 +5,8 @@ import { AppIcon } from "./app-icon";
 import { MediaImage } from "./media-image";
 import { ClanTag, type ClanTagData } from "./clan-tag";
 import { DirectCallOverlay } from "./direct-call-overlay";
-import { ProfileVisitCard } from "./profile-visit-card";
 import { ProfileAppearanceSurface } from "./profile-appearance-surface";
+import { FullUserProfile } from "./full-user-profile";
 import { useModalA11y } from "@/hooks/use-modal-a11y";
 
 type CommonFriend = { id:string; username:string; displayName:string; avatarUrl:string|null };
@@ -163,32 +163,21 @@ export function UserProfilePopover({
       </div>:null}
     />}
 
-    {p&&full?<div className="fz-full-profile-backdrop" role="presentation" onMouseDown={(event)=>{if(event.target===event.currentTarget)setFull(false)}}><section ref={fullRef} tabIndex={-1} className={`fz-full-profile effect-${p.cosmetics?.profile_effect??"none"} chat-${p.cosmetics?.message_effect??"none"}`} role="dialog" aria-modal="true" aria-label={`Полный профиль ${p.displayName}`} style={{"--profile-accent":"var(--accent,#8f70ff)"} as CSSProperties}>
-      <button className="fz-full-close" type="button" onClick={()=>setFull(false)} aria-label="Закрыть полный профиль"><AppIcon name="close" size={20}/></button>
-      <aside>
-        <div className={`fz-full-banner cosmetic-${p.cosmetics?.banner??"none"}`} style={p.bannerUrl?{backgroundImage:`linear-gradient(180deg,transparent,#08101e),url("${p.bannerUrl}")`}:undefined}/>
-        <div className={`fz-full-avatar frame-${p.cosmetics?.avatar_frame??"none"}`}>{p.avatarUrl?<MediaImage src={p.avatarUrl}/>:p.displayName.slice(0,2)}<i className={p.presence==="online"?"online":""}/></div>
-        <div className="fz-full-name-row"><h2 className={p.cosmetics?.nickname?`nick-${p.cosmetics.nickname}`:""}>{p.displayName}</h2>{p.cosmetics?.badge?<span className={`store-profile-badge badge-${p.cosmetics.badge}`} title="Косметический значок">✦</span>:null}</div>{p.clan?<ClanTag clan={p.clan} variant="full" className="fz-full-clan-details"/>:null}<p>@{p.username}</p><small>Уровень {p.globalLevel} · {p.presence==="online"?"в сети":"не в сети"}</small>
-        {!p.isOwnProfile?<div className="fz-profile-icon-actions fz-full-actions"><button onClick={message} aria-label="Написать сообщение" title="Написать сообщение"><AppIcon name="messages"/></button><button onClick={()=>setCallMode("voice")} aria-label="Голосовой звонок" title="Голосовой звонок"><AppIcon name="call"/></button><button onClick={()=>setCallMode("video")} aria-label="Видеозвонок" title="Видеозвонок"><AppIcon name="video"/></button><button onClick={()=>void friendAction()} aria-label={p.friendshipStatus==="friends"?"Удалить из друзей":"Добавить в друзья"} title={p.friendshipStatus==="friends"?"Удалить из друзей":p.friendshipStatus==="outgoing"?"Заявка отправлена":"Добавить в друзья"} disabled={busy||p.friendshipStatus==="outgoing"}>{p.friendshipStatus==="friends"?<AppIcon name="user-remove"/>:p.friendshipStatus==="outgoing"?<AppIcon name="check"/>:<AppIcon name="friends"/>}</button></div>:null}
-        <section><h3>О пользователе</h3><p>{p.bio||"Описание не заполнено."}</p>{p.profileStatus?<span>{p.profileStatus}</span>:null}</section>
-        <div className="fz-full-stats"><span><b>{p.stats.messages}</b><small>сообщений</small></span><span><b>{p.stats.friends}</b><small>друзей</small></span><span><b>{p.stats.servers}</b><small>серверов</small></span></div>
-      </aside>
-      <main>
-        <ProfileVisitCard key={p.id} profile={p} onSaved={updates=>setProfile(current=>current?{...current,...updates}:current)}/>
-        <section className="fz-profile-equipped-showcase" aria-label="Экипированное оформление профиля">
-          <article><small>Рамка аватара</small><div className={`fz-profile-equipped-avatar frame-${p.cosmetics?.avatar_frame??"none"}`}>{p.avatarUrl?<MediaImage src={p.avatarUrl}/>:p.displayName.slice(0,2)}</div></article>
-          <article className={`effect-${p.cosmetics?.profile_effect??"none"}`}><small>Эффект профиля</small><strong>{p.cosmetics?.profile_effect?"Активен":"Не выбран"}</strong></article>
-          <article><small>Баннер</small><div className={`fz-profile-equipped-banner cosmetic-${p.cosmetics?.banner??"none"}`}/></article>
-          <article><small>Стиль имени</small><strong className={p.cosmetics?.nickname?`nick-${p.cosmetics.nickname}`:""}>{p.displayName}</strong></article>
-          <article><small>Значок</small><strong>{p.cosmetics?.badge?<span className={`store-profile-badge badge-${p.cosmetics.badge}`}>✦ Экипирован</span>:"Не выбран"}</strong></article>
-          <article><small>Стиль сообщений</small><div className={`fz-profile-equipped-message message-effect-${p.cosmetics?.message_effect??"none"}`}>Пример сообщения</div></article>
-        </section>
-        <nav><button className={fullTab==="activity"?"active":""} onClick={()=>setFullTab("activity")}>Активность</button><button className={fullTab==="friends"?"active":""} onClick={()=>setFullTab("friends")}>Общие друзья <b>{p.commonFriends.length}</b></button><button className={fullTab==="servers"?"active":""} onClick={()=>setFullTab("servers")}>Общие серверы <b>{p.commonServers.length}</b></button></nav>
-        {fullTab==="activity"?<div className="fz-full-empty"><strong>{p.presence==="online"?"Сейчас в сети":"Сейчас не в сети"}</strong><p>{p.profileStatus||"Публичной активности пока нет."}</p><div className="fz-activity-cards"><span><b>{p.globalXp}</b><small>XP аккаунта</small></span><span><b>{p.globalLevel}</b><small>уровень</small></span><span><b>{new Date(p.createdAt).toLocaleDateString("ru-RU")}</b><small>в FlipZero с</small></span></div><div className="fz-profile-xp-progress"><span>{p.globalLevel>=100?"Уровень 100":`Прогресс до уровня ${p.globalLevel+1}`}<b>{p.globalLevel>=100?"MAX":`${p.xpToNextLevel} XP осталось`}</b></span><i><b style={{width:`${p.globalLevel>=100?100:Math.max(0,Math.min(100,((p.globalXp-p.currentLevelXp)/Math.max(1,p.nextLevelXp-p.currentLevelXp))*100))}%`}}/></i></div></div>:null}
-        {fullTab==="friends"?<div className="fz-full-list">{p.commonFriends.length?p.commonFriends.map(friend=><article key={friend.id}><i>{friend.avatarUrl?<MediaImage src={friend.avatarUrl}/>:friend.displayName.slice(0,2)}</i><span><strong>{friend.displayName}</strong><small>@{friend.username}</small></span></article>):<div className="fz-full-empty"><strong>Нет общих друзей</strong><p>Когда появятся общие контакты, они будут показаны здесь.</p></div>}</div>:null}
-        {fullTab==="servers"?<div className="fz-full-list">{p.commonServers.length?p.commonServers.map(server=><article key={server.id}><i>{server.iconUrl?<MediaImage src={server.iconUrl}/>:server.name.slice(0,2)}</i><span><strong>{server.name}</strong><small>Общее пространство</small></span></article>):<div className="fz-full-empty"><strong>Нет общих серверов</strong><p>Общие пространства появятся здесь.</p></div>}</div>:null}
-      </main>
-    </section></div>:null}
+    {p&&full?<div className="fz-full-profile-backdrop fz-profile-v2-backdrop" role="presentation" onMouseDown={(event)=>{if(event.target===event.currentTarget)setFull(false)}}>
+      <FullUserProfile
+        profile={p}
+        rootRef={fullRef}
+        tab={fullTab}
+        busy={busy}
+        onTab={setFullTab}
+        onClose={()=>setFull(false)}
+        onMessage={message}
+        onVoice={()=>setCallMode("voice")}
+        onVideo={()=>setCallMode("video")}
+        onFriendAction={()=>void friendAction()}
+        onSaved={updates=>setProfile(current=>current?{...current,...updates}:current)}
+      />
+    </div>:null}
 
     {p&&reporting?<div className="fz-profile-report-backdrop" role="presentation" onMouseDown={(event)=>{if(event.target===event.currentTarget)setReporting(false)}}><section ref={reportRef} tabIndex={-1} role="dialog" aria-modal="true" aria-label="Пожаловаться на профиль"><form className="fz-profile-report" onSubmit={submitReport}><h3>Пожаловаться на профиль</h3><p>@{p.username}</p><label>Причина<select name="reason" defaultValue="harassment"><option value="harassment">Оскорбления / травля</option><option value="spam">Спам</option><option value="fraud">Мошенничество</option><option value="impersonation">Выдаёт себя за другого</option><option value="unwanted_content">Нежелательный контент</option><option value="other">Другое</option></select></label><label>Описание<textarea name="description" rows={4} maxLength={2000}/></label><footer><button type="button" onClick={()=>setReporting(false)}>Отмена</button><button disabled={busy}>Отправить</button></footer></form></section></div>:null}
     {p&&callMode?<DirectCallOverlay person={p} video={callMode==="video"} onClose={()=>setCallMode(null)}/>:null}
