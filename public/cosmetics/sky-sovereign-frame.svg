@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Sky Sovereign avatar frame">
+<defs>
+  <linearGradient id="metal" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#ffffff"/><stop offset=".18" stop-color="#a8d7f5"/><stop offset=".42" stop-color="#4c6d9a"/><stop offset=".62" stop-color="#dbefff"/><stop offset=".82" stop-color="#7a6cff"/><stop offset="1" stop-color="#eef9ff"/></linearGradient>
+  <radialGradient id="gem"><stop stop-color="#effcff"/><stop offset=".3" stop-color="#78dcff"/><stop offset=".7" stop-color="#6a5cff"/><stop offset="1" stop-color="#18213d"/></radialGradient>
+  <filter id="g" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="6" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+</defs>
+<g fill="none" stroke="url(#metal)" stroke-linecap="round" stroke-linejoin="round" filter="url(#g)">
+  <circle cx="256" cy="256" r="171" stroke-width="16" opacity=".94"/>
+  <circle cx="256" cy="256" r="188" stroke-width="3" stroke-dasharray="9 18" opacity=".8"/>
+  <path d="M98 198 C55 183 33 158 20 126 C69 141 112 158 143 184 C126 188 111 193 98 198Z" stroke-width="8"/>
+  <path d="M414 198 C457 183 479 158 492 126 C443 141 400 158 369 184 C386 188 401 193 414 198Z" stroke-width="8"/>
+  <path d="M113 318 C71 329 45 352 26 386 C73 373 114 355 145 330 C132 327 122 323 113 318Z" stroke-width="7"/>
+  <path d="M399 318 C441 329 467 352 486 386 C439 373 398 355 367 330 C380 327 390 323 399 318Z" stroke-width="7"/>
+  <path d="M190 84 L221 27 L256 62 L291 27 L322 84" stroke-width="8"/>
+  <path d="M208 422 L256 484 L304 422" stroke-width="8"/>
+  <path d="M71 255 L29 236 L48 255 L29 276 Z" stroke-width="6"/>
+  <path d="M441 255 L483 236 L464 255 L483 276 Z" stroke-width="6"/>
+</g>
+<g filter="url(#g)">
+  <circle cx="256" cy="61" r="15" fill="url(#gem)" stroke="#dff7ff" stroke-width="3"/>
+  <path d="M256 43 L263 57 L279 61 L263 66 L256 81 L249 66 L233 61 L249 57Z" fill="#eafaff"/>
+  <circle cx="256" cy="451" r="12" fill="url(#gem)" stroke="#dff7ff" stroke-width="3"/>
+  <circle cx="71" cy="255" r="8" fill="#8edfff"/><circle cx="441" cy="255" r="8" fill="#8edfff"/>
+</g>
+</svg>

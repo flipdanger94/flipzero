@@ -206,3 +206,102 @@
   .fz-mini-avatar[class*="frame-"]:before,.fz-mini-avatar[class*="frame-"]:after,.fz-full-avatar[class*="frame-"]:before,.fz-full-avatar[class*="frame-"]:after,
   .cosmetic-art[class*="visual-"]:before,.store-profile-badge{animation:none!important}
 }
+
+
+/* Sky Sovereign profile collection */
+@keyframes sky-sovereign-flyby{
+  0%{transform:translate3d(-130%,-10px,0) scale(.72) rotate(-4deg);opacity:0}
+  10%{opacity:1}
+  54%{transform:translate3d(12%,-2px,0) scale(1.04) rotate(1deg);opacity:1}
+  82%{opacity:1}
+  100%{transform:translate3d(145%,10px,0) scale(.82) rotate(4deg);opacity:0}
+}
+@keyframes sky-sovereign-contrail{0%{background-position:0 0,0 0,0 0}100%{background-position:180px 0,-120px 0,0 0}}
+@keyframes sky-sovereign-frame-pulse{0%,100%{filter:drop-shadow(0 0 5px #a9d9ff99) drop-shadow(0 0 12px #695cff55)}50%{filter:drop-shadow(0 0 10px #eaf7ffcc) drop-shadow(0 0 24px #7e6dff88)}}
+@keyframes sky-sovereign-sigil-pulse{0%,100%{transform:scale(1);filter:drop-shadow(0 0 4px #7fcfff)}50%{transform:scale(1.12);filter:drop-shadow(0 0 11px #d9f4ff)}}
+
+.fz-mini-profile.effect-sky-sovereign-flight,.fz-full-profile.effect-sky-sovereign-flight{
+  isolation:isolate;
+  box-shadow:0 30px 100px #020917c9,0 0 46px #6e79ff3d,inset 0 0 72px #4f72b51f;
+}
+.fz-mini-profile.effect-sky-sovereign-flight:before,.fz-full-profile.effect-sky-sovereign-flight:before{
+  content:"";position:absolute;z-index:4;pointer-events:none;
+  width:clamp(210px,58%,520px);aspect-ratio:3.1/1;
+  left:0;top:24px;
+  background:url("/cosmetics/sky-sovereign-plane.svg") center/contain no-repeat;
+  transform-origin:50% 50%;
+  filter:drop-shadow(0 12px 18px #0009) drop-shadow(0 0 13px #8ccfff66);
+  animation:sky-sovereign-flyby 9s cubic-bezier(.34,.03,.33,.98) infinite;
+}
+.fz-mini-profile.effect-sky-sovereign-flight:after,.fz-full-profile.effect-sky-sovereign-flight:after{
+  content:"";position:absolute;inset:0;z-index:1;pointer-events:none;border-radius:inherit;
+  background:
+    radial-gradient(ellipse at 16% 18%,#dbeeff2a 0 3%,transparent 20%),
+    radial-gradient(circle,#d9edff 0 1px,transparent 1.5px),
+    linear-gradient(105deg,transparent 0 34%,#92cfff16 45%,transparent 57%);
+  background-size:auto,44px 44px,220px 100%;
+  opacity:.72;animation:sky-sovereign-contrail 12s linear infinite;
+}
+.fz-mini-profile.effect-sky-sovereign-flight .fz-mini-body,
+.fz-full-profile.effect-sky-sovereign-flight>aside,
+.fz-full-profile.effect-sky-sovereign-flight>main{position:relative;z-index:2}
+
+.fz-mini-avatar.frame-sky-sovereign-frame,.fz-full-avatar.frame-sky-sovereign-frame,.fz-profile-equipped-avatar.frame-sky-sovereign-frame{
+  border-color:#d9edff!important;
+  box-shadow:0 0 0 2px #15233c,0 0 0 5px #a9cfff3d,0 0 24px #7cc6ff8f,0 0 54px #6d5bff58;
+}
+.fz-mini-avatar.frame-sky-sovereign-frame:before,.fz-full-avatar.frame-sky-sovereign-frame:before,.fz-profile-equipped-avatar.frame-sky-sovereign-frame:before{
+  content:"";position:absolute;inset:-20px;z-index:3;pointer-events:none;
+  background:url("/cosmetics/sky-sovereign-frame.svg") center/contain no-repeat;
+  animation:sky-sovereign-frame-pulse 4.8s ease-in-out infinite;
+}
+.fz-mini-avatar.frame-sky-sovereign-frame:after,.fz-full-avatar.frame-sky-sovereign-frame:after,.fz-profile-equipped-avatar.frame-sky-sovereign-frame:after{
+  content:"";position:absolute;left:50%;bottom:-15px;z-index:2;width:56%;height:7px;transform:translateX(-50%);
+  border-radius:50%;background:#79c8ff66;filter:blur(6px);box-shadow:0 0 16px #7569ff;
+}
+.fz-mini-avatar.frame-sky-sovereign-frame>i,.fz-full-avatar.frame-sky-sovereign-frame>i{z-index:5}
+
+.fz-mini-banner.cosmetic-sky-sovereign-banner,.fz-full-banner.cosmetic-sky-sovereign-banner,.fz-profile-equipped-banner.cosmetic-sky-sovereign-banner{
+  background-image:
+    radial-gradient(ellipse at 72% 18%,#fff4df44 0 5%,transparent 18%),
+    radial-gradient(ellipse at 20% 82%,#dceeff31 0 8%,transparent 34%),
+    linear-gradient(180deg,transparent 30%,#060d1fd4 92%),
+    repeating-linear-gradient(115deg,transparent 0 36px,#a8d9ff0b 37px 38px),
+    linear-gradient(135deg,#0e1830,#182a52 48%,#080d19)!important;
+  background-size:auto,auto,auto,180px 130px,auto!important;
+  animation:sky-sovereign-contrail 18s linear infinite;
+}
+
+.store-profile-badge.badge-sky-sovereign-sigil{font-size:0;color:#bce8ff;animation:sky-sovereign-sigil-pulse 3.1s ease-in-out infinite}
+.store-profile-badge.badge-sky-sovereign-sigil:before{content:"✈";font-size:13px}
+
+.cosmetic-art.visual-sky-sovereign-frame,
+.cosmetic-art.visual-sky-sovereign-flight,
+.cosmetic-art.visual-sky-sovereign-banner,
+.cosmetic-art.visual-sky-sovereign-bundle{
+  background:
+    radial-gradient(circle at 75% 20%,#d7ecff48,transparent 24%),
+    linear-gradient(145deg,#172645,#090f1d 72%);
+  overflow:hidden;
+}
+.cosmetic-art.visual-sky-sovereign-frame:before,
+.cosmetic-art.visual-sky-sovereign-flight:before,
+.cosmetic-art.visual-sky-sovereign-banner:before,
+.cosmetic-art.visual-sky-sovereign-bundle:before{
+  content:"";position:absolute;inset:12% -14% auto 6%;height:52%;
+  background:url("/cosmetics/sky-sovereign-plane.svg") center/contain no-repeat;
+  filter:drop-shadow(0 7px 9px #0008) drop-shadow(0 0 7px #9cd8ff66);
+  animation:sky-sovereign-flyby 7s ease-in-out infinite;
+}
+.cosmetic-art.visual-sky-sovereign-sigil:before{content:"✈";position:absolute;right:16%;top:16%;font-size:26px;color:#d8f2ff;filter:drop-shadow(0 0 9px #75c8ff);animation:sky-sovereign-sigil-pulse 3s ease-in-out infinite}
+.store-preview-profile[class*="cosmetic-sky-sovereign-"]{background:linear-gradient(150deg,#14233f,#070d19)!important}
+
+@media(prefers-reduced-motion:reduce){
+  .fz-mini-profile.effect-sky-sovereign-flight:before,.fz-full-profile.effect-sky-sovereign-flight:before,
+  .fz-mini-profile.effect-sky-sovereign-flight:after,.fz-full-profile.effect-sky-sovereign-flight:after,
+  .fz-mini-avatar.frame-sky-sovereign-frame:before,
+  .fz-full-avatar.frame-sky-sovereign-frame:before,
+  .fz-profile-equipped-avatar.frame-sky-sovereign-frame:before,
+  .fz-mini-banner.cosmetic-sky-sovereign-banner,.fz-full-banner.cosmetic-sky-sovereign-banner,
+  .cosmetic-art[class*="visual-sky-sovereign-"]:before,.store-profile-badge.badge-sky-sovereign-sigil{animation:none!important}
+}
