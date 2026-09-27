@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "node scripts/apply-clans-migration.mjs && next build",
+    "build": "node scripts/apply-clans-migration.mjs && next build --webpack",
     "start": "next start",
     "lint": "eslint .",
     "test": "vitest run",
