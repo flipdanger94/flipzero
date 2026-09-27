@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 320" role="img" aria-label="Sky Sovereign aircraft">
+<defs>
+  <linearGradient id="body" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#f5fbff"/><stop offset=".22" stop-color="#9ec8ef"/><stop offset=".48" stop-color="#233c65"/><stop offset=".72" stop-color="#0b1730"/><stop offset="1" stop-color="#7a6cff"/></linearGradient>
+  <linearGradient id="wing" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#dcefff"/><stop offset=".45" stop-color="#6fa9dd"/><stop offset="1" stop-color="#1b2a49"/></linearGradient>
+  <linearGradient id="trail" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#86d8ff" stop-opacity="0"/><stop offset=".65" stop-color="#86d8ff" stop-opacity=".55"/><stop offset="1" stop-color="#d7f5ff" stop-opacity=".95"/></linearGradient>
+  <radialGradient id="engine"><stop stop-color="#effcff"/><stop offset=".22" stop-color="#76d7ff"/><stop offset=".5" stop-color="#5b5cff"/><stop offset=".78" stop-color="#162746"/><stop offset="1" stop-color="#050b16"/></radialGradient>
+  <filter id="glow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="8" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+</defs>
+<path d="M0 199 C146 184 226 189 322 191" fill="none" stroke="url(#trail)" stroke-width="8" stroke-linecap="round" opacity=".7"/>
+<path d="M34 225 C152 212 243 210 336 209" fill="none" stroke="url(#trail)" stroke-width="3" stroke-linecap="round" opacity=".45"/>
+<g filter="url(#glow)">
+  <path d="M278 186 C334 172 398 150 482 124 C609 85 758 80 879 112 C922 123 951 141 957 158 C962 176 934 193 879 201 C742 221 594 221 461 214 C385 210 326 204 278 198 C253 195 252 190 278 186Z" fill="url(#body)" stroke="#ccecff" stroke-width="2.3"/>
+  <path d="M451 163 L261 64 L213 69 L360 181 Z" fill="url(#wing)" stroke="#b8dcff" stroke-width="2"/>
+  <path d="M520 184 L681 267 L736 260 L596 178 Z" fill="url(#wing)" stroke="#b8dcff" stroke-width="2"/>
+  <path d="M326 182 L251 118 L227 120 L278 190 Z" fill="#243d67" stroke="#91c7ef" stroke-width="1.6"/>
+  <path d="M815 114 L851 57 L877 61 L884 122 Z" fill="#29456f" stroke="#a5d4f4" stroke-width="2"/>
+  <ellipse cx="421" cy="193" rx="39" ry="31" fill="#0a1222" stroke="#8edfff" stroke-width="4"/>
+  <ellipse cx="421" cy="193" rx="25" ry="22" fill="url(#engine)"/>
+  <ellipse cx="690" cy="205" rx="35" ry="28" fill="#0a1222" stroke="#8edfff" stroke-width="4"/>
+  <ellipse cx="690" cy="205" rx="22" ry="19" fill="url(#engine)"/>
+  <path d="M870 135 Q903 143 920 158 Q897 166 859 166" fill="none" stroke="#eefaff" stroke-width="3" stroke-linecap="round"/>
+  <path d="M512 124 C580 109 688 105 773 117" fill="none" stroke="#ffffff" stroke-opacity=".48" stroke-width="2"/>
+  <g fill="#bfe8ff" opacity=".76">
+    <rect x="600" y="121" width="11" height="5" rx="2.5"/><rect x="620" y="118" width="11" height="5" rx="2.5"/><rect x="640" y="116" width="11" height="5" rx="2.5"/><rect x="660" y="114" width="11" height="5" rx="2.5"/><rect x="680" y="113" width="11" height="5" rx="2.5"/><rect x="700" y="113" width="11" height="5" rx="2.5"/><rect x="720" y="114" width="11" height="5" rx="2.5"/>
+  </g>
+  <path d="M789 147 l20 -12 20 12 -20 12Z" fill="none" stroke="#d8efff" stroke-width="2"/><path d="M809 135 v24 M798 147 h22" stroke="#8b7cff" stroke-width="1.5"/>
+</g>
+</svg>
