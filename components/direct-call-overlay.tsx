@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { LoaderCircle, Maximize2, Mic, MicOff, MonitorUp, PhoneOff, Video, VideoOff, X } from "lucide-react";
 import { Room, RoomEvent, Track } from "livekit-client";
+import { Dialog } from "./ui/dialog";
 import { MediaImage } from "./media-image";
 
 export type CallPerson = { id: string; displayName: string; avatarUrl?: string | null };
@@ -13,6 +14,9 @@ export function DirectCallOverlay({ person, video, onClose, connection }: { pers
   const [error, setError] = useState("");
   const [muted, setMuted] = useState(false);
   const [camera, setCamera] = useState(video);
+  const [shareBusy,setShareBusy]=useState(false);
+  const shareBusyRef=useRef(false);
+  const screenSupported=typeof navigator!=="undefined"&&Boolean(navigator.mediaDevices?.getDisplayMedia);
   const [sharing, setSharing] = useState(false);
   const [remoteSharing, setRemoteSharing] = useState(false);
   const [fullscreen, setFullscreen] = useState(false);
@@ -34,19 +38,22 @@ export function DirectCallOverlay({ person, video, onClose, connection }: { pers
     const attachLocal = () => {
       clearVideo(localRef.current);
       const track = room.localParticipant.getTrackPublication(Track.Source.Camera)?.track;
-      if (track && localRef.current) localRef.current.appendChild(track.attach());
+      if (track && localRef.current) {
+        const element=track.attach();element.muted=true;if(element instanceof HTMLVideoElement)element.playsInline=true;
+        localRef.current.appendChild(element);
+      }
     };
     room.on(RoomEvent.TrackSubscribed, (track, publication) => {
       if (track.kind === Track.Kind.Audio) audioRef.current?.appendChild(track.attach());
       if (track.kind === Track.Kind.Video) {
         const target = publication.source === Track.Source.ScreenShare ? remoteScreenRef.current : remoteRef.current;
         if (publication.source === Track.Source.ScreenShare) setRemoteSharing(true);
-        if (target) { clearVideo(target); target.appendChild(track.attach()); }
+        if (target) { clearVideo(target); const element=track.attach();if(element instanceof HTMLVideoElement)element.playsInline=true;target.appendChild(element); }
       }
     });
     room.on(RoomEvent.TrackUnsubscribed, (track, publication) => {
       track.detach().forEach((element) => element.remove());
-      if (publication.source === Track.Source.ScreenShare) { clearVideo(remoteScreenRef.current); setRemoteSharing(false); }
+      if (publication.source === Track.Source.ScreenShare) { clearVideo(remoteScreenRef.current); setRemoteSharing(false);setFullscreen(false); }
     });
     room.on(RoomEvent.ParticipantConnected, () => { hasRemoteRef.current=true; setStatus("На связи"); });
     room.on(RoomEvent.ParticipantDisconnected, () => { hasRemoteRef.current=false; setStatus("Собеседник вышел"); setRemoteSharing(false); });
@@ -58,7 +65,7 @@ export function DirectCallOverlay({ person, video, onClose, connection }: { pers
       if (publication.source === Track.Source.Camera) { setCamera(false); clearVideo(localRef.current); }
       if (publication.source === Track.Source.ScreenShare) setSharing(false);
     });
-    room.on(RoomEvent.Disconnected, () => setStatus("Звонок завершён"));
+    room.on(RoomEvent.Disconnected, () => {setStatus("Звонок завершён");setSharing(false);setRemoteSharing(false);setFullscreen(false)});
 
     void (async () => {
       try {
@@ -72,9 +79,10 @@ export function DirectCallOverlay({ person, video, onClose, connection }: { pers
         }
         if (cancelled) return;
         await room.connect(data.url, data.token);
+        if(cancelled){await room.disconnect();return;}
         await room.localParticipant.setMicrophoneEnabled(true);
         if (video) await room.localParticipant.setCameraEnabled(true);
-        if (cancelled) return;
+        if (cancelled) {await room.disconnect();return;}
         hasRemoteRef.current=room.remoteParticipants.size>0;
         setStatus(hasRemoteRef.current ? "На связи" : (roleRef.current==="caller" ? "Звоним…" : "Ожидаем соединения…"));
         attachLocal();
@@ -110,12 +118,6 @@ export function DirectCallOverlay({ person, video, onClose, connection }: { pers
     return()=>{cancelled=true;window.clearInterval(timer)};
   },[callId,onClose]);
 
-  useEffect(() => {
-    const onKey = (event: KeyboardEvent) => { if (event.key === "Escape") setFullscreen(false); };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, []);
-
   async function closeCall(){
     const callId=callIdRef.current;
     if(callId){
@@ -126,13 +128,24 @@ export function DirectCallOverlay({ person, video, onClose, connection }: { pers
   }
   async function toggleMic() { const room = roomRef.current; if (!room) return; const next = !muted; try { await room.localParticipant.setMicrophoneEnabled(!next); setMuted(next); } catch { setError("Не удалось переключить микрофон."); } }
   async function toggleCamera() { const room = roomRef.current; if (!room) return; const next = !camera; try { await room.localParticipant.setCameraEnabled(next); setCamera(next); } catch { setError("Не удалось переключить камеру."); } }
-  async function toggleSharing() { const room = roomRef.current; if (!room) return; try { await room.localParticipant.setScreenShareEnabled(!sharing); } catch { setError("Не удалось запустить демонстрацию экрана."); } }
+  async function toggleSharing() {
+    const room=roomRef.current;
+    if(!room||shareBusyRef.current||!screenSupported)return;
+    shareBusyRef.current=true;setShareBusy(true);
+    try{
+      await room.localParticipant.setScreenShareEnabled(!room.localParticipant.isScreenShareEnabled,{audio:true,systemAudio:"include"});
+      if(roomRef.current!==room){await room.localParticipant.setScreenShareEnabled(false);return;}
+      setSharing(room.localParticipant.isScreenShareEnabled);setError("");
+    }catch{setError("Демонстрация отменена или недоступна. Проверьте разрешения браузера.")}
+    finally{shareBusyRef.current=false;setShareBusy(false)}
+  }
 
-  return <div className="direct-call-backdrop" role="presentation">
-    <section className={`direct-call-dialog${fullscreen ? " direct-call-dialog-fullscreen" : ""}`} role="dialog" aria-modal="true" aria-label={video ? "Видеозвонок" : "Голосовой звонок"}>
+
+  return <Dialog backdropClassName="direct-call-backdrop" className={`direct-call-dialog${fullscreen ? " direct-call-dialog-fullscreen" : ""}`} label={video ? "Видеозвонок" : "Голосовой звонок"} onClose={()=>{if(fullscreen)setFullscreen(false);else void closeCall()}}>
       <button className="direct-call-close" onClick={()=>void closeCall()} aria-label="Закрыть звонок"><X size={20}/></button>
       <div className="direct-call-stage">
-        <div className={`direct-call-remote${remoteSharing ? " has-screen-share" : ""}`} ref={remoteRef}>
+        <div className={`direct-call-remote${remoteSharing ? " has-screen-share" : ""}`} hidden={remoteSharing}>
+          <div ref={remoteRef} className="direct-call-camera"/>
           <span className="direct-call-avatar">{person.avatarUrl ? <MediaImage src={person.avatarUrl}/> : person.displayName.slice(0,2).toLocaleUpperCase("ru")}</span>
           <strong>{person.displayName}</strong><small>{error || status}</small>
           {!error && status === "Подключаемся…" ? <LoaderCircle className="spin" size={22}/> : null}
@@ -144,10 +157,9 @@ export function DirectCallOverlay({ person, video, onClose, connection }: { pers
       <footer>
         <button className={muted ? "is-off" : ""} onClick={()=>void toggleMic()} aria-label={muted ? "Включить микрофон" : "Выключить микрофон"}>{muted?<MicOff/>:<Mic/>}</button>
         {video ? <button className={!camera ? "is-off" : ""} onClick={()=>void toggleCamera()} aria-label={camera ? "Выключить камеру" : "Включить камеру"}>{camera?<Video/>:<VideoOff/>}</button> : null}
-        <button className={sharing ? "is-active" : ""} onClick={()=>void toggleSharing()} aria-label={sharing ? "Остановить демонстрацию" : "Демонстрация экрана"}><MonitorUp/></button>
+        <button className={sharing ? "is-active" : ""} disabled={!screenSupported||shareBusy} title={!screenSupported?"Демонстрация доступна в поддерживаемом браузере на компьютере":undefined} onClick={()=>void toggleSharing()} aria-label={sharing ? "Остановить демонстрацию" : "Демонстрация экрана"}><MonitorUp/></button>
         {remoteSharing ? <button onClick={()=>setFullscreen((value)=>!value)} aria-label={fullscreen ? "Выйти из полноэкранного режима" : "Открыть стрим на весь экран"}><Maximize2/></button> : null}
         <button className="hangup" onClick={()=>void closeCall()} aria-label="Завершить звонок"><PhoneOff/></button>
       </footer>
-    </section>
-  </div>;
+  </Dialog>;
 }

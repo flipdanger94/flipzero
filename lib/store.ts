@@ -75,7 +75,6 @@ function publicItem(
     slot: item.slot,
     rarity: item.rarity,
     priceOrbs: item.price,
-    priceMoneyCents: item.priceMoneyCents,
     preview: item.preview,
     previewImage: item.previewImage ?? item.preview,
     previewAnimation: item.previewAnimation,

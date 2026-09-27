@@ -30,10 +30,10 @@ describe("icon v2 and SuperFlip theme contracts",()=>{
 
   it("migrates the primary product surfaces away from direct Lucide imports",async()=>{
     const [store,superflip]=await Promise.all([
-      readFile("components/personal-economy.tsx","utf8"),
+      Promise.all(["components/personal-economy.tsx","components/economy/types.ts"].map(path=>readFile(path,"utf8"))).then(parts=>parts.join("\n")),
       readFile("app/superflip/page.tsx","utf8"),
     ]);
-    expect(store).toContain('import { AppIcon, type AppIconName } from "./app-icon"');
+    expect(store).toContain('import { AppIcon } from "./app-icon"');
     expect(store).not.toContain('from "lucide-react"');
     expect(superflip).toContain('import { AppIcon, type AppIconName } from "@/components/app-icon"');
     expect(superflip).not.toContain('from "lucide-react"');
@@ -84,11 +84,11 @@ describe("icon v2 and SuperFlip theme contracts",()=>{
   });
 
   it("covers every current inventory equipment slot with a semantic icon",async()=>{
-    const store=await readFile("components/personal-economy.tsx","utf8");
+    const store=await Promise.all(["components/personal-economy.tsx","components/economy/types.ts"].map(path=>readFile(path,"utf8"))).then(parts=>parts.join("\n"));
     for(const slot of ["avatar_decoration","profile_effect","profile_banner","nameplate","chat_style","badge","app_theme"]){
       expect(store).toContain(slot);
     }
-    expect(store).toContain("const slotIcons:Record<string,AppIconName>");
+    expect(store).toMatch(/const slotIcons:\s*Record<string,\s*AppIconName>/);
     expect(store).toContain('name="buy"');
     expect(store).toContain('name="equip"');
     expect(store).toContain('name="unequip"');

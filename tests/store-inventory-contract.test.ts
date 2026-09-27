@@ -68,7 +68,7 @@ describe("store and inventory contracts", () => {
 
   it("builds the storefront and inventory UX from the product specification", async () => {
     const [ui, styles] = await Promise.all([
-      readFile("components/personal-economy.tsx", "utf8"),
+      Promise.all(["components/personal-economy.tsx", "components/economy/store-tab.tsx", "components/economy/inventory-tab.tsx"].map(path=>readFile(path,"utf8"))).then(parts=>parts.join("\n")),
       readFile("app/store.css", "utf8"),
     ]);
     expect(ui).toContain('setTab("store")');

@@ -129,7 +129,8 @@ export default function Home({ initialSpaceId, initialChannelId }: { initialSpac
       if(window.location.pathname.startsWith("/channels/")){setPlatformView(null);return}
       if(window.location.pathname!=="/app")return;
       const params=new URLSearchParams(window.location.search);
-      if(params.get("clan")){setClanMounted(true);setPlatformView("clans")}
+      if(params.get("dm")){setSocialRoute(route=>({tab:"messages",userId:params.get("dm"),nonce:route.nonce+1}));setPlatformView("social")}
+      else if(params.get("clan")){setClanMounted(true);setPlatformView("clans")}
       else if(params.get("view")==="personal")setPlatformView("social");
       else if(params.get("view")==="admin")setPlatformView("admin");
       else if(params.get("view")==="clans"){setClanMounted(true);setPlatformView("clans")}

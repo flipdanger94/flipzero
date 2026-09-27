@@ -11,6 +11,9 @@ const FOCUSABLE = [
   "[tabindex]:not([tabindex='-1'])",
 ].join(",");
 
+const modalStack: HTMLElement[] = [];
+let originalOverflow = "";
+
 export function useModalA11y(onClose: () => void, active = true) {
   const dialogRef = useRef<HTMLElement | null>(null);
   const closeRef = useRef(onClose);
@@ -24,18 +27,26 @@ export function useModalA11y(onClose: () => void, active = true) {
     const dialog = dialogRef.current;
     if (!dialog) return;
     const dialogElement = dialog;
+    if (!modalStack.length) {
+      originalOverflow = document.body.style.overflow;
+      document.body.style.overflow = "hidden";
+    }
+    modalStack.push(dialogElement);
+    modalStack.sort((a,b)=>a.contains(b)?-1:b.contains(a)?1:0);
 
     const previouslyFocused = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     const focusInitial = window.requestAnimationFrame(() => {
+      if(modalStack.at(-1)!==dialogElement)return;
       const preferred = dialogElement.querySelector<HTMLElement>("[autofocus]");
       const first = dialogElement.querySelector<HTMLElement>(FOCUSABLE);
-      (preferred ?? first ?? dialogElement).focus({ preventScroll: true });
+      (preferred ?? (previouslyFocused && dialogElement.contains(previouslyFocused) ? previouslyFocused : null) ?? first ?? dialogElement).focus({ preventScroll: true });
     });
 
     function onKeyDown(event: KeyboardEvent) {
+      if (modalStack.at(-1) !== dialogElement) return;
       if (event.key === "Escape") {
         event.preventDefault();
-        event.stopPropagation();
+        event.stopImmediatePropagation();
         closeRef.current();
         return;
       }
@@ -57,7 +68,7 @@ export function useModalA11y(onClose: () => void, active = true) {
       if (event.shiftKey && (current === first || !dialogElement.contains(current))) {
         event.preventDefault();
         last.focus();
-      } else if (!event.shiftKey && current === last) {
+      } else if (!event.shiftKey && (current === last || !dialogElement.contains(current))) {
         event.preventDefault();
         first.focus();
       }
@@ -65,9 +76,13 @@ export function useModalA11y(onClose: () => void, active = true) {
 
     document.addEventListener("keydown", onKeyDown, true);
     return () => {
+      const wasTop = modalStack.at(-1) === dialogElement;
+      const index = modalStack.indexOf(dialogElement);
+      if (index >= 0) modalStack.splice(index, 1);
+      if (!modalStack.length) document.body.style.overflow = originalOverflow;
       window.cancelAnimationFrame(focusInitial);
       document.removeEventListener("keydown", onKeyDown, true);
-      if (previouslyFocused?.isConnected) previouslyFocused.focus({ preventScroll: true });
+      if (wasTop && previouslyFocused?.isConnected) previouslyFocused.focus({ preventScroll: true });
     };
   }, [active]);
 

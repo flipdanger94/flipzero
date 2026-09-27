@@ -1,0 +1,149 @@
+:root {
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+  --font-sm: 0.75rem;
+  --font-base: 0.875rem;
+  --font-lg: 1rem;
+  --font-title: 1.5rem;
+  --ui-surface: var(--panel, #211e29);
+  --ui-text: var(--text, #f2eff8);
+  --ui-muted: var(--muted, #aaa4b5);
+  --ui-border: var(--border, #393241);
+  --ui-accent: var(--accent, #aa8aff);
+  --ui-overlay: #080710cc;
+  --ui-motion: 160ms;
+}
+
+.ui-dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+  background: var(--ui-overlay);
+}
+.ui-dialog {
+  min-width: 0;
+  max-width: 100%;
+  max-height: calc(100dvh - var(--space-8));
+  overflow: auto;
+  overscroll-behavior: contain;
+  border-radius: var(--radius-lg);
+  animation: ui-dialog-enter var(--ui-motion) ease-out;
+}
+.ui-dialog:focus-visible,
+.ui-dialog :focus-visible {
+  outline: 2px solid var(--ui-accent);
+  outline-offset: var(--space-1);
+}
+.ui-dialog.space-dialog {
+  padding: var(--space-6);
+}
+.store-item-card,
+.inventory-card {
+  border-radius: var(--radius-lg);
+}
+.store-item-copy {
+  padding: var(--space-4);
+}
+.store-card-actions {
+  gap: var(--space-2);
+}
+.store-currency {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+.store-item-badges:empty {
+  display: none;
+}
+.profile-page {
+  min-height: 100dvh;
+  padding: var(--space-6);
+  background: var(--ui-surface);
+  color: var(--ui-text);
+}
+.profile-page > nav {
+  margin-bottom: var(--space-4);
+}
+.profile-page .fz-profile-v2 {
+  margin: auto;
+  max-height: none;
+  width: 100%;
+}
+.fz-mini-profile-live,
+.fz-profile-v2,
+.fz-profile-v2-card,
+.fz-profile-report {
+  border-radius: var(--radius-lg);
+}
+.fz-profile-v2-card {
+  padding: var(--space-4);
+}
+.fz-mini-body {
+  padding: calc(var(--space-8) + var(--space-6)) var(--space-4) var(--space-4);
+}
+.fz-profile-link {
+  display: block;
+  padding: var(--space-2);
+  color: var(--ui-accent);
+  text-align: center;
+}
+@keyframes ui-dialog-enter {
+  from {
+    opacity: 0;
+    transform: translateY(var(--space-2));
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@media (max-width: 600px) {
+  .ui-dialog-backdrop {
+    padding: var(--space-2);
+  }
+  .ui-dialog {
+    max-height: calc(100dvh - var(--space-4));
+  }
+  .ui-dialog.space-dialog,
+  .profile-page {
+    padding: var(--space-4);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ui-dialog {
+    animation: none;
+  }
+}
+.profile-dialog-shell {
+  width: min(1100px, 100%);
+}
+.profile-dialog-shell > .fz-profile-v2 {
+  width: 100%;
+  max-height: none;
+}
+.ui-dialog.discovery-dialog { overflow: hidden; }
+.discovery-nav, .discovery-content { min-width: 0; }
+.store-preview-close { z-index: 5; }
+@media (max-width: 767px) {
+  .ui-dialog.discovery-dialog { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); }
+  .discovery-hero { padding: var(--space-8) var(--space-4) var(--space-6); }
+}
+.direct-call-stage { min-height: 0; }
+.direct-call-camera, .direct-call-screen { position: absolute; inset: 0; }
+.direct-call-camera { pointer-events: none; }
+.direct-call-screen { background: var(--ui-overlay); }
+.direct-call-screen video { width: 100%; height: 100%; object-fit: contain; }
+.direct-call-dialog-fullscreen { width: 100%; height: calc(100dvh - var(--space-8)); }
+.direct-call-screen[hidden], .direct-call-remote[hidden] { display: none; }
+.store-profile-live-preview { z-index: 0; }

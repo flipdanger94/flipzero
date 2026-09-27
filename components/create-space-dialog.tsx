@@ -2,12 +2,11 @@
 
 import { type FormEvent, useState } from "react";
 import { LoaderCircle, Sparkles, X } from "lucide-react";
-import { useModalA11y } from "@/hooks/use-modal-a11y";
+import { Dialog } from "./ui/dialog";
 
 type CreatedSpace = { id: string; name: string; slug: string; description: string | null; accentColor: string; categories: Array<{ id: string; spaceId: string; name: string; position: number }>; channels: Array<{ id: string; name: string; kind: string; topic: string | null; parentId: string | null }> };
 
 export function CreateSpaceDialog({onClose, onCreated }: { onClose: () => void; onCreated: (space: CreatedSpace) => void }) {
-  const dialogRef = useModalA11y(onClose);
   const [loading, setLoading] = useState(false);
   const [templateFile, setTemplateFile] = useState<File | null>(null);
   const [error, setError] = useState("");
@@ -26,8 +25,7 @@ export function CreateSpaceDialog({onClose, onCreated }: { onClose: () => void; 
     } catch (reason) { setError(reason instanceof Error ? reason.message : "Не удалось прочитать шаблон."); setLoading(false); }
   }
 
-  return <div className="dialog-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
-    <section ref={dialogRef} tabIndex={-1} className="space-dialog" role="dialog" aria-modal="true" aria-labelledby="create-space-title">
+  return <Dialog backdropClassName="dialog-backdrop" className="space-dialog" labelledBy="create-space-title" onClose={onClose}>
       <button className="dialog-close" onClick={onClose} aria-label="Закрыть"><X size={19} /></button>
       <div className="dialog-symbol"><Sparkles size={23} /></div>
       <h2 id="create-space-title">Новое пространство</h2>
@@ -43,6 +41,5 @@ export function CreateSpaceDialog({onClose, onCreated }: { onClose: () => void; 
         <label><span>Шаблон пространства (необязательно)</span><input type="file" accept="application/json,.json" onChange={(event) => setTemplateFile(event.target.files?.[0] ?? null)} /><small>Импортирует категории и каналы без сообщений и личных данных.</small></label>
         <button className="auth-submit" disabled={loading}>{loading ? <><LoaderCircle className="spin" size={18} /> Создаём...</> : "Создать пространство"}</button>
       </form>
-    </section>
-  </div>;
+    </Dialog>;
 }

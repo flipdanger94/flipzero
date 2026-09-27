@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Award, Crown, LoaderCircle, Medal, Palette, Plus, Sparkles, Trophy, X } from "lucide-react";
-import { useModalA11y } from "@/hooks/use-modal-a11y";
+import { Dialog } from "./ui/dialog";
 
 type Progress = { level: number; current: number; required: number; percent: number };
 type Cosmetics = { title: string; avatarFrame: string; profileEffect: string; showcasedPath: string };
@@ -14,7 +14,6 @@ type GamificationData = {
 };
 
 export function GamificationDialog({spaceId, isOwner, onClose }: { spaceId: string; isOwner: boolean; onClose: () => void }) {
-  const dialogRef = useModalA11y(onClose);
   const [data, setData] = useState<GamificationData | null>(null);
   const [tab, setTab] = useState<"profile" | "achievements" | "leaderboard" | "create">("profile");
   const [error, setError] = useState("");
@@ -26,7 +25,7 @@ export function GamificationDialog({spaceId, isOwner, onClose }: { spaceId: stri
   async function saveCosmetics(form: FormData) { setSaving(true); setError(""); const response = await fetch("/api/v1/gamification", { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify(Object.fromEntries(form.entries())) }); const result = await response.json(); setSaving(false); if (!response.ok) setError(result.message ?? "Не удалось сохранить оформление."); else await load(); }
   async function createAchievement(form: FormData) { setSaving(true); setError(""); const response = await fetch(`/api/v1/spaces/${spaceId}/achievements`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(Object.fromEntries(form.entries())) }); const result = await response.json(); setSaving(false); if (!response.ok) setError(result.message ?? "Не удалось создать достижение."); else { await load(); setTab("achievements"); } }
 
-  return <div className="dialog-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}><section ref={dialogRef} tabIndex={-1} className="space-dialog gamification-dialog" role="dialog" aria-modal="true" aria-label="Прогресс и достижения">
+  return <Dialog backdropClassName="dialog-backdrop" className="space-dialog gamification-dialog" label="Прогресс и достижения" onClose={onClose}>
     <button className="dialog-close" onClick={onClose} aria-label="Закрыть"><X size={18} /></button>
     <div className="gamification-head"><span className="dialog-symbol"><Trophy size={22} /></span><div><h2>Прогресс FlipZero</h2><p>Уровни, пути развития и достижения</p></div></div>
     <nav className="gamification-tabs"><button className={tab === "profile" ? "active" : ""} onClick={() => setTab("profile")}><Sparkles size={15} /> Профиль</button><button className={tab === "achievements" ? "active" : ""} onClick={() => setTab("achievements")}><Award size={15} /> Достижения</button><button className={tab === "leaderboard" ? "active" : ""} onClick={() => setTab("leaderboard")}><Crown size={15} /> Рейтинг</button>{isOwner ? <button className={tab === "create" ? "active" : ""} onClick={() => setTab("create")}><Plus size={15} /> Создать</button> : null}</nav>
@@ -37,7 +36,7 @@ export function GamificationDialog({spaceId, isOwner, onClose }: { spaceId: stri
       {tab === "leaderboard" ? <div className="leaderboard"><header><span>Место</span><span>Участник</span><span>Уровень</span><span>XP</span></header>{data.leaderboard.map((entry) => <article className={entry.isCurrentUser ? "current" : ""} key={entry.userId}><b>{entry.rank <= 3 ? <Medal size={17} /> : `#${entry.rank}`}</b><span><strong>{entry.displayName}</strong><small>@{entry.username}</small></span><em>{entry.level}</em><i>{entry.xp.toLocaleString("ru-RU")}</i></article>)}</div> : null}
       {tab === "create" && isOwner ? <form className="achievement-create" action={createAchievement}><label><span>Название</span><input name="name" required maxLength={50} placeholder="Например, Душа сообщества" /></label><label><span>Описание</span><textarea name="description" required maxLength={160} placeholder="Что нужно сделать участнику" /></label><div className="form-grid"><label><span>Событие</span><select name="eventSource"><option value="message">Сообщения</option><option value="reaction_received">Реакции</option><option value="voice_minute">Минуты в голосе</option><option value="event_hosted">Проведённые события</option><option value="invite_joined">Приглашённые участники</option><option value="level">Глобальный уровень</option></select></label><label><span>Цель</span><input name="target" type="number" min="1" max="100000" defaultValue="10" required /></label><label><span>Редкость</span><select name="rarity"><option value="common">Обычная</option><option value="rare">Редкая</option><option value="epic">Эпическая</option><option value="legendary">Легендарная</option></select></label><label><span>Иконка</span><input name="icon" defaultValue="✦" maxLength={8} /></label></div><button className="auth-submit" disabled={saving}>{saving ? <LoaderCircle className="spin" size={16} /> : <Plus size={16} />} Создать достижение</button></form> : null}
     </div>}
-  </section></div>;
+  </Dialog>;
 }
 
 function LevelCard({ label, progress }: { label: string; progress: Progress }) { return <article><div><span>{label}</span><b>Уровень {progress.level}</b></div><div className="level-progress"><i style={{ width: `${progress.percent}%` }} /></div><small>{progress.current.toLocaleString("ru-RU")} / {progress.required.toLocaleString("ru-RU")} XP</small></article>; }

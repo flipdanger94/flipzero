@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Check, Hash, LoaderCircle, Minus, Save, Search, ShieldCheck, UserRound, Users, X } from "lucide-react";
 import { Permission } from "@/lib/permissions";
-import { useModalA11y } from "@/hooks/use-modal-a11y";
+import { Dialog } from "./ui/dialog";
 
 type Role = { id: string; name: string; color: string; isManaged: boolean };
 type Member = { id: string; username: string; displayName: string; avatarUrl: string | null };
@@ -37,7 +37,6 @@ export function ChannelPermissionsDialog({
   onClose: () => void;
   onUpdated?: (channel: { id: string; userLimit: number | null }) => void;
 }) {
-  const dialogRef = useModalA11y(onClose);
   const isVoice = ["voice", "stage"].includes(channel.kind);
   const [view, setView] = useState<"overview" | "permissions">(isVoice ? "overview" : "permissions");
   const [roles, setRoles] = useState<Role[]>([]);
@@ -161,8 +160,7 @@ export function ChannelPermissionsDialog({
     setSaved(true);
   }
 
-  return <div className="dialog-backdrop channel-permissions-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
-    <section ref={dialogRef} tabIndex={-1} className="space-dialog channel-permissions-dialog discord-permissions-dialog" role="dialog" aria-modal="true" aria-labelledby="channel-permissions-title">
+  return <Dialog backdropClassName="dialog-backdrop channel-permissions-backdrop" className="space-dialog channel-permissions-dialog discord-permissions-dialog" labelledBy="channel-permissions-title" onClose={onClose}>
       <button className="dialog-close" onClick={onClose} aria-label="Закрыть"><X size={19}/></button>
       <div className="channel-permissions-title">
         <span className="dialog-symbol"><Hash size={22}/></span>
@@ -230,6 +228,5 @@ export function ChannelPermissionsDialog({
           <div className="permission-savebar"><span>{saved ? "Права сохранены" : "Изменения применятся после сохранения."}</span><button className="auth-submit override-save" onClick={() => void savePermissions()} disabled={saving}>{saving ? <LoaderCircle className="spin" size={17}/> : <><Save size={16}/>Сохранить изменения</>}</button></div>
         </> : <div className="role-protected"><ShieldCheck size={30}/><strong>Выберите роль или участника</strong></div>}</div>
       </div> : null}
-    </section>
-  </div>;
+    </Dialog>;
 }

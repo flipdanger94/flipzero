@@ -1,94 +1,92 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { AppIcon, type AppIconName } from "./app-icon";
-import { CosmeticArt } from "./cosmetic-art";
-import { ProfileAppearanceSurface, type ProfileAppearanceData } from "./profile-appearance-surface";
+import { AppIcon } from "./app-icon";
+import { StoreTab } from "./economy/store-tab";
+import { InventoryTab } from "./economy/inventory-tab";
+import { QuestsTab } from "./economy/quests-tab";
+import { HistoryTab } from "./economy/history-tab";
+import { Dialog } from "./ui/dialog";
+import { ItemCard, Currency } from "./economy/item-card";
+import {
+  type Ledger,
+  type Quest,
+  type StoreItem,
+  type StoreResponse,
+  type InventoryResponse,
+  type StoreProfile,
+  slotLabels,
+  categoryLabels,
+} from "./economy/types";
+import { ProfileAppearanceSurface } from "./profile-appearance-surface";
 
-type Ledger={id:string;amount:number;reason:string;createdAt:string};
-type Quest={key:string;title:string;description:string;period:"daily"|"weekly";target:number;progress:number;coins:number;xp:number;claimed:boolean};
-type ItemState="not_owned"|"owned"|"equipped";
-type StoreItem={
-  id:string;slug:string;title:string;description:string;category:string;type:string;slot:string;rarity:string;
-  priceOrbs:number;priceMoneyCents:number|null;preview:string;previewImage:string|null;previewAnimation:string|null;
-  superflipOnly:boolean;isBundle:boolean;isAnimated:boolean;isActive:boolean;isNew:boolean;state:ItemState;
-  bundleItems:string[];createdAt:string;availableUntil:string|null;
-};
-type InventoryItem=StoreItem&{source:string;acquiredAt:string};
-type StoreResponse={items:StoreItem[];balance:number;superflipActive:boolean;equipped:Record<string,string>;categories:string[];slots:string[];rarities:string[]};
-type InventoryResponse={items:InventoryItem[];equipped:Record<string,string>;slots:string[]};
-type StoreProfile=ProfileAppearanceData&{id:string};
-
-const slotLabels:Record<string,string>={
-  avatar_decoration:"Рамка аватара",
-  profile_effect:"Эффект профиля",
-  profile_banner:"Баннер профиля",
-  nameplate:"Стиль имени",
-  chat_style:"Стиль сообщений",
-  badge:"Значок",
-  app_theme:"Тема приложения",
-};
-const categoryLabels:Record<string,string>={
-  avatar_frame:"Рамки",
-  profile_effect:"Эффекты профиля",
-  banner:"Баннеры",
-  nickname:"Стили имени",
-  message_effect:"Сообщения",
-  badge:"Значки",
-  theme:"Темы",
-  bundle:"Наборы",
-};
-const rarityLabels:Record<string,string>={common:"Обычный",rare:"Редкий",epic:"Эпический",legendary:"Легендарный",limited:"Лимитированный"};
-const slotIcons:Record<string,AppIconName>={avatar_decoration:"avatar-decoration",profile_effect:"profile-effect",profile_banner:"banner",nameplate:"nameplate",chat_style:"chat-style",badge:"badge",app_theme:"theme"};
-
-function withEquippedState<T extends StoreItem>(items:T[],equipped:Record<string,string>){
-  const equippedIds=new Set(Object.values(equipped));
-  return items.map(item=>({...item,state:equippedIds.has(item.id)?"equipped":item.state==="not_owned"?"not_owned":"owned"} as T));
+function withEquippedState<T extends StoreItem>(
+  items: T[],
+  equipped: Record<string, string>,
+) {
+  const equippedIds = new Set(Object.values(equipped));
+  return items.map(
+    (item) =>
+      ({
+        ...item,
+        state: equippedIds.has(item.id)
+          ? "equipped"
+          : item.state === "not_owned"
+            ? "not_owned"
+            : "owned",
+      }) as T,
+  );
 }
 
-function ItemBadges({item}:{item:StoreItem}){
-  return <div className="store-item-badges">
-    {item.state==="owned"?<span className="owned"><AppIcon name="check" size={11}/>Куплено</span>:null}
-    {item.state==="equipped"?<span className="equipped"><AppIcon name="check" size={11}/>Надето</span>:null}
-    {item.isNew?<span>Новый</span>:null}
-    {item.isBundle?<span>В наборе</span>:null}
-    {item.isAnimated?<span className="animated"><AppIcon name="animated" size={11}/>Анимированный</span>:null}
-  </div>;
-}
+export function PersonalEconomy({
+  onOpenSuperFlip,
+}: { onOpenSuperFlip?: () => void } = {}) {
+  const router = useRouter();
+  const [tab, setTab] = useState<"quests" | "store" | "inventory" | "history">(
+    "store",
+  );
+  const [balance, setBalance] = useState(0);
+  const [superflipActive, setSuperflipActive] = useState(false);
+  const [ledger, setLedger] = useState<Ledger[]>([]);
+  const [quests, setQuests] = useState<Quest[]>([]);
+  const [streak, setStreak] = useState(0);
+  const [profile, setProfile] = useState<StoreProfile | null>(null);
+  const [storeItems, setStoreItems] = useState<StoreItem[]>([]);
+  const [inventory, setInventory] = useState<InventoryResponse>({
+    items: [],
+    equipped: {},
+    slots: [],
+  });
+  const [busy, setBusy] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [query, setQuery] = useState("");
+  const [category, setCategory] = useState("all");
+  const [sort, setSort] = useState("featured");
+  const [inventoryQuery, setInventoryQuery] = useState("");
+  const [inventorySlot, setInventorySlot] = useState("all");
+  const [inventorySort, setInventorySort] = useState("newest");
+  const [visibleLimit, setVisibleLimit] = useState(12);
+  const [preview, setPreview] = useState<StoreItem | null>(null);
 
-export function PersonalEconomy({onOpenSuperFlip}:{onOpenSuperFlip?:()=>void}={}){
-  const [tab,setTab]=useState<"quests"|"store"|"inventory"|"history">("store");
-  const [balance,setBalance]=useState(0);
-  const [superflipActive,setSuperflipActive]=useState(false);
-  const [ledger,setLedger]=useState<Ledger[]>([]);
-  const [quests,setQuests]=useState<Quest[]>([]);
-  const [streak,setStreak]=useState(0);
-  const [profile,setProfile]=useState<StoreProfile|null>(null);
-  const [storeItems,setStoreItems]=useState<StoreItem[]>([]);
-  const [inventory,setInventory]=useState<InventoryResponse>({items:[],equipped:{},slots:[]});
-  const [busy,setBusy]=useState("");
-  const [error,setError]=useState("");
-  const [loading,setLoading]=useState(true);
-  const [query,setQuery]=useState("");
-  const [category,setCategory]=useState("all");
-  const [sort,setSort]=useState("featured");
-  const [inventoryQuery,setInventoryQuery]=useState("");
-  const [inventorySlot,setInventorySlot]=useState("all");
-  const [inventorySort,setInventorySort]=useState("newest");
-  const [visibleLimit,setVisibleLimit]=useState(12);
-  const [preview,setPreview]=useState<StoreItem|null>(null);
-  const [hovered,setHovered]=useState("");
-
-  const refresh=useCallback(async()=>{
-    try{
-      const [economyResponse,questResponse,storeResponse,inventoryResponse]=await Promise.all([
-        fetch("/api/v1/economy",{cache:"no-store"}),
-        fetch("/api/v1/quests",{cache:"no-store"}),
-        fetch("/api/store?limit=100",{cache:"no-store"}),
-        fetch("/api/inventory",{cache:"no-store"}),
-      ]);
-      if(!economyResponse.ok||!questResponse.ok||!storeResponse.ok||!inventoryResponse.ok)throw Error("Не удалось загрузить магазин.");
-      const [economy,questData,store,inventoryData]=await Promise.all([
+  const refresh = useCallback(async () => {
+    try {
+      const [economyResponse, questResponse, storeResponse, inventoryResponse] =
+        await Promise.all([
+          fetch("/api/v1/economy", { cache: "no-store" }),
+          fetch("/api/v1/quests", { cache: "no-store" }),
+          fetch("/api/store?limit=100", { cache: "no-store" }),
+          fetch("/api/inventory", { cache: "no-store" }),
+        ]);
+      if (
+        !economyResponse.ok ||
+        !questResponse.ok ||
+        !storeResponse.ok ||
+        !inventoryResponse.ok
+      )
+        throw Error("Не удалось загрузить магазин.");
+      const [economy, questData, store, inventoryData] = await Promise.all([
         economyResponse.json(),
         questResponse.json(),
         storeResponse.json() as Promise<StoreResponse>,
@@ -98,266 +96,559 @@ export function PersonalEconomy({onOpenSuperFlip}:{onOpenSuperFlip?:()=>void}={}
       setLedger(economy.transactions);
       setQuests(questData.quests);
       setStreak(questData.streak);
-      setStoreItems(withEquippedState(store.items,inventoryData.equipped));
-      setInventory({...inventoryData,items:withEquippedState(inventoryData.items,inventoryData.equipped)});
+      setStoreItems(withEquippedState(store.items, inventoryData.equipped));
+      setInventory({
+        ...inventoryData,
+        items: withEquippedState(inventoryData.items, inventoryData.equipped),
+      });
       setSuperflipActive(Boolean(store.superflipActive));
       setError("");
-    }catch{
+    } catch {
       setError("Не удалось загрузить данные. Повторите попытку.");
-    }finally{
+    } finally {
       setLoading(false);
     }
-  },[]);
+  }, []);
 
-  useEffect(()=>{if(!preview)return;const handler=(event:KeyboardEvent)=>{if(event.key==="Escape")setPreview(null)};window.addEventListener("keydown",handler);return()=>window.removeEventListener("keydown",handler)},[preview]);
-
-  useEffect(()=>{
-    const timer=window.setTimeout(()=>void refresh(),0);
-    void fetch("/api/v1/auth/me",{cache:"no-store"})
-      .then(response=>response.ok?response.json():null)
-      .then(async data=>{
-        const user=data?.user;
-        if(!user?.id)return;
-        const response=await fetch(`/api/v1/users/${user.id}/profile`,{cache:"no-store"});
-        const result=await response.json().catch(()=>null);
-        if(response.ok&&result?.profile)setProfile(result.profile);
-        else setProfile({id:user.id,username:user.username??"flipzero",displayName:user.displayName??user.username??"Ваш профиль",avatarUrl:user.avatarUrl??null,bannerUrl:user.bannerUrl??null,presence:"online",globalLevel:1,globalXp:0,cosmetics:{}});
+  useEffect(() => {
+    const timer = window.setTimeout(() => void refresh(), 0);
+    void fetch("/api/v1/auth/me", { cache: "no-store" })
+      .then((response) => (response.ok ? response.json() : null))
+      .then(async (data) => {
+        const user = data?.user;
+        if (!user?.id) return;
+        const response = await fetch(`/api/v1/users/${user.id}/profile`, {
+          cache: "no-store",
+        });
+        const result = await response.json().catch(() => null);
+        if (response.ok && result?.profile) setProfile(result.profile);
+        else
+          setProfile({
+            id: user.id,
+            username: user.username ?? "flipzero",
+            displayName: user.displayName ?? user.username ?? "Ваш профиль",
+            avatarUrl: user.avatarUrl ?? null,
+            bannerUrl: user.bannerUrl ?? null,
+            presence: "online",
+            globalLevel: 1,
+            globalXp: 0,
+            cosmetics: {},
+          });
       })
-      .catch(()=>undefined);
-    return()=>window.clearTimeout(timer);
-  },[refresh]);
+      .catch(() => undefined);
+    return () => window.clearTimeout(timer);
+  }, [refresh]);
 
-  async function post(path:string,body:object){
-    const response=await fetch(path,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(body)});
-    const data=await response.json().catch(()=>({}));
-    if(!response.ok)throw Error(data.message??"Действие не выполнено.");
+  async function post(path: string, body: object) {
+    const response = await fetch(path, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw Error(data.message ?? "Действие не выполнено.");
     return data;
   }
 
-  async function claimQuest(key:string){
-    setBusy(key);setError("");
-    try{await post("/api/v1/quests",{questKey:key});await refresh()}
-    catch(reason){setError(reason instanceof Error?reason.message:"Не удалось забрать награду.")}
-    finally{setBusy("")}
-  }
-
-  async function purchase(item:StoreItem){
-    if(item.superflipOnly&&!superflipActive){setError("Для этого предмета нужен активный SuperFlip.");return}
-    if(balance<item.priceOrbs){setError(`Не хватает ${item.priceOrbs-balance} монет.`);return}
-    setBusy(item.id);setError("");
-    try{await post("/api/store/purchase",{itemId:item.id});await refresh()}
-    catch(reason){setError(reason instanceof Error?reason.message:"Покупка не выполнена.")}
-    finally{setBusy("")}
-  }
-
-  async function equip(item:StoreItem){
-    const previous=inventory;
-    const nextEquipped={...inventory.equipped,[item.slot]:item.id};
-    setInventory(current=>({...current,equipped:nextEquipped,items:withEquippedState(current.items,nextEquipped)}));
-    setStoreItems(current=>withEquippedState(current,nextEquipped));
-    setBusy(item.id);setError("");
-    try{
-      const data=await post("/api/inventory/equip",{itemId:item.id});
-      if(data.inventory)setInventory({...data.inventory,items:withEquippedState(data.inventory.items,data.inventory.equipped)});
-      if(item.slot==="app_theme")window.dispatchEvent(new Event("flipzero:preferences-updated"));
+  async function claimQuest(key: string) {
+    setBusy(key);
+    setError("");
+    try {
+      await post("/api/v1/quests", { questKey: key });
       await refresh();
-    }catch(reason){
-      setInventory(previous);
-      setStoreItems(current=>withEquippedState(current,previous.equipped));
-      setError(reason instanceof Error?reason.message:"Не удалось надеть предмет.");
-    }finally{setBusy("")}
-  }
-
-  async function unequip(item:StoreItem){
-    const previous=inventory;
-    const nextEquipped={...inventory.equipped};
-    delete nextEquipped[item.slot];
-    setInventory(current=>({...current,equipped:nextEquipped,items:withEquippedState(current.items,nextEquipped)}));
-    setStoreItems(current=>withEquippedState(current,nextEquipped));
-    setBusy(item.id);setError("");
-    try{
-      const data=await post("/api/inventory/unequip",{slot:item.slot});
-      if(data.inventory)setInventory({...data.inventory,items:withEquippedState(data.inventory.items,data.inventory.equipped)});
-      if(item.slot==="app_theme")window.dispatchEvent(new Event("flipzero:preferences-updated"));
-      await refresh();
-    }catch(reason){
-      setInventory(previous);
-      setStoreItems(current=>withEquippedState(current,previous.equipped));
-      setError(reason instanceof Error?reason.message:"Не удалось снять предмет.");
-    }finally{setBusy("")}
-  }
-
-  const filteredStore=useMemo(()=>{
-    const q=query.trim().toLocaleLowerCase("ru");
-    const rarityWeight:Record<string,number>={common:1,rare:2,epic:3,legendary:4,limited:5};
-    return [...storeItems]
-      .filter(item=>(category==="all"||item.category===category)&&(!q||item.title.toLocaleLowerCase("ru").includes(q)||item.description.toLocaleLowerCase("ru").includes(q)))
-      .sort((a,b)=>{
-        if(sort==="price_asc")return a.priceOrbs-b.priceOrbs;
-        if(sort==="price_desc")return b.priceOrbs-a.priceOrbs;
-        if(sort==="newest")return Number(b.isNew)-Number(a.isNew)||new Date(b.createdAt).getTime()-new Date(a.createdAt).getTime();
-        if(sort==="rarity")return (rarityWeight[b.rarity]??0)-(rarityWeight[a.rarity]??0);
-        return Number(b.isBundle)-Number(a.isBundle)||Number(b.isAnimated)-Number(a.isAnimated)||a.priceOrbs-b.priceOrbs;
-      });
-  },[storeItems,query,category,sort]);
-
-  const filteredInventory=useMemo(()=>{
-    const q=inventoryQuery.trim().toLocaleLowerCase("ru");
-    const rarityWeight:Record<string,number>={common:1,rare:2,epic:3,legendary:4,limited:5};
-    return [...inventory.items]
-      .filter(item=>(inventorySlot==="all"||item.slot===inventorySlot)&&(!q||item.title.toLocaleLowerCase("ru").includes(q)))
-      .sort((a,b)=>{
-        if(inventorySort==="name")return a.title.localeCompare(b.title,"ru");
-        if(inventorySort==="rarity")return (rarityWeight[b.rarity]??0)-(rarityWeight[a.rarity]??0);
-        return new Date(b.acquiredAt).getTime()-new Date(a.acquiredAt).getTime();
-      });
-  },[inventory.items,inventoryQuery,inventorySlot,inventorySort]);
-
-  const featuredBundles=storeItems.filter(item=>item.isBundle).slice(0,2);
-  const equippedItems=Object.entries(inventory.equipped).map(([slot,itemId])=>({slot,item:inventory.items.find(item=>item.id===itemId)??null}));
-  const previewItem=preview?(storeItems.find(item=>item.id===preview.id)??inventory.items.find(item=>item.id===preview.id)??preview):null;
-  const previewAppliedItems=useMemo(()=>{
-    if(!previewItem)return [] as StoreItem[];
-    const all=[...storeItems,...inventory.items];
-    if(previewItem.isBundle)return previewItem.bundleItems.map(id=>all.find(item=>item.id===id)).filter((item):item is StoreItem=>Boolean(item));
-    return [previewItem];
-  },[previewItem,storeItems,inventory.items]);
-  const previewCosmetics=useMemo(()=>{
-    const resolved={...(profile?.cosmetics??{})};
-    const all=[...storeItems,...inventory.items];
-    for(const itemId of Object.values(inventory.equipped)){
-      const equippedItem=all.find(item=>item.id===itemId);
-      if(equippedItem&&["avatar_frame","profile_effect","banner","nickname","message_effect","badge"].includes(equippedItem.category))resolved[equippedItem.category]=equippedItem.preview;
+    } catch (reason) {
+      setError(
+        reason instanceof Error
+          ? reason.message
+          : "Не удалось забрать награду.",
+      );
+    } finally {
+      setBusy("");
     }
-    for(const item of previewAppliedItems){
-      if(["avatar_frame","profile_effect","banner","nickname","message_effect","badge"].includes(item.category))resolved[item.category]=item.preview;
+  }
+
+  async function purchase(item: StoreItem) {
+    if (item.superflipOnly && !superflipActive) {
+      setError("Для этого предмета нужен активный SuperFlip.");
+      return;
+    }
+    if (balance < item.priceOrbs) {
+      setError(`Не хватает ${item.priceOrbs - balance} монет.`);
+      return;
+    }
+    setBusy(item.id);
+    setError("");
+    try {
+      await post("/api/store/purchase", { itemId: item.id });
+      await refresh();
+    } catch (reason) {
+      setError(
+        reason instanceof Error ? reason.message : "Покупка не выполнена.",
+      );
+    } finally {
+      setBusy("");
+    }
+  }
+
+  async function equip(item: StoreItem) {
+    const previous = inventory;
+    const nextEquipped = { ...inventory.equipped, [item.slot]: item.id };
+    setInventory((current) => ({
+      ...current,
+      equipped: nextEquipped,
+      items: withEquippedState(current.items, nextEquipped),
+    }));
+    setStoreItems((current) => withEquippedState(current, nextEquipped));
+    setBusy(item.id);
+    setError("");
+    try {
+      const data = await post("/api/inventory/equip", { itemId: item.id });
+      if (data.inventory)
+        setInventory({
+          ...data.inventory,
+          items: withEquippedState(
+            data.inventory.items,
+            data.inventory.equipped,
+          ),
+        });
+      if (item.slot === "app_theme")
+        window.dispatchEvent(new Event("flipzero:preferences-updated"));
+      await refresh();
+    } catch (reason) {
+      setInventory(previous);
+      setStoreItems((current) => withEquippedState(current, previous.equipped));
+      setError(
+        reason instanceof Error ? reason.message : "Не удалось надеть предмет.",
+      );
+    } finally {
+      setBusy("");
+    }
+  }
+
+  async function unequip(item: StoreItem) {
+    const previous = inventory;
+    const nextEquipped = { ...inventory.equipped };
+    delete nextEquipped[item.slot];
+    setInventory((current) => ({
+      ...current,
+      equipped: nextEquipped,
+      items: withEquippedState(current.items, nextEquipped),
+    }));
+    setStoreItems((current) => withEquippedState(current, nextEquipped));
+    setBusy(item.id);
+    setError("");
+    try {
+      const data = await post("/api/inventory/unequip", { slot: item.slot });
+      if (data.inventory)
+        setInventory({
+          ...data.inventory,
+          items: withEquippedState(
+            data.inventory.items,
+            data.inventory.equipped,
+          ),
+        });
+      if (item.slot === "app_theme")
+        window.dispatchEvent(new Event("flipzero:preferences-updated"));
+      await refresh();
+    } catch (reason) {
+      setInventory(previous);
+      setStoreItems((current) => withEquippedState(current, previous.equipped));
+      setError(
+        reason instanceof Error ? reason.message : "Не удалось снять предмет.",
+      );
+    } finally {
+      setBusy("");
+    }
+  }
+
+  const filteredStore = useMemo(() => {
+    const q = query.trim().toLocaleLowerCase("ru");
+    const rarityWeight: Record<string, number> = {
+      common: 1,
+      rare: 2,
+      epic: 3,
+      legendary: 4,
+      limited: 5,
+    };
+    return [...storeItems]
+      .filter(
+        (item) =>
+          (category === "all" || item.category === category) &&
+          (!q ||
+            item.title.toLocaleLowerCase("ru").includes(q) ||
+            item.description.toLocaleLowerCase("ru").includes(q)),
+      )
+      .sort((a, b) => {
+        if (sort === "price_asc") return a.priceOrbs - b.priceOrbs;
+        if (sort === "price_desc") return b.priceOrbs - a.priceOrbs;
+        if (sort === "newest")
+          return (
+            Number(b.isNew) - Number(a.isNew) ||
+            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+          );
+        if (sort === "rarity")
+          return (rarityWeight[b.rarity] ?? 0) - (rarityWeight[a.rarity] ?? 0);
+        return (
+          Number(b.isBundle) - Number(a.isBundle) ||
+          Number(b.isAnimated) - Number(a.isAnimated) ||
+          a.priceOrbs - b.priceOrbs
+        );
+      });
+  }, [storeItems, query, category, sort]);
+
+  const filteredInventory = useMemo(() => {
+    const q = inventoryQuery.trim().toLocaleLowerCase("ru");
+    const rarityWeight: Record<string, number> = {
+      common: 1,
+      rare: 2,
+      epic: 3,
+      legendary: 4,
+      limited: 5,
+    };
+    return [...inventory.items]
+      .filter(
+        (item) =>
+          (inventorySlot === "all" || item.slot === inventorySlot) &&
+          (!q || item.title.toLocaleLowerCase("ru").includes(q)),
+      )
+      .sort((a, b) => {
+        if (inventorySort === "name")
+          return a.title.localeCompare(b.title, "ru");
+        if (inventorySort === "rarity")
+          return (rarityWeight[b.rarity] ?? 0) - (rarityWeight[a.rarity] ?? 0);
+        return (
+          new Date(b.acquiredAt).getTime() - new Date(a.acquiredAt).getTime()
+        );
+      });
+  }, [inventory.items, inventoryQuery, inventorySlot, inventorySort]);
+
+  const featuredBundles = storeItems
+    .filter((item) => item.isBundle)
+    .slice(0, 2);
+  const equippedItems = Object.entries(inventory.equipped).map(
+    ([slot, itemId]) => ({
+      slot,
+      item: inventory.items.find((item) => item.id === itemId) ?? null,
+    }),
+  );
+  const previewItem = preview
+    ? (storeItems.find((item) => item.id === preview.id) ??
+      inventory.items.find((item) => item.id === preview.id) ??
+      preview)
+    : null;
+  const previewAppliedItems = useMemo(() => {
+    if (!previewItem) return [] as StoreItem[];
+    const all = [...storeItems, ...inventory.items];
+    if (previewItem.isBundle)
+      return previewItem.bundleItems
+        .map((id) => all.find((item) => item.id === id))
+        .filter((item): item is StoreItem => Boolean(item));
+    return [previewItem];
+  }, [previewItem, storeItems, inventory.items]);
+  const previewCosmetics = useMemo(() => {
+    const resolved = { ...(profile?.cosmetics ?? {}) };
+    const all = [...storeItems, ...inventory.items];
+    for (const itemId of Object.values(inventory.equipped)) {
+      const equippedItem = all.find((item) => item.id === itemId);
+      if (
+        equippedItem &&
+        [
+          "avatar_frame",
+          "profile_effect",
+          "banner",
+          "nickname",
+          "message_effect",
+          "badge",
+        ].includes(equippedItem.category)
+      )
+        resolved[equippedItem.category] = equippedItem.preview;
+    }
+    for (const item of previewAppliedItems) {
+      if (
+        [
+          "avatar_frame",
+          "profile_effect",
+          "banner",
+          "nickname",
+          "message_effect",
+          "badge",
+        ].includes(item.category)
+      )
+        resolved[item.category] = item.preview;
     }
     return resolved;
-  },[profile?.cosmetics,previewAppliedItems,storeItems,inventory.items,inventory.equipped]);
-  const previewChangedSlots=previewAppliedItems.map(item=>slotLabels[item.slot]??categoryLabels[item.category]??item.category);
+  }, [
+    profile?.cosmetics,
+    previewAppliedItems,
+    storeItems,
+    inventory.items,
+    inventory.equipped,
+  ]);
+  const previewChangedSlots = previewAppliedItems.map(
+    (item) =>
+      slotLabels[item.slot] ?? categoryLabels[item.category] ?? item.category,
+  );
 
-  function actionFor(item:StoreItem){
-    if(item.isBundle){
-      if(item.superflipOnly&&!superflipActive&&item.state==="not_owned")return <button onClick={()=>onOpenSuperFlip?onOpenSuperFlip():window.location.assign("/superflip")}><AppIcon name="superflip" size={14}/>Нужен SuperFlip</button>;
-      return <button disabled={!!busy||item.state!=="not_owned"} onClick={()=>void purchase(item)}>
-        {busy===item.id?"Покупаем…":item.state!=="not_owned"?"Набор куплен":<><AppIcon name="buy" size={14}/>Купить · {item.priceOrbs} монет</>}
-      </button>;
+  function actionFor(item: StoreItem) {
+    if (item.isBundle) {
+      if (item.superflipOnly && !superflipActive && item.state === "not_owned")
+        return (
+          <button
+            onClick={() =>
+              onOpenSuperFlip ? onOpenSuperFlip() : router.push("/superflip")
+            }
+          >
+            <AppIcon name="superflip" size={14} />
+            Нужен SuperFlip
+          </button>
+        );
+      return (
+        <button
+          disabled={!!busy || item.state !== "not_owned"}
+          onClick={() => void purchase(item)}
+        >
+          {busy === item.id ? (
+            "Покупаем…"
+          ) : item.state !== "not_owned" ? (
+            "Набор куплен"
+          ) : (
+            <>
+              <AppIcon name="buy" size={14} />
+              Купить · <Currency amount={item.priceOrbs} />
+            </>
+          )}
+        </button>
+      );
     }
-    if(item.state==="equipped")return <button className="secondary" disabled={!!busy} onClick={()=>void unequip(item)}>{busy===item.id?"Снимаем…":<><AppIcon name="unequip" size={14}/>Снять</>}</button>;
-    if(item.state==="owned")return <button disabled={!!busy} onClick={()=>void equip(item)}>{busy===item.id?"Надеваем…":<><AppIcon name="equip" size={14}/>Надеть</>}</button>;
-    if(item.superflipOnly&&!superflipActive)return <button onClick={()=>onOpenSuperFlip?onOpenSuperFlip():window.location.assign("/superflip")}>Нужен SuperFlip</button>;
-    return <button disabled={!!busy||balance<item.priceOrbs} onClick={()=>void purchase(item)}>
-      {busy===item.id?"Покупаем…":balance<item.priceOrbs?`Не хватает ${item.priceOrbs-balance}`:<><AppIcon name="buy" size={14}/>Купить · {item.priceOrbs} монет</>}
-    </button>;
+    if (item.state === "equipped")
+      return (
+        <button
+          className="secondary"
+          disabled={!!busy}
+          onClick={() => void unequip(item)}
+        >
+          {busy === item.id ? (
+            "Снимаем…"
+          ) : (
+            <>
+              <AppIcon name="unequip" size={14} />
+              Снять
+            </>
+          )}
+        </button>
+      );
+    if (item.state === "owned")
+      return (
+        <button disabled={!!busy} onClick={() => void equip(item)}>
+          {busy === item.id ? (
+            "Надеваем…"
+          ) : (
+            <>
+              <AppIcon name="equip" size={14} />
+              Надеть
+            </>
+          )}
+        </button>
+      );
+    if (item.superflipOnly && !superflipActive)
+      return (
+        <button
+          onClick={() =>
+            onOpenSuperFlip ? onOpenSuperFlip() : router.push("/superflip")
+          }
+        >
+          Нужен SuperFlip
+        </button>
+      );
+    return (
+      <button
+        disabled={!!busy || balance < item.priceOrbs}
+        onClick={() => void purchase(item)}
+      >
+        {busy === item.id ? (
+          "Покупаем…"
+        ) : balance < item.priceOrbs ? (
+          `Не хватает ${item.priceOrbs - balance}`
+        ) : (
+          <>
+            <AppIcon name="buy" size={14} />
+            Купить · <Currency amount={item.priceOrbs} />
+          </>
+        )}
+      </button>
+    );
   }
 
-  return <div className="personal-economy store-shell">
-    <header className="store-shell-head">
-      <div><small>FLIPZERO STYLE</small><h3>Магазин и коллекция</h3><p>Собирайте предметы, настраивайте профиль и меняйте стиль без перезагрузки.</p></div>
-      <strong><AppIcon name="currency" size={22}/>{balance.toLocaleString("ru-RU")} <small>монет</small></strong>
-    </header>
-
-    <nav className="store-main-tabs" aria-label="Экономика и косметика">
-      <button className={tab==="store"?"active":""} onClick={()=>setTab("store")}><AppIcon name="store" size={17}/>Магазин</button>
-      <button className={tab==="inventory"?"active":""} onClick={()=>setTab("inventory")}><AppIcon name="inventory" size={17}/>Инвентарь</button>
-      <button className={tab==="quests"?"active":""} onClick={()=>setTab("quests")}><AppIcon name="quests" size={17}/>Квесты</button>
-      <button className={tab==="history"?"active":""} onClick={()=>setTab("history")}><AppIcon name="currency" size={17}/>История</button>
-    </nav>
-
-    {error?<div role="alert" className="store-error">{error}<button type="button" onClick={()=>setError("")}><AppIcon name="close" size={15}/></button></div>:null}
-    {loading?<div className="social-loading"><AppIcon name="loading" className="spin"/>Загружаем коллекцию…</div>:null}
-
-    {!loading&&tab==="store"?<div className="store-page">
-      <section className="store-hero">
+  return (
+    <div className="personal-economy store-shell">
+      <header className="store-shell-head">
         <div>
-          <span><AppIcon name="animated" size={14}/> КОЛЛЕКЦИИ FLIPZERO</span>
-          <h2>Найдите свой стиль.</h2>
-          <p>Рамки, живые эффекты, баннеры, темы и наборы. Анимированные предметы запускаются при наведении и в предпросмотре.</p>
-          <div><button onClick={()=>{setCategory("bundle");document.querySelector(".store-catalog")?.scrollIntoView({behavior:"smooth"})}}>Смотреть наборы</button><button className="ghost" onClick={()=>setTab("inventory")}>Моя коллекция</button></div>
+          <small>FLIPZERO STYLE</small>
+          <h3>Магазин и коллекция</h3>
+          <p>
+            Собирайте предметы, настраивайте профиль и меняйте стиль без
+            перезагрузки.
+          </p>
         </div>
-        <div className="store-hero-art" aria-hidden="true">
-          <CosmeticArt live item={featuredBundles[0]??storeItems[0]??{title:"FlipZero",preview:"bundle-neon"}}/>
-          <CosmeticArt live item={featuredBundles[1]??storeItems[1]??{title:"FlipZero",preview:"aurora-wave"}}/>
+        <strong>
+          <AppIcon name="currency" size={22} />
+          {balance.toLocaleString("ru-RU")} <small>монет</small>
+        </strong>
+      </header>
+
+      <nav className="store-main-tabs" aria-label="Экономика и косметика">
+        <button
+          className={tab === "store" ? "active" : ""}
+          onClick={() => setTab("store")}
+        >
+          <AppIcon name="store" size={17} />
+          Магазин
+        </button>
+        <button
+          className={tab === "inventory" ? "active" : ""}
+          onClick={() => setTab("inventory")}
+        >
+          <AppIcon name="inventory" size={17} />
+          Инвентарь
+        </button>
+        <button
+          className={tab === "quests" ? "active" : ""}
+          onClick={() => setTab("quests")}
+        >
+          <AppIcon name="quests" size={17} />
+          Квесты
+        </button>
+        <button
+          className={tab === "history" ? "active" : ""}
+          onClick={() => setTab("history")}
+        >
+          <AppIcon name="currency" size={17} />
+          История
+        </button>
+      </nav>
+
+      {error ? (
+        <div role="alert" className="store-error">
+          {error}
+          <button
+            type="button"
+            aria-label="Закрыть сообщение об ошибке"
+            onClick={() => setError("")}
+          >
+            <AppIcon name="close" size={15} />
+          </button>
         </div>
-      </section>
-
-      {featuredBundles.length?<section className="store-featured">
-        <div className="store-section-title"><div><small>ПОДБОРКА</small><h3>Наборы недели</h3></div><span>В одном наборе — несколько предметов для разных слотов.</span></div>
-        <div className="store-featured-grid">{featuredBundles.map(item=><article key={item.id} className="store-feature-card">
-          <CosmeticArt live={hovered===item.id} item={item}/>
-          <div><ItemBadges item={item}/><small>{rarityLabels[item.rarity]??item.rarity}</small><h4>{item.title}</h4><p>{item.description}</p><strong>{item.priceOrbs} монет</strong><div className="store-card-actions"><button className="preview" onClick={()=>setPreview(item)}><AppIcon name="preview" size={15}/>Просмотр</button>{actionFor(item)}</div></div>
-        </article>)}</div>
-      </section>:null}
-
-      <section className="store-catalog">
-        <div className="store-section-title"><div><small>МАГАЗИН</small><h3>Косметика</h3></div><span>{filteredStore.length} предметов</span></div>
-        <div className="store-toolbar">
-          <label className="store-search"><AppIcon name="search" size={16}/><input value={query} onChange={event=>{setQuery(event.target.value);setVisibleLimit(12)}} placeholder="Поиск по магазину" aria-label="Поиск по магазину"/></label>
-          <select value={sort} onChange={event=>setSort(event.target.value)} aria-label="Сортировка магазина">
-            <option value="featured">Для вас</option><option value="newest">Сначала новые</option><option value="rarity">По редкости</option><option value="price_asc">Сначала дешевле</option><option value="price_desc">Сначала дороже</option>
-          </select>
+      ) : null}
+      {loading ? (
+        <div className="social-loading">
+          <AppIcon name="loading" className="spin" />
+          Загружаем коллекцию…
         </div>
-        <div className="store-categories" aria-label="Категории">
-          <button className={category==="all"?"active":""} onClick={()=>{setCategory("all");setVisibleLimit(12)}}>Все</button>
-          {[...new Set(storeItems.map(item=>item.category))].map(value=><button key={value} className={category===value?"active":""} onClick={()=>{setCategory(value);setVisibleLimit(12)}}>{categoryLabels[value]??value}</button>)}
-        </div>
-        <div className="store-grid">{filteredStore.slice(0,visibleLimit).map(item=><article key={item.id} className={`store-item-card rarity-${item.rarity}`} onMouseEnter={()=>setHovered(item.id)} onMouseLeave={()=>setHovered("")} onFocus={()=>setHovered(item.id)} onBlur={()=>setHovered("")}>
-          <div className="store-item-visual"><CosmeticArt live={hovered===item.id} item={item}/><ItemBadges item={item}/></div>
-          <div className="store-item-copy"><small>{rarityLabels[item.rarity]??item.rarity} · {categoryLabels[item.category]??item.category}</small><h4>{item.title}</h4><p>{item.description}</p><div className="store-item-price"><strong>{item.priceOrbs} монет</strong>{item.superflipOnly?<span><AppIcon name="superflip" size={12}/>SuperFlip</span>:null}</div></div>
-          <div className="store-card-actions"><button className="preview" onClick={()=>setPreview(item)}><AppIcon name="preview" size={15}/>Просмотр</button>{actionFor(item)}</div>
-        </article>)}</div>
-        {visibleLimit<filteredStore.length?<div className="store-more"><span>Это ещё далеко не всё</span><button onClick={()=>setVisibleLimit(value=>value+16)}>Показать ещё предметы</button></div>:null}
-        {!filteredStore.length?<div className="store-empty"><AppIcon name="search" size={28}/><strong>Ничего не найдено</strong><p>Попробуйте другой запрос или категорию.</p></div>:null}
-      </section>
-    </div>:null}
+      ) : null}
 
-    {!loading&&tab==="inventory"?<div className="inventory-page">
-      <section className="inventory-equipped">
-        <div className="store-section-title"><div><small>НАДЕТО</small><h3>Текущий образ</h3></div><span>Новый предмет автоматически заменяет старый в том же слоте.</span></div>
-        <div className="equipped-slots">{(inventory.slots.length?inventory.slots:Object.keys(slotLabels)).filter(slot=>slot!=="bundle").map(slot=>{
-          const current=equippedItems.find(entry=>entry.slot===slot)?.item??null;
-          return <article key={slot} className={current?"filled":""}>
-            <div className="equipped-slot-head"><span><AppIcon name={slotIcons[slot]??"inventory"} size={15}/>{slotLabels[slot]??slot}</span>{current?<b>Надето</b>:null}</div>
-            {current?<><CosmeticArt live item={current}/><strong>{current.title}</strong><button onClick={()=>void unequip(current)} disabled={!!busy}>Снять</button></>:<><div className="equipped-placeholder"><AppIcon name="animated" size={24}/></div><strong>Слот свободен</strong><button onClick={()=>{setInventorySlot(slot);document.querySelector(".inventory-all")?.scrollIntoView({behavior:"smooth"})}}>Выбрать предмет</button></>}
-          </article>;
-        })}</div>
-      </section>
+      {!loading && tab === "store" ? (
+        <StoreTab
+          featuredBundles={featuredBundles}
+          storeItems={storeItems}
+          filteredStore={filteredStore}
+          query={query}
+          sort={sort}
+          category={category}
+          visibleLimit={visibleLimit}
+          setCategory={setCategory}
+          setQuery={setQuery}
+          setSort={setSort}
+          setVisibleLimit={setVisibleLimit}
+          setTab={setTab}
+          setPreview={setPreview}
+          actionFor={actionFor}
+        />
+      ) : null}
 
-      <section className="inventory-all">
-        <div className="store-section-title"><div><small>КОЛЛЕКЦИЯ</small><h3>Все предметы</h3></div><span>{inventory.items.length} в коллекции</span></div>
-        <div className="store-toolbar">
-          <label className="store-search"><AppIcon name="search" size={16}/><input value={inventoryQuery} onChange={event=>setInventoryQuery(event.target.value)} placeholder="Поиск в инвентаре" aria-label="Поиск в инвентаре"/></label>
-          <select value={inventorySlot} onChange={event=>setInventorySlot(event.target.value)} aria-label="Фильтр по слоту"><option value="all">Все слоты</option>{inventory.slots.filter(slot=>slot!=="bundle").map(slot=><option key={slot} value={slot}>{slotLabels[slot]??slot}</option>)}</select>
-          <select value={inventorySort} onChange={event=>setInventorySort(event.target.value)} aria-label="Сортировка инвентаря"><option value="newest">Сначала новые</option><option value="rarity">По редкости</option><option value="name">По названию</option></select>
-        </div>
-        <div className="inventory-grid">{filteredInventory.map(item=><article key={item.id} className={`inventory-card rarity-${item.rarity}`}>
-          <div className="store-item-visual"><CosmeticArt live item={item}/><ItemBadges item={item}/></div>
-          <div><small>{slotLabels[item.slot]??categoryLabels[item.category]??item.category}</small><strong>{item.title}</strong><p>Получено {new Date(item.acquiredAt).toLocaleDateString("ru-RU")}</p></div>
-          <div className="store-card-actions inventory-actions"><button className="preview" onClick={()=>setPreview(item)}><AppIcon name="preview" size={15}/>Просмотр</button><button className="preview" onClick={()=>{setTab("store");setCategory(item.category);setQuery(item.title);window.setTimeout(()=>document.querySelector(".store-catalog")?.scrollIntoView({behavior:"smooth"}),0)}}><AppIcon name="store" size={15}/>В магазин</button>{item.isBundle?<button disabled>Набор</button>:item.state==="equipped"?<button className="secondary" onClick={()=>void unequip(item)} disabled={!!busy}><AppIcon name="unequip" size={14}/>Снять</button>:<button onClick={()=>void equip(item)} disabled={!!busy}><AppIcon name="equip" size={14}/>Надеть</button>}</div>
-        </article>)}</div>
-        {!filteredInventory.length?<div className="store-empty"><AppIcon name="inventory" size={30}/><strong>В этом разделе пока пусто</strong><p>Откройте магазин и добавьте первые предметы в коллекцию.</p><button onClick={()=>setTab("store")}>Открыть магазин</button></div>:null}
-      </section>
-    </div>:null}
+      {!loading && tab === "inventory" ? (
+        <InventoryTab
+          inventory={inventory}
+          equippedItems={equippedItems}
+          filteredInventory={filteredInventory}
+          inventoryQuery={inventoryQuery}
+          inventorySlot={inventorySlot}
+          inventorySort={inventorySort}
+          busy={busy}
+          setInventoryQuery={setInventoryQuery}
+          setInventorySlot={setInventorySlot}
+          setInventorySort={setInventorySort}
+          setTab={setTab}
+          setPreview={setPreview}
+          actionFor={actionFor}
+          unequip={unequip}
+        />
+      ) : null}
 
-    {!loading&&tab==="quests"?<div className="quests-page">
-      <div className="personal-streak"><AppIcon name="gift" size={22}/><span><strong>Серия: {streak} дн.</strong><small>Зарабатывайте монет и открывайте новые предметы.</small></span></div>
-      <div className="personal-economy-grid">{quests.map(quest=><article key={quest.key}><small>{quest.period==="daily"?"ЕЖЕДНЕВНЫЙ":"ЕЖЕНЕДЕЛЬНЫЙ"}</small><strong>{quest.title}</strong><p>{quest.description}</p><div className="personal-progress" role="progressbar" aria-valuenow={quest.progress} aria-valuemin={0} aria-valuemax={quest.target} aria-label={quest.title}><i style={{width:`${Math.min(100,100*quest.progress/quest.target)}%`}}/></div><span>{quest.progress}/{quest.target} · {quest.xp} XP · {quest.coins} монет</span><button disabled={quest.claimed||quest.progress<quest.target||!!busy} onClick={()=>void claimQuest(quest.key)}>{quest.claimed?"Получено":busy===quest.key?"Забираем…":"Забрать"}</button></article>)}</div>
-    </div>:null}
+      {!loading && tab === "quests" ? (
+        <QuestsTab
+          streak={streak}
+          quests={quests}
+          busy={busy}
+          claimQuest={claimQuest}
+        />
+      ) : null}
 
-    {!loading&&tab==="history"?<div className="personal-ledger">{ledger.length?ledger.map(entry=><article key={entry.id}><span><strong>{entry.reason}</strong><small>{new Date(entry.createdAt).toLocaleString("ru-RU")}</small></span><b className={entry.amount>0?"positive":""}>{entry.amount>0?"+":""}{entry.amount} монет</b></article>):<div className="store-empty"><AppIcon name="currency" size={28}/><strong>Операций пока нет</strong><p>Выполните квест или купите первый предмет.</p></div>}</div>:null}
+      {!loading && tab === "history" ? <HistoryTab ledger={ledger} /> : null}
 
-    {previewItem?<div className="store-preview-backdrop" role="presentation" onClick={()=>setPreview(null)}>
-      <section className="store-preview-dialog" role="dialog" aria-modal="true" aria-label={`Предпросмотр: ${previewItem.title}`} onClick={event=>event.stopPropagation()}>
-        <button className="store-preview-close" onClick={()=>setPreview(null)} aria-label="Закрыть"><AppIcon name="close" size={20}/></button>
-        <div className="store-preview-stage">
-          {profile?<ProfileAppearanceSurface profile={profile} cosmetics={previewCosmetics} className="store-profile-live-preview" previewLabel="ПРЕДПРОСМОТР ОФОРМЛЕНИЯ" showMessagePreview/>:<div className="store-preview-loading"><AppIcon name="loading" className="spin"/><span>Загружаем ваш профиль…</span></div>}
-        </div>
-        <div className="store-preview-copy"><ItemBadges item={previewItem}/><small>{rarityLabels[previewItem.rarity]??previewItem.rarity}</small><h3>{previewItem.title}</h3><p>{previewItem.description}</p><div className="store-preview-impact"><strong>На вашем профиле изменится</strong><div>{previewChangedSlots.length?previewChangedSlots.map((label,index)=><span key={`${label}-${index}`}><AppIcon name="check" size={12}/>{label}</span>):<span>Предмет не меняет профиль напрямую.</span>}</div></div><div className="store-preview-price">{previewItem.priceOrbs} монет</div>
-          <div className="store-card-actions store-preview-actions">
-            {previewItem.state==="equipped"&&!previewItem.isBundle?<button className="secondary" disabled={!!busy} onClick={()=>void unequip(previewItem)}><AppIcon name="unequip" size={14}/>{busy===previewItem.id?"Снимаем…":"Снять с профиля"}</button>:actionFor(previewItem)}
-            <button className="preview" type="button" onClick={()=>setPreview(null)}><AppIcon name="close" size={14}/>Закрыть просмотр</button>
-          </div></div>
-      </section>
-    </div>:null}
-  </div>;
+      {previewItem ? (
+        <Dialog
+          backdropClassName="store-preview-backdrop"
+          className="store-preview-dialog"
+          label={`Предпросмотр: ${previewItem.title}`}
+          onClose={() => setPreview(null)}
+        >
+          <button
+            className="store-preview-close"
+            onClick={() => setPreview(null)}
+            aria-label="Закрыть"
+          >
+            <AppIcon name="close" size={20} />
+          </button>
+          <div className="store-preview-stage">
+            {profile ? (
+              <ProfileAppearanceSurface
+                profile={profile}
+                cosmetics={previewCosmetics}
+                className="store-profile-live-preview"
+                previewLabel="ПРЕДПРОСМОТР ОФОРМЛЕНИЯ"
+                showMessagePreview
+              />
+            ) : (
+              <div className="store-preview-loading">
+                <AppIcon name="loading" className="spin" />
+                <span>Загружаем ваш профиль…</span>
+              </div>
+            )}
+          </div>
+          <ItemCard
+            item={previewItem}
+            previewMode
+            action={actionFor(previewItem)}
+          >
+            <div className="store-preview-impact">
+              <strong>На вашем профиле изменится</strong>
+              <div>
+                {previewChangedSlots.length ? (
+                  previewChangedSlots.map((label, index) => (
+                    <span key={`${label}-${index}`}>{label}</span>
+                  ))
+                ) : (
+                  <span>Предмет не меняет профиль напрямую.</span>
+                )}
+              </div>
+            </div>
+            <p>
+              {previewItem.isAnimated ? "Анимированный предмет. " : ""}
+              {previewItem.isBundle ? "Включает несколько предметов." : ""}
+            </p>
+          </ItemCard>
+        </Dialog>
+      ) : null}
+    </div>
+  );
 }

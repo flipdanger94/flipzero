@@ -24,7 +24,7 @@ describe("store profile WYSIWYG preview", () => {
     expect(economy).toContain("Object.values(inventory.equipped)");
     expect(economy).toContain("previewAppliedItems");
     expect(economy).toContain("previewItem.bundleItems");
-    expect(economy).toContain("resolved[item.category]=item.preview");
+    expect(economy).toMatch(/resolved\[item.category\]\s*=\s*item.preview/);
   });
 
   it("shows all profile-facing cosmetic slots in the preview renderer", () => {

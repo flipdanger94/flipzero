@@ -22,6 +22,7 @@ import {
 import { ConnectionQuality, Room, RoomEvent, Track } from "livekit-client";
 import { MediaImage } from "./media-image";
 import { normalizeVoicePresence, type VoicePresence } from "@/lib/voice-presence";
+import { playbackSettings, selectScreenSubscriptions } from "@/lib/stream-playback";
 import { voiceGridLayout } from "@/lib/voice-layout";
 
 type VoiceStatus = "idle" | "connecting" | "connected" | "reconnecting";
@@ -75,6 +76,8 @@ export function VoiceRoom({
   const [cameraPreviewError, setCameraPreviewError] = useState("");
   const [cameraPreviewBusy, setCameraPreviewBusy] = useState(false);
   const [sharing, setSharing] = useState(false);
+  const [screenBusy,setScreenBusy]=useState(false);
+  const screenBusyRef=useRef(false);
   const [screenQuality, setScreenQuality] = useState<"720"|"1080">("1080");
   const [screenFps, setScreenFps] = useState<15|30|60>(30);
   const [screenAudio, setScreenAudio] = useState(true);
@@ -113,7 +116,10 @@ export function VoiceRoom({
   const reconnectTimerRef = useRef<number | null>(null);
   const joinRef = useRef<() => Promise<void>>(async () => {});
   const outputVolumeRef = useRef(1);
+  const streamPlaybackRef=useRef({muted:streamMuted,volume:streamVolume});
+  useEffect(()=>{streamPlaybackRef.current={muted:streamMuted,volume:streamVolume};applyAudioSettings()},[streamMuted,streamVolume]);
   const voiceRootRef = useRef<HTMLDivElement | null>(null);
+  const attachedVideosRef=useRef(new Map<string,Track>());
   const swipeStartRef = useRef<number | null>(null);
 
   useEffect(
@@ -147,6 +153,16 @@ export function VoiceRoom({
       .catch(() => { if (!controller.signal.aborted) { setVoiceAvailable(true); setVoiceChecked(false); } });
     return () => controller.abort();
   }, [autoJoin, voiceCheckNonce]);
+  function applyAudioSettings() {
+    audioRef.current?.querySelectorAll<HTMLAudioElement>("audio").forEach(audio=>{
+      const values=playbackSettings(audio.dataset.voiceMediaSource==="screen",deafenedRef.current,outputVolumeRef.current,streamPlaybackRef.current.muted,streamPlaybackRef.current.volume);
+      audio.muted=values.muted;audio.volume=values.volume;
+    });
+  }
+  function syncStreamingState(streaming:boolean) {
+    setSharing(streaming);
+    if(resolvedStateUrl)void fetch(resolvedStateUrl,{method:"PATCH",headers:{"content-type":"application/json"},body:JSON.stringify({streaming})}).catch(()=>undefined);
+  }
   function clearMedia(container: HTMLElement | null) {
     container?.replaceChildren();
   }
@@ -154,12 +170,16 @@ export function VoiceRoom({
     return voiceRootRef.current?.querySelector<HTMLElement>(`[data-voice-media-id="${CSS.escape(participantId)}"][data-voice-media-source="${source}"]`) ?? null;
   }
   function attachParticipantVideo(participantId: string, source: "camera"|"screen", track: Track, attempt = 0) {
+    if(!roomRef.current || (source==="screen" && participantId!==selectedStreamRef.current))return;
+    const participant=roomRef.current.localParticipant.identity===participantId?roomRef.current.localParticipant:roomRef.current.remoteParticipants.get(participantId);
+    if(participant?.getTrackPublication(source==="screen"?Track.Source.ScreenShare:Track.Source.Camera)?.track!==track)return;
     const target = mediaTarget(participantId, source);
     if (!target) {
       if (attempt < 8) window.setTimeout(() => attachParticipantVideo(participantId, source, track, attempt + 1), 80 + attempt * 30);
       return;
     }
-    clearMedia(target);
+    clearParticipantVideo(participantId,source);
+    attachedVideosRef.current.set(`${participantId}:${source}`,track);
     const element = track.attach();
     element.dataset.participantId = participantId;
     element.dataset.voiceMediaSource = source;
@@ -170,6 +190,9 @@ export function VoiceRoom({
     target.appendChild(element);
   }
   function clearParticipantVideo(participantId: string, source: "camera"|"screen") {
+    const key=`${participantId}:${source}`;
+    attachedVideosRef.current.get(key)?.detach().forEach(element=>element.remove());
+    attachedVideosRef.current.delete(key);
     clearMedia(mediaTarget(participantId, source));
   }
   function attachLocal(source: Track.Source) {
@@ -250,7 +273,10 @@ export function VoiceRoom({
         onPresenceChange?.(nextPresence);
       };
       room.on(RoomEvent.ParticipantConnected, refresh);
-      room.on(RoomEvent.ParticipantDisconnected, refresh);
+      room.on(RoomEvent.ParticipantDisconnected, participant=>{
+        if(participant.identity===selectedStreamRef.current)clearFocus();
+        refresh();
+      });
       room.on(RoomEvent.ParticipantMetadataChanged, refresh);
       room.on(RoomEvent.ParticipantAttributesChanged, refresh);
       room.on(RoomEvent.ActiveSpeakersChanged, (speakers) => {
@@ -287,10 +313,8 @@ export function VoiceRoom({
         refresh();
       });
       room.on(RoomEvent.TrackUnpublished, (publication, participant) => {
-        if ((publication.source === Track.Source.ScreenShare || publication.source === Track.Source.ScreenShareAudio) && participant.identity === selectedStreamRef.current) {
-          selectedStreamRef.current = "";
-          setSelectedStreamId("");
-          setFocusMode(false);
+        if (publication.source === Track.Source.ScreenShare && participant.identity === selectedStreamRef.current) {
+          clearFocus();
         }
         refresh();
       });
@@ -308,8 +332,10 @@ export function VoiceRoom({
         if (track.kind === Track.Kind.Audio) {
           const element = track.attach();
           element.dataset.participantId = participant.identity;
+          element.dataset.voiceMediaSource = isScreen ? "screen" : "microphone";
           if (element instanceof HTMLAudioElement) { element.muted = deafenedRef.current; element.volume = outputVolumeRef.current; }
           audioRef.current?.appendChild(element);
+          applyAudioSettings();
         }
         if (track.kind === Track.Kind.Video) {
           attachParticipantVideo(participant.identity, track.source === Track.Source.ScreenShare ? "screen" : "camera", track);
@@ -329,7 +355,8 @@ export function VoiceRoom({
         if (publication.source === Track.Source.ScreenShare) {
           // Do not render our own screen-share track back into the shared surface.
           // Showing it locally creates the recursive "screen inside screen" tunnel.
-          setSharing(true);
+          syncStreamingState(true);
+          refresh();
           clearParticipantVideo(connectedRoom.localParticipant.identity, "screen");
         }
       });
@@ -339,7 +366,8 @@ export function VoiceRoom({
           clearParticipantVideo(connectedRoom.localParticipant.identity, "camera");
         }
         if (publication.source === Track.Source.ScreenShare) {
-          setSharing(false);
+          syncStreamingState(false);
+          refresh();
           clearParticipantVideo(connectedRoom.localParticipant.identity, "screen");
         }
       });
@@ -347,6 +375,9 @@ export function VoiceRoom({
         if (roomRef.current !== connectedRoom) return;
         roomRef.current = null;
         setParticipantCount(0);
+        clearMedia(audioRef.current);
+        voiceRootRef.current?.querySelectorAll<HTMLElement>("[data-voice-media-id]").forEach(clearMedia);
+        clearFocus();
         setCamera(false);
         setSharing(false);
         setActiveSpeaker("");
@@ -460,7 +491,7 @@ export function VoiceRoom({
       if (detail.type === "toggle-output") {
         const nextDeafened = Boolean(detail.deafened);
         deafenedRef.current = nextDeafened;
-        audioRef.current?.querySelectorAll("audio").forEach((audio) => { audio.muted = nextDeafened; });
+        applyAudioSettings();
         setDeafened(nextDeafened);
       }
       if (detail.type === "input-device" && typeof detail.deviceId === "string") {
@@ -472,7 +503,7 @@ export function VoiceRoom({
       if (detail.type === "output-volume") {
         const volume = Math.max(0, Math.min(1, Number(detail.value ?? 100) / 100));
         outputVolumeRef.current = volume;
-        audioRef.current?.querySelectorAll("audio").forEach((audio) => { audio.volume = volume; });
+        applyAudioSettings();
       }
       if (detail.type === "participant-volume" && typeof detail.participantId === "string") {
         const volume = Math.max(0, Math.min(1, Number(detail.value ?? 100) / 100));
@@ -515,7 +546,7 @@ export function VoiceRoom({
   async function toggleDeafen() {
     const next = !deafenedRef.current;
     deafenedRef.current = next;
-    audioRef.current?.querySelectorAll("audio").forEach((audio) => { audio.muted = next; });
+    applyAudioSettings();
     setDeafened(next);
     window.dispatchEvent(new CustomEvent("flipzero:voice-state",{detail:{deafened:next}}));
     if (resolvedStateUrl) void fetch(resolvedStateUrl, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ selfDeafened: next }) });
@@ -673,9 +704,10 @@ export function VoiceRoom({
   }
   async function toggleScreen() {
     const room = roomRef.current;
-    if (!room) return;
+    if (!room || screenBusyRef.current) return;
     if (!screenSupported) { setError("Демонстрация экрана недоступна в этом браузере. Откройте FlipZero на компьютере."); return; }
-    const next = !sharing;
+    const next = !room.localParticipant.isScreenShareEnabled;
+    screenBusyRef.current=true;setScreenBusy(true);
     try {
       if(next){
         const safari=/^((?!chrome|android).)*safari/i.test(navigator.userAgent);
@@ -692,15 +724,15 @@ export function VoiceRoom({
       }else{
         await room.localParticipant.setScreenShareEnabled(false);
       }
-      setSharing(next);
-      if (resolvedStateUrl) void fetch(resolvedStateUrl, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ streaming: next }) });
+      if(roomRef.current!==room){await room.localParticipant.setScreenShareEnabled(false);return;}
+      setSharing(room.localParticipant.isScreenShareEnabled);
       // The broadcaster does not need a local screen-share preview in the room.
       // Viewers receive the remote LiveKit track; the broadcaster only sees a status.
       clearParticipantVideo(room.localParticipant.identity, "screen");
       setError("");
     } catch {
       setError("Демонстрация экрана отменена или недоступна.");
-    }
+    } finally {screenBusyRef.current=false;setScreenBusy(false)}
   }
   function leave() {
     intentionalLeaveRef.current = true;
@@ -717,6 +749,7 @@ export function VoiceRoom({
     voiceRootRef.current?.querySelectorAll<HTMLElement>("[data-voice-media-id]").forEach((element) => clearMedia(element));
     setStatus("idle");
     setParticipantCount(0);
+    clearFocus();
     setCamera(false);
     setSharing(false);
     setMuted(false);
@@ -743,10 +776,28 @@ export function VoiceRoom({
   const hiddenParticipantCount = focusMode ? 0 : Math.max(0, normalizedPresence.length - visibleParticipants.length);
   const connected = status === "connected" || status === "reconnecting";
 
+  // Focus mode unmounts other tiles. Reattach subscribed video when they return.
+  useEffect(()=>{
+    const room=roomRef.current;
+    if(!room)return;
+    for(const participant of [room.localParticipant,...room.remoteParticipants.values()]) {
+      for(const publication of participant.trackPublications.values()) {
+        if(publication.track?.kind!==Track.Kind.Video)continue;
+        const source=publication.source===Track.Source.ScreenShare?"screen":"camera";
+        if(mediaTarget(participant.identity,source))attachParticipantVideo(participant.identity,source,publication.track);
+      }
+    }
+  // Attachment reads the committed DOM and current room; it must not reconnect the room.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[focusMode,selectedStreamId,participantCount,status]);
+
   function focusStream(participantId: string) {
     const room = roomRef.current;
     if (!participantId || participantId === room?.localParticipant.identity) return;
+    const previous=selectedStreamRef.current;
+    if(previous && previous!==participantId)clearParticipantVideo(previous,"screen");
     selectedStreamRef.current = participantId;
+    if(room)selectScreenSubscriptions(room.remoteParticipants.values(),participantId);
     setSelectedStreamId(participantId);
     setFocusMode(true);
     const participant = room?.remoteParticipants.get(participantId);
@@ -765,19 +816,9 @@ export function VoiceRoom({
     selectedStreamRef.current = "";
     setFocusMode(false);
     setSelectedStreamId("");
-    roomRef.current?.remoteParticipants.get(previous)?.trackPublications.forEach((publication) => {
-      if (publication.source === Track.Source.ScreenShare || publication.source === Track.Source.ScreenShareAudio) publication.setSubscribed(false);
-    });
+    if(roomRef.current)selectScreenSubscriptions(roomRef.current.remoteParticipants.values(),"");
     if (previous) clearParticipantVideo(previous, "screen");
   }
-  function applyStreamVolume() {
-    if (!selectedStreamId) return;
-    audioRef.current?.querySelectorAll<HTMLAudioElement>(`audio[data-participant-id="${selectedStreamId}"]`).forEach((audio) => {
-      audio.muted = streamMuted || deafenedRef.current;
-      audio.volume = Math.max(0, Math.min(1, streamVolume / 100));
-    });
-  }
-  useEffect(() => { applyStreamVolume(); }, [selectedStreamId, streamMuted, streamVolume]);
   useEffect(() => {
     if (!connected) return;
     const heartbeat = () => {
@@ -903,7 +944,7 @@ export function VoiceRoom({
         <button className={muted?"is-muted":""} onClick={toggleMute} aria-label={muted?"Включить микрофон":"Выключить микрофон"} title="Микрофон · M">{muted?<MicOff size={20}/>:<Mic size={20}/>}<span>Микрофон</span></button>
         <button className={deafened?"is-muted":""} onClick={toggleDeafen} aria-label={deafened?"Включить звук":"Выключить звук"} title="Звук · D"><Headphones size={20}/><span>Звук</span></button>
         <button className={camera?"is-active":""} onClick={toggleCamera} aria-label={camera?"Выключить камеру":"Включить камеру"}>{camera?<VideoOff size={20}/>:<Video size={20}/>}<span>Камера</span></button>
-        <button className={sharing?"is-active":""} onClick={toggleScreen} disabled={!screenSupported} aria-label={sharing?"Остановить демонстрацию экрана":"Демонстрация экрана"}><MonitorUp size={20}/><span>Экран</span></button>
+        <button className={sharing?"is-active":""} onClick={toggleScreen} disabled={!screenSupported||screenBusy} aria-label={sharing?"Остановить демонстрацию экрана":"Демонстрация экрана"}><MonitorUp size={20}/><span>Экран</span></button>
         <button className={settings?"is-active":""} onClick={()=>setSettings((value)=>!value)} aria-label="Устройства" title="Устройства"><Settings2 size={20}/><span>Устройства</span></button>
         <button className={soundboard?"is-active":""} onClick={()=>setSoundboard((value)=>!value)} aria-label="Soundboard" title="Soundboard"><Music2 size={20}/><span>Soundboard</span></button>
         <button className="voice-leave" onClick={leave} aria-label="Отключиться"><PhoneOff size={20}/><span>Выйти</span></button>

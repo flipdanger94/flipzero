@@ -1,0 +1,153 @@
+{
+  "results": [
+    {
+      "width": 360,
+      "view": "store/inventory",
+      "badges": 2,
+      "focusInside": true,
+      "focusRestored": true
+    },
+    {
+      "width": 360,
+      "view": "profile",
+      "overflow": false,
+      "dialogOverflow": false
+    },
+    {
+      "width": 360,
+      "view": "full",
+      "overflow": false,
+      "dialogOverflow": false
+    },
+    {
+      "width": 360,
+      "view": "discovery",
+      "overflow": false,
+      "dialogOverflow": false
+    },
+    {
+      "width": 360,
+      "view": "events",
+      "overflow": false,
+      "dialogOverflow": false
+    },
+    {
+      "width": 360,
+      "view": "wiki",
+      "overflow": false,
+      "dialogOverflow": false
+    },
+    {
+      "width": 390,
+      "view": "store/inventory",
+      "badges": 2,
+      "focusInside": true,
+      "focusRestored": true
+    },
+    {
+      "width": 390,
+      "view": "profile",
+      "overflow": false,
+      "dialogOverflow": false
+    },
+    {
+      "width": 390,
+      "view": "full",
+      "overflow": false,
+      "dialogOverflow": false
+    },
+    {
+      "width": 390,
+      "view": "discovery",
+      "overflow": false,
+      "dialogOverflow": false
+    },
+    {
+      "width": 390,
+      "view": "events",
+      "overflow": false,
+      "dialogOverflow": false
+    },
+    {
+      "width": 390,
+      "view": "wiki",
+      "overflow": false,
+      "dialogOverflow": false
+    },
+    {
+      "width": 768,
+      "view": "store/inventory",
+      "badges": 2,
+      "focusInside": true,
+      "focusRestored": true
+    },
+    {
+      "width": 768,
+      "view": "profile",
+      "overflow": false,
+      "dialogOverflow": false
+    },
+    {
+      "width": 768,
+      "view": "full",
+      "overflow": false,
+      "dialogOverflow": false
+    },
+    {
+      "width": 768,
+      "view": "discovery",
+      "overflow": false,
+      "dialogOverflow": false
+    },
+    {
+      "width": 768,
+      "view": "events",
+      "overflow": false,
+      "dialogOverflow": false
+    },
+    {
+      "width": 768,
+      "view": "wiki",
+      "overflow": false,
+      "dialogOverflow": false
+    },
+    {
+      "width": 1440,
+      "view": "store/inventory",
+      "badges": 2,
+      "focusInside": true,
+      "focusRestored": true
+    },
+    {
+      "width": 1440,
+      "view": "profile",
+      "overflow": false,
+      "dialogOverflow": false
+    },
+    {
+      "width": 1440,
+      "view": "full",
+      "overflow": false,
+      "dialogOverflow": false
+    },
+    {
+      "width": 1440,
+      "view": "discovery",
+      "overflow": false,
+      "dialogOverflow": false
+    },
+    {
+      "width": 1440,
+      "view": "events",
+      "overflow": false,
+      "dialogOverflow": false
+    },
+    {
+      "width": 1440,
+      "view": "wiki",
+      "overflow": false,
+      "dialogOverflow": false
+    }
+  ],
+  "errors": []
+}

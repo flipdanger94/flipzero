@@ -2,14 +2,13 @@
 
 import { type FormEvent, useState } from "react";
 import { Bell, Columns3, Hash, LoaderCircle, MessagesSquare, Volume2, X } from "lucide-react";
-import { useModalA11y } from "@/hooks/use-modal-a11y";
+import { Dialog } from "./ui/dialog";
 
 type ChannelKind = "text" | "forum" | "voice" | "announcement" | "board";
 export type CreatedChannel = { id: string; spaceId: string; parentId: string | null; name: string; topic: string | null; kind: ChannelKind; position: number; userLimit?: number | null };
 type CategoryOption = { id: string; name: string };
 
 export function CreateChannelDialog({spaceId, categories, initialKind, initialParentId, onClose, onCreated }: { spaceId: string; categories: CategoryOption[]; initialKind: "text" | "voice"; initialParentId?: string | null; onClose: () => void; onCreated: (channel: CreatedChannel) => void }) {
-  const dialogRef = useModalA11y(onClose);
   const [kind, setKind] = useState<ChannelKind>(initialKind);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -26,8 +25,7 @@ export function CreateChannelDialog({spaceId, categories, initialKind, initialPa
     onCreated(result.channel);
   }
 
-  return <div className="dialog-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
-    <section ref={dialogRef} tabIndex={-1} className="space-dialog channel-dialog" role="dialog" aria-modal="true" aria-labelledby="create-channel-title">
+  return <Dialog backdropClassName="dialog-backdrop" className="space-dialog channel-dialog" labelledBy="create-channel-title" onClose={onClose}>
       <button className="dialog-close" onClick={onClose} aria-label="Закрыть"><X size={19} /></button>
       <h2 id="create-channel-title">Создать канал</h2><p>Выберите формат и задайте понятное название.</p>
       <div className="channel-kind-picker">
@@ -44,6 +42,5 @@ export function CreateChannelDialog({spaceId, categories, initialKind, initialPa
         <label><span>Описание</span><textarea name="topic" maxLength={240} placeholder="Для чего этот канал?" rows={2} /></label>
         <button className="auth-submit" disabled={loading}>{loading ? <><LoaderCircle className="spin" size={18} /> Создаём...</> : "Создать канал"}</button>
       </form>
-    </section>
-  </div>;
+    </Dialog>;
 }

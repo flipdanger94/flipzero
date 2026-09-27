@@ -1,5 +1,6 @@
 import { and, desc, eq, gt, lt, or } from "drizzle-orm";
-import { AccessToken, TrackSource } from "livekit-server-sdk";
+import { AccessToken } from "livekit-server-sdk";
+import { directCallPublishSources } from "@/lib/direct-call-permissions";
 import { NextResponse } from "next/server";
 import { getDatabase } from "@/db/client";
 import { directCallSessions, users } from "@/db/schema";
@@ -76,7 +77,7 @@ export async function POST(request:Request){
   if(call.receiverId!==user.id||call.status!=="ringing"||call.expiresAt<=new Date())return NextResponse.json({message:"Звонок уже недоступен."},{status:409});
   const lk=livekit();if(!lk)return NextResponse.json({message:"Сервис звонков пока не настроен."},{status:503});
   const token=new AccessToken(lk.key,lk.secret,{identity:user.id,name:user.displayName,ttl:"2m",metadata:JSON.stringify({directCall:true,callerId:call.callerId,callId})});
-  token.addGrant({roomJoin:true,room:call.roomName,canPublish:true,canPublishSources:call.video?[TrackSource.MICROPHONE,TrackSource.CAMERA]:[TrackSource.MICROPHONE],canSubscribe:true});
+  token.addGrant({roomJoin:true,room:call.roomName,canPublish:true,canPublishSources:directCallPublishSources(call.video),canSubscribe:true});
   await db.update(directCallSessions).set({status:"accepted",answeredAt:new Date()}).where(eq(directCallSessions.id,callId));
   const [caller]=await db.select({id:users.id,displayName:users.displayName,avatarUrl:users.avatarUrl}).from(users).where(eq(users.id,call.callerId)).limit(1);
   return NextResponse.json({ok:true,status:"accepted",token:await token.toJwt(),url:lk.url,room:call.roomName,video:call.video,callId,person:caller});

@@ -37,7 +37,7 @@ export function FullUserProfile({
   onSaved,
 }:{
   profile:FullProfileData;
-  rootRef:RefObject<HTMLElement|null>;
+  rootRef?:RefObject<HTMLElement|null>;
   tab:Tab;
   busy:boolean;
   onTab:(tab:Tab)=>void;
@@ -53,7 +53,7 @@ export function FullUserProfile({
   const joined=new Date(p.createdAt).toLocaleDateString("ru-RU",{month:"long",year:"numeric"});
   const location=p.profileLocation||"Местоположение не указано";
 
-  return <section ref={rootRef} tabIndex={-1} className={`fz-profile-v2 effect-${p.cosmetics?.profile_effect??"none"}`} role="dialog" aria-modal="true" aria-label={`Полный профиль ${p.displayName}`} style={{"--profile-accent":"var(--accent,#8f70ff)"} as CSSProperties}>
+  return <section ref={rootRef} tabIndex={-1} className={`fz-profile-v2 effect-${p.cosmetics?.profile_effect??"none"}`}  aria-label={`Полный профиль ${p.displayName}`} style={{"--profile-accent":"var(--accent,#8f70ff)"} as CSSProperties}>
     <button className="fz-profile-v2-close" type="button" onClick={onClose} aria-label="Закрыть профиль"><AppIcon name="close" size={20}/></button>
 
     <header className="fz-profile-v2-hero">
@@ -81,7 +81,7 @@ export function FullUserProfile({
           <button onClick={onVoice} aria-label="Позвонить"><AppIcon name="call" size={18}/></button>
           <button onClick={onVideo} aria-label="Видеозвонок"><AppIcon name="video" size={18}/></button>
           <button onClick={onFriendAction} disabled={busy||p.friendshipStatus==="outgoing"} aria-label="Действие с дружбой"><AppIcon name={p.friendshipStatus==="friends"?"user-remove":p.friendshipStatus==="outgoing"?"check":"friends"} size={18}/></button></>:<span className="fz-profile-v2-own">Ваш профиль</span>}
-          <button aria-label="Ещё"><AppIcon name="more" size={18}/></button>
+
         </div>
       </div>
     </header>

@@ -10,7 +10,7 @@ import { AppIcon } from "./app-icon";
 import { MediaImage } from "./media-image";
 import { ClanTag, type ClanTagData } from "./clan-tag";
 import { DirectCallOverlay } from "./direct-call-overlay";
-import { useModalA11y } from "@/hooks/use-modal-a11y";
+import { Dialog } from "./ui/dialog";
 import { UserProfilePopover } from "./user-profile-popover";
 import { PersonalEconomy } from "./personal-economy";
 import { ChatGameCard, createChatGame, gameMarker } from "./chat-game-card";
@@ -73,7 +73,6 @@ export function SocialHubDialog({ currentUserId, initialTab = "messages", initia
   const recordingStreamRef = useRef<MediaStream | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const recordingStartedRef = useRef(0);
-  const modalRef = useModalA11y(onClose ?? (() => undefined), !embedded && Boolean(onClose));
   const [superflip, setSuperflip] = useState<{ status:"not_launched"|"trial_active"|"active"|"expired"; active:boolean; waitlisted:boolean; source?:string|null; reason?:string|null; grantedAt?:string|null; expiresAt?:string|null; capabilities?:{directMessageLimit:number;profileBioLimit:number;avatarUploadMb:number;bannerUploadMb:number;animatedProfileMedia:boolean} } | null>(null);
 
   const messageLimit = superflip?.capabilities?.directMessageLimit ?? 1000;
@@ -215,7 +214,7 @@ export function SocialHubDialog({ currentUserId, initialTab = "messages", initia
   const filteredConversations=conversations.filter((item)=>{const q=conversationQuery.trim().toLocaleLowerCase("ru");return !q||item.other.displayName.toLocaleLowerCase("ru").includes(q)||item.other.username.toLocaleLowerCase("ru").includes(q)});
 
   const friendRows=friendView==="online"?friends.filter((person)=>person.presence==="online"):friendView==="all"?friends:[];
-  const content=<section ref={modalRef} tabIndex={embedded?undefined:-1} className={`social-hub social-hub-v2 ${embedded?"social-hub-embedded":""}`} role={embedded?"region":"dialog"} aria-modal={embedded?undefined:true}>
+  const content=<>
     <aside className="social-nav-rail">
       <div className="social-nav-brand"><small>FLIPZERO SOCIAL</small><strong>Личное</strong></div>
       <label className="social-conversation-search"><AppIcon name="search" size={14}/><input value={conversationQuery} onChange={(event)=>setConversationQuery(event.target.value)} placeholder="Поиск диалогов"/></label>
@@ -251,8 +250,8 @@ export function SocialHubDialog({ currentUserId, initialTab = "messages", initia
       :<div className="superflip-panel superflip-panel-v2"><span className="superflip-icon"><AppIcon name="superflip" size={34}/></span><small>{superflip?.status==="active"?"SUPERFLIP АКТИВЕН":superflip?.status==="trial_active"?"ПОДАРОЧНЫЙ SUPERFLIP":superflip?.status==="expired"?"SUPERFLIP ЗАВЕРШЁН":"SUPERFLIP: СКОРО"}</small><h3>{superflip?.active?"Ваши расширенные возможности включены":"Больше возможностей. Больше вашего стиля."}</h3><p>{superflip?.active?"Используйте увеличенные лимиты профиля, медиа и личных сообщений.":"SuperFlip расширяет личное общение и оформление профиля без изменения привычного интерфейса."}</p><div className="superflip-benefit-grid"><article><MessageCircle/><strong>4000 символов</strong><span>Личные сообщения вместо 1000 в Free.</span></article><article><Star/><strong>Профиль до 500</strong><span>Больше места для описания и персонализации.</span></article><article><ImageIcon/><strong>Баннер до 16 МБ</strong><span>Больше качества для оформления профиля.</span></article><article><Zap/><strong>Анимированные медиа</strong><span>Расширенные возможности аватара и баннера.</span></article><article><Star/><strong>Бонус к наградам</strong><span>На 20% больше XP и монет за квесты.</span></article><article><AppIcon name="superflip"/><strong>5 бейджей</strong><span>Расширенная витрина достижений вместо 3.</span></article><article><Sparkles/><strong>Эксклюзивы</strong><span>Особые предметы в магазине косметики.</span></article></div><div className="superflip-store-link"><AppIcon name="store" size={18}/><span><strong>SuperFlip + Магазин</strong><small>Эксклюзивные анимированные предметы доступны прямо в разделе «Магазин».</small></span><button type="button" onClick={()=>setTab("economy")}>Открыть магазин</button></div>{superflip?.source==="gift"&&superflip.reason?<div className="superflip-gift-reason" role="note"><span><AppIcon name="superflip" size={14}/> ПРИЧИНА ПОДАРКА</span><strong>{superflip.reason}</strong><small>{superflip.grantedAt?`Выдан ${new Date(superflip.grantedAt).toLocaleString("ru-RU",{day:"2-digit",month:"long",year:"numeric",hour:"2-digit",minute:"2-digit"})}`:"Подарочный доступ SuperFlip"}</small></div>:null}{superflip?.active?<button disabled>SuperFlip активен{superflip.expiresAt?` до ${new Date(superflip.expiresAt).toLocaleDateString("ru-RU")}`:""}</button>:<button onClick={joinWaitlist} disabled={superflip?.waitlisted}>{superflip?.waitlisted?"Вы в листе ожидания":"Подключить SuperFlip"}</button>}{notice?<p className="social-notice">{notice}</p>:null}</div>}
     </div>
     {profilePopup?<UserProfilePopover key={profilePopup.person.id} userId={profilePopup.person.id} displayName={profilePopup.person.displayName} anchor={profilePopup.anchor} onClose={()=>setProfilePopup(null)} onOpenDirect={(userId)=>{const person=[...friends,...conversations.map((item)=>item.other),...results].find((item)=>item.id===userId)??profilePopup.person;setProfilePopup(null);void openChat(person)}}/>:null}
-  </section>;
-  return embedded?content:<div className="dialog-backdrop" onMouseDown={(event)=>event.target===event.currentTarget&&onClose?.()}>{content}</div>;
+  </>;
+  return embedded?<section className="social-hub social-hub-v2 social-hub-embedded" role="region" aria-label="Личное пространство">{content}</section>:<Dialog className="social-hub social-hub-v2" label="Личное пространство" onClose={()=>onClose?.()}>{content}</Dialog>;
 }
 
 function FriendRow({person,subtitle,actions,onProfile}:{person:Person;subtitle?:string;actions:ReactNode;onProfile:(anchor:{x:number;y:number})=>void}){return <article className="friend-row-v2"><button type="button" className="friend-profile-trigger" onClick={(event)=>{const rect=event.currentTarget.getBoundingClientRect();onProfile({x:rect.left,y:rect.bottom+6})}} aria-label={`Открыть профиль ${person.displayName}`}><Avatar person={person}/><span><strong className={person.cosmetics?.nickname?`nick-${person.cosmetics.nickname}`:""}>{person.displayName}</strong><ClanTag clan={person.clan}/><small>@{person.username}{person.globalLevel?` · уровень ${person.globalLevel}`:""} · {subtitle??(person.presence==="online"?"В сети":"Не в сети")}</small></span></button><div className="friend-row-actions">{actions}</div></article>}

@@ -1,0 +1,42 @@
+{
+  "results": [
+    {
+      "width": 360,
+      "view": "store/inventory",
+      "badges": 2,
+      "focusInside": true,
+      "focusRestored": true
+    },
+    {
+      "width": 360,
+      "view": "profile",
+      "overflow": false,
+      "dialogOverflow": false
+    },
+    {
+      "width": 360,
+      "view": "full",
+      "overflow": false,
+      "dialogOverflow": false
+    },
+    {
+      "width": 360,
+      "view": "discovery",
+      "overflow": false,
+      "dialogOverflow": false
+    },
+    {
+      "width": 360,
+      "view": "events",
+      "overflow": false,
+      "dialogOverflow": false
+    },
+    {
+      "width": 360,
+      "view": "wiki",
+      "overflow": false,
+      "dialogOverflow": false
+    }
+  ],
+  "errors": []
+}

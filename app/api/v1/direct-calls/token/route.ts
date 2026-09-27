@@ -1,6 +1,7 @@
 import { createHash, randomUUID } from "node:crypto";
 import { and, eq, or } from "drizzle-orm";
-import { AccessToken, TrackSource } from "livekit-server-sdk";
+import { AccessToken } from "livekit-server-sdk";
+import { directCallPublishSources } from "@/lib/direct-call-permissions";
 import { NextResponse } from "next/server";
 import { getDatabase } from "@/db/client";
 import { directCallSessions, friends, notifications, userBlocks, userPrivacySettings, users } from "@/db/schema";
@@ -46,7 +47,7 @@ export async function POST(request: Request) {
     roomJoin: true,
     room,
     canPublish: true,
-    canPublishSources: video ? [TrackSource.MICROPHONE, TrackSource.CAMERA] : [TrackSource.MICROPHONE],
+    canPublishSources: directCallPublishSources(video),
     canSubscribe: true,
   });
 

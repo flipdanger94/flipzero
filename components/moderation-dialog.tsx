@@ -2,7 +2,7 @@
 
 import { type FormEvent, useEffect, useMemo, useState } from "react";
 import { Ban, Bot, Check, Gavel, LoaderCircle, ShieldAlert, Trash2, X } from "lucide-react";
-import { useModalA11y } from "@/hooks/use-modal-a11y";
+import { Dialog } from "./ui/dialog";
 
 type Person = { userId?: string; id?: string; displayName: string; username: string };
 type Case = { id: string; targetUserId: string; action: "warn" | "timeout" | "kick" | "ban" | "unban"; reason: string | null; expiresAt: string | null; createdAt: string; target: Person | null; moderator: Person | null };
@@ -11,7 +11,6 @@ const labels = { warn: "Предупреждение", timeout: "Таймаут"
 const statusLabels = { pending: "Ожидает решения", dismissed: "Разрешено", actioned: "Удалено" } as const;
 
 export function ModerationDialog({spaceId, onClose }: { spaceId: string; onClose: () => void }) {
-  const dialogRef = useModalA11y(onClose);
   const [members, setMembers] = useState<Person[]>([]);
   const [cases, setCases] = useState<Case[]>([]);
   const [flags, setFlags] = useState<Flag[]>([]);
@@ -59,14 +58,12 @@ export function ModerationDialog({spaceId, onClose }: { spaceId: string; onClose
     setFlags((current) => current.map((flag) => flag.id === flagId ? { ...flag, status: data.status } : flag));
   }
 
-  return <div className="dialog-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
-    <section ref={dialogRef} tabIndex={-1} className="space-dialog moderation-dialog" role="dialog" aria-modal="true" aria-labelledby="moderation-title">
+  return <Dialog backdropClassName="dialog-backdrop" className="space-dialog moderation-dialog" labelledBy="moderation-title" onClose={onClose}>
       <button className="dialog-close" onClick={onClose} aria-label="Закрыть"><X size={19} /></button>
       <div className="moderation-heading"><div className="dialog-symbol"><Gavel size={22} /></div><div><h2 id="moderation-title">Trust & Safety</h2><p>Автоматическая защита сообщений и действия модераторов.</p></div></div>
       <div className="trust-status"><span><Bot size={17} /></span><div><strong>Автомодерация активна</strong><small>Проверяет угрозы, мошенничество, персональные данные, травлю и спам.</small></div><b>{pendingFlags.length} на проверке</b></div>
       <nav className="moderation-tabs"><button className={section === "safety" ? "active" : ""} onClick={() => setSection("safety")}><ShieldAlert size={15} /> Очередь <b>{pendingFlags.length}</b></button><button className={section === "actions" ? "active" : ""} onClick={() => setSection("actions")}><Gavel size={15} /> Действия и журнал</button></nav>
       {error ? <div className="auth-error" role="alert">{error}</div> : null}
       {loading ? <div className="role-loading"><LoaderCircle className="spin" size={22} /> Загружаем данные безопасности...</div> : section === "safety" ? <div className="flag-list">{flags.length ? flags.map((flag) => <article key={flag.id} className={`flag-card ${flag.status}`}><header><span className={`severity ${flag.severity}`}>{flag.severity === "high" ? "ВЫСОКИЙ РИСК" : "ТРЕБУЕТ ПРОВЕРКИ"}</span><small>{flag.confidence}% уверенности · {new Date(flag.createdAt).toLocaleString("ru-RU")}</small><b className={`flag-status ${flag.status}`}>{statusLabels[flag.status]}</b></header><div className="flag-meta"><strong>{flag.displayName} <span>@{flag.username}</span></strong><small>#{flag.channelName}{flag.autoHidden ? " · скрыто автоматически" : " · пока видно участникам"}</small></div><blockquote>{flag.content}</blockquote><p>{flag.summary}</p><div className="flag-signals">{flag.evidence.map((signal) => <span key={signal}>{signal}</span>)}</div>{flag.status === "pending" ? <footer><button className="flag-allow" disabled={workingFlag === flag.id} onClick={() => reviewFlag(flag.id, "dismiss")}><Check size={15} /> Разрешить</button><button className="flag-remove" disabled={workingFlag === flag.id} onClick={() => reviewFlag(flag.id, "remove")}>{workingFlag === flag.id ? <LoaderCircle className="spin" size={15} /> : <Trash2 size={15} />} Удалить сообщение</button></footer> : null}</article>) : <div className="invite-empty"><Bot size={29} /><strong>Срабатываний пока нет</strong><span>Новые подозрительные сообщения появятся здесь.</span></div>}</div> : <div className="moderation-layout"><form onSubmit={submit}><label><span>Действие</span><select value={action} onChange={(event) => setAction(event.target.value as Case["action"])}>{Object.entries(labels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label><label><span>Участник</span><select name="targetUserId" required><option value="">Выберите пользователя</option>{targets.map((person) => <option key={person.userId ?? person.id} value={person.userId ?? person.id}>{person.displayName} (@{person.username})</option>)}</select></label>{action === "timeout" ? <label><span>Длительность</span><select name="durationMinutes" defaultValue="60"><option value="10">10 минут</option><option value="60">1 час</option><option value="1440">1 день</option><option value="10080">7 дней</option></select></label> : null}<label><span>Причина</span><textarea name="reason" maxLength={500} rows={3} placeholder="Опишите причину действия" /></label><button className="auth-submit" disabled={working || targets.length === 0}>{working ? <LoaderCircle className="spin" size={17} /> : <><ShieldAlert size={16} /> Применить</>}</button></form><div className="audit-list"><h3>Последние действия</h3>{cases.length ? cases.map((item) => <article key={item.id}><i className={`audit-icon ${item.action}`}><Ban size={14} /></i><div><strong>{labels[item.action]} · {item.target?.displayName ?? "Пользователь"}</strong><span>{item.reason || "Причина не указана"}</span><small>{new Date(item.createdAt).toLocaleString("ru-RU")}{item.expiresAt ? ` · до ${new Date(item.expiresAt).toLocaleString("ru-RU")}` : ""}</small></div></article>) : <div className="invite-empty"><Gavel size={27} /><strong>Журнал пока пуст</strong><span>Здесь появятся действия модераторов.</span></div>}</div></div>}
-    </section>
-  </div>;
+    </Dialog>;
 }

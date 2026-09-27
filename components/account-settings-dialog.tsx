@@ -2,7 +2,7 @@
 
 import { type FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useModalA11y } from "@/hooks/use-modal-a11y";
+import { Dialog } from "./ui/dialog";
 import { AtSign, Bell, Check, Code2, Gem, Headphones, KeyRound, LoaderCircle, LogOut, Mic, RefreshCw, ShieldCheck, UserRound, Volume2, UserX } from "lucide-react";
 import { AppIcon } from "./app-icon";
 import { BrandMark } from "./brand-mark";
@@ -31,7 +31,6 @@ export type AccountSettingsSection = "profile" | "security" | "privacy" | "notif
 
 export function AccountSettingsDialog({ user, initialSection = "profile", onClose, onSaved }: { user: AccountProfile; initialSection?: AccountSettingsSection; onClose: () => void; onSaved: (user: AccountProfile) => void }) {
   const router = useRouter();
-  const dialogRef = useModalA11y(onClose);
   const [section, setSection] = useState<AccountSettingsSection>(initialSection);
   const [mobileSectionOpen, setMobileSectionOpen] = useState(initialSection !== "profile");
   const [busy, setBusy] = useState(false);
@@ -102,8 +101,7 @@ export function AccountSettingsDialog({ user, initialSection = "profile", onClos
 
   const initials = user.displayName.split(/\s+/).map((part) => part[0]).join("").slice(0, 2).toLocaleUpperCase("ru");
 
-  return <div className="dialog-backdrop account-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
-    <section ref={dialogRef} tabIndex={-1} className={`account-settings ${mobileSectionOpen ? "mobile-section-open" : "mobile-section-list"}`} role="dialog" aria-modal="true" aria-labelledby="account-settings-title">
+  return <Dialog backdropClassName="dialog-backdrop account-backdrop" className={`account-settings ${mobileSectionOpen ? "mobile-section-open" : "mobile-section-list"}`} labelledBy="account-settings-title" onClose={onClose}>
       <aside className="account-settings-nav">
         <div className="account-settings-brand"><span className="brand-symbol-wrap"><BrandMark /></span><strong>FlipZero</strong></div>
         <small className="account-nav-label">НАСТРОЙКИ ПОЛЬЗОВАТЕЛЯ</small>
@@ -162,8 +160,7 @@ export function AccountSettingsDialog({ user, initialSection = "profile", onClos
       </div>
       {section === "profile" ? <footer className="account-settings-savebar" aria-live="polite"><span>{profileDirty ? "У вас есть несохранённые изменения" : "Все изменения сохранены"}</span><div><button type="button" className="account-secondary" onClick={resetProfileDraft} disabled={!profileDirty || busy}>Сбросить</button><button type="submit" form="account-profile-form" className="account-primary" disabled={!profileDirty || busy}>{busy ? <><LoaderCircle size={17} className="spin" /> Сохраняем…</> : "Сохранить"}</button></div></footer> : null}
       </div>
-    </section>
-  </div>;
+    </Dialog>;
 }
 
 const preferenceDefaults = {
