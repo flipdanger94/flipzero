@@ -3,7 +3,7 @@
 import { type FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Dialog } from "./ui/dialog";
-import { AtSign, Bell, Check, Code2, Gem, Headphones, KeyRound, LoaderCircle, LogOut, Mic, RefreshCw, Search, ShieldCheck, UserRound, Volume2, UserX } from "lucide-react";
+import { AtSign, Bell, Check, Code2, Gem, Headphones, KeyRound, LoaderCircle, LogOut, Mic, RefreshCw, Search, ShieldCheck, UserRound, Volume2, UserX, X } from "lucide-react";
 import { AppIcon } from "./app-icon";
 import { BrandMark } from "./brand-mark";
 import { ImageUpload } from "./image-upload";
@@ -105,7 +105,7 @@ export function AccountSettingsDialog({ user, initialSection = "profile", onClos
 
   return <Dialog backdropClassName="dialog-backdrop account-backdrop" className={`account-settings ${mobileSectionOpen ? "mobile-section-open" : "mobile-section-list"}`} labelledBy="account-settings-title" onClose={onClose}>
       <aside className="account-settings-nav">
-        <button className="account-settings-index-close" type="button" onClick={onClose} aria-label="Закрыть настройки"><AppIcon name="close" size={20}/></button>
+        <button className="account-settings-index-close" type="button" onClick={onClose} aria-label="Закрыть настройки"><X size={24} strokeWidth={2.4}/></button>
         <div className="account-settings-brand"><span className="brand-symbol-wrap"><BrandMark /></span><strong>FlipZero</strong></div>
         <div className="account-mobile-profile"><span>{media.avatarUrl ? <MediaImage src={media.avatarUrl} /> : initials}</span><div><strong>{user.displayName}</strong><small>@{user.username}</small></div></div>
         <label className="account-settings-search"><Search size={18}/><input value={settingsQuery} onChange={(event)=>setSettingsQuery(event.target.value)} placeholder="Поиск настроек" aria-label="Поиск настроек"/></label>
@@ -129,7 +129,7 @@ export function AccountSettingsDialog({ user, initialSection = "profile", onClos
 
       <div className="account-settings-main"><div className="account-settings-content">
         <button className="account-settings-mobile-back" type="button" onClick={()=>setMobileSectionOpen(false)} aria-label="Назад к разделам">← <span>Настройки</span></button>
-        <button className="account-settings-close" onClick={onClose} aria-label="Закрыть настройки"><AppIcon name="close" size={20}/></button>
+        <button className="account-settings-close" type="button" onClick={onClose} aria-label="Закрыть настройки"><X size={24} strokeWidth={2.4}/></button>
         {section === "profile" ? <>
           <div className="account-settings-heading"><span>ПРОФИЛЬ</span><h2 id="account-settings-title">Мой профиль</h2><p>Так вас видят другие участники FlipZero.</p></div>
           <div className="account-profile-preview"><div className="account-profile-banner" style={media.bannerUrl ? { backgroundImage: `url(${media.bannerUrl})` } : undefined} /><div className="account-profile-details"><span className="account-profile-avatar">{media.avatarUrl ? <MediaImage src={media.avatarUrl} sizes="88px" /> : initials}</span><strong>{user.displayName}</strong><small>@{user.username} · уровень {user.globalLevel}</small><p>{user.bio || "Расскажите немного о себе."}</p></div></div>

@@ -22,7 +22,7 @@
 .account-nav-user strong { font-size: .8rem; }
 .account-nav-user small { margin-top: 2px; font-size: .7rem; color: #8b98a7; }
 .account-settings-content { position: relative; overflow-y: auto; padding: 42px clamp(20px, 5vw, 58px) 50px; scrollbar-width: thin; }
-.account-settings-close { position: absolute; top: 19px; right: 20px; width: 36px; height: 36px; display: grid; place-items: center; border: 1px solid rgba(255,255,255,.1); border-radius: 10px; background: #1b1d25; color: #cbd4df; cursor: pointer; }
+.account-settings-close { position: absolute; top: 19px; right: 20px; width: 44px; height: 44px; min-width:44px; min-height:44px; padding:0; display: grid; place-items: center; border: 1px solid rgba(255,255,255,.16); border-radius: 11px; background: #1b1d25; color: #eef3f8; cursor: pointer; }
 .account-settings-heading > span { color: #00d4ff; font-size: .72rem; letter-spacing: .13em; font-weight: 800; }
 .account-settings-heading h2 { margin: 9px 0 6px; font-size: clamp(1.5rem,3vw,2rem); letter-spacing: -.05em; }
 .account-settings-heading p { margin: 0 0 26px; color: #a7b2bc; font-size: .88rem; }

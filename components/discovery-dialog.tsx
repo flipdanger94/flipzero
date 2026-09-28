@@ -29,7 +29,7 @@ function matchesCategory(item: Community, category: Category) {
   return words[category].some((word) => text.includes(word));
 }
 
-export function DiscoveryDialog({onClose, onJoined }: { onClose: () => void; onJoined: (spaceId: string) => void | Promise<void> }) {
+export function DiscoveryDialog({onClose, onJoined }: { onClose: () => void; onJoined: (spaceId: string) => boolean | void | Promise<boolean | void> }) {
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState<Category>("all");
   const [items, setItems] = useState<Community[]>([]);

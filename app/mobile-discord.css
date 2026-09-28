@@ -103,3 +103,18 @@
   .discovery-nav nav button{font-size:.54rem!important}
   .clan-section-nav button{font-size:.52rem!important}
 }
+
+@media (max-width:767px){
+  .onboarding-backdrop{align-items:center!important;padding:max(8px,env(safe-area-inset-top)) 8px max(8px,env(safe-area-inset-bottom))!important}
+  .onboarding-wizard{width:min(100%,520px)!important;height:auto!important;max-height:calc(100dvh - 16px)!important;border-radius:18px!important;padding:18px 16px 12px!important}
+  .onboarding-progress{margin-bottom:12px!important}.onboarding-step-content{padding-inline:0!important}
+  .onboarding-avatar-preview{width:82px;height:82px;margin-top:16px}.onboarding-step-content>svg{margin:18px auto 7px!important}
+  .onboarding-wizard h2{font-size:1.28rem!important}.onboarding-wizard p{font-size:.9rem!important}
+  .onboarding-wizard textarea{min-height:112px!important;font-size:16px!important}
+  .onboarding-wizard footer{position:sticky;z-index:2;bottom:0;margin:14px -4px 0!important;padding:10px 4px calc(2px + env(safe-area-inset-bottom));background:linear-gradient(180deg,transparent,#11131a 22%)}
+  .onboarding-wizard footer button{flex:1;min-width:0;padding-inline:10px!important}.onboarding-secondary{width:100%;margin-top:12px!important}
+
+  .platform-workspace .social-hub-v2 .social-main-v2.social-main-economy{height:100%!important;min-height:0!important;overflow:hidden!important;display:grid!important;grid-template-rows:auto minmax(0,1fr)!important;padding-bottom:0!important}
+  .platform-workspace .social-main-economy>.store-shell{height:auto!important;min-height:0!important;max-height:100%!important;overflow-y:auto!important;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding:0!important;scroll-padding-bottom:max(12px,env(safe-area-inset-bottom))!important}
+  .platform-workspace .social-main-economy .store-page,.platform-workspace .social-main-economy .inventory-page,.platform-workspace .social-main-economy .quests-page,.platform-workspace .social-main-economy .personal-ledger{padding-bottom:max(16px,env(safe-area-inset-bottom))!important}
+}

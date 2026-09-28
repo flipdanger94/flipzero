@@ -39,7 +39,7 @@ export function CreateSpaceDialog({onClose, onCreated }: { onClose: () => void; 
           <label><span>Акцент</span><input className="color-input" name="accentColor" type="color" defaultValue="#ff5c70" /></label>
         </div>
         <label><span>Шаблон пространства (необязательно)</span><input type="file" accept="application/json,.json" onChange={(event) => setTemplateFile(event.target.files?.[0] ?? null)} /><small>Импортирует категории и каналы без сообщений и личных данных.</small></label>
-        <button className="auth-submit" disabled={loading}>{loading ? <><LoaderCircle className="spin" size={18} /> Создаём...</> : "Создать пространство"}</button>
+        <button className="auth-submit" disabled={loading}>{loading ? <><LoaderCircle className="spin" size={18} /> Создаём...</> : "Создать"}</button>
       </form>
     </Dialog>;
 }
