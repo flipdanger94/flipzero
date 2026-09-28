@@ -1,0 +1,88 @@
+/* Mobile surfaces inspired by Discord's compact, single-column navigation. */
+.account-mobile-profile,.account-settings-search{display:none}
+
+@media (max-width:767px){
+  :root{--mobile-discord-bg:#313338;--mobile-discord-panel:#2b2d31;--mobile-discord-row:#3a3c43}
+
+  /* Settings index: one scrollable page with profile, search and grouped rows. */
+  .account-settings-nav{
+    background:var(--mobile-discord-bg)!important;
+    padding:calc(22px + env(safe-area-inset-top)) 16px calc(26px + env(safe-area-inset-bottom))!important;
+    gap:4px!important;
+  }
+  .account-settings-nav .account-settings-brand{display:none!important}
+  .account-mobile-profile{display:grid;grid-template-columns:58px minmax(0,1fr);align-items:center;gap:13px;padding:7px 8px 18px}
+  .account-mobile-profile>span{width:58px;height:58px;overflow:hidden;border-radius:50%;display:grid;place-items:center;background:linear-gradient(135deg,#00d4ff,#6f5cff);color:#071019;font-weight:900}
+  .account-mobile-profile img{width:100%;height:100%;object-fit:cover}
+  .account-mobile-profile strong,.account-mobile-profile small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .account-mobile-profile strong{font-size:1.08rem;color:#f2f3f5}.account-mobile-profile small{margin-top:4px;color:#b5bac1;font-size:.78rem}
+  .account-settings-search{height:48px;margin:0 0 12px;border:1px solid #4e5058;border-radius:12px;background:#2b2d31;color:#dbdee1;display:flex;align-items:center;gap:11px;padding:0 13px}
+  .account-settings-search input{width:100%;min-width:0;border:0;outline:0;background:transparent;color:#f2f3f5;font:inherit;font-size:16px}
+  .account-settings-search input::placeholder{color:#949ba4}
+  .account-settings-nav .account-nav-label{padding:18px 9px 7px!important;color:#b5bac1!important;font-size:.72rem!important;letter-spacing:0!important;text-transform:none}
+  .account-settings-nav .account-nav-group{margin-top:8px!important;padding-top:18px!important;border-top:1px solid #3f4147!important}
+  .account-settings-nav>button,.account-settings-nav .account-nav-link{min-height:52px!important;border-radius:11px!important;padding:0 12px!important;color:#b5bac1!important;font-size:.95rem!important;gap:13px!important}
+  .account-settings-nav>button svg,.account-settings-nav .account-nav-link svg{width:21px;height:21px}
+  .account-settings-nav>button.active{background:#404249!important;color:#fff!important}
+  .account-settings-nav>.account-logout{color:#f38ba8!important;border-top:1px solid #3f4147!important;border-radius:0!important;margin-top:10px!important;padding-top:12px!important}
+  .account-settings-nav>.account-nav-user{display:none!important}
+
+  /* Settings detail: native-feeling page and stable controls. */
+  .account-settings-main{background:var(--mobile-discord-bg)!important}
+  .account-settings-main>.account-settings-content{padding:calc(68px + env(safe-area-inset-top)) 18px calc(118px + env(safe-area-inset-bottom))!important;background:var(--mobile-discord-bg)!important}
+  .account-settings-mobile-back{background:#404249!important;border-radius:50%!important;width:42px!important;padding:0!important;justify-content:center!important;font-size:1.15rem!important}
+  .account-settings-mobile-back span{display:none}
+  .account-settings-close{width:42px!important;height:42px!important;border-radius:50%!important;background:#404249!important;border-color:transparent!important}
+  .account-settings-heading{padding:0 48px 18px 0!important;margin-bottom:18px!important}
+  .account-settings-heading>span{display:none}.account-settings-heading h2{font-size:1.45rem!important}.account-settings-heading p{font-size:.9rem!important;line-height:1.45}
+  .account-profile-preview,.account-email-card,.audio-device-card,.premium-feature,.settings-row{background:#2b2d31!important;border-color:#45474e!important}
+  .settings-row{min-height:72px;padding:0 12px;border-radius:10px;margin-bottom:6px}
+  .settings-list{border:0!important;gap:2px}
+
+  /* Compact profile card over conversation. */
+  .fz-user-profile-layer{background:rgba(0,0,0,.58)!important;backdrop-filter:blur(2px)!important}
+  .fz-mini-profile{left:14px!important;right:14px!important;bottom:calc(var(--mobile-bottom-nav,66px) + 12px)!important;max-height:min(72dvh,620px)!important;border:1px solid #ffffff24!important;border-radius:16px!important;background:#232428!important;box-shadow:0 18px 70px #000c!important}
+  .fz-mini-banner{height:128px!important;border-radius:15px 15px 0 0!important}
+  .fz-mini-body{padding:56px 18px 18px!important}
+  .fz-mini-avatar{width:88px!important;height:88px!important;top:-47px!important;border-color:#232428!important}
+  .fz-profile-icon-actions button{width:42px!important;height:42px!important;background:#35373c!important;border-color:#ffffff10!important}
+  .fz-mini-full{min-height:44px!important;background:#35373c!important;border-color:#4e5058!important}
+
+  /* Full profile: tall centered card with banner, identity and content in one scroll. */
+  .fz-profile-v2-backdrop{padding:0!important;align-items:stretch!important;background:rgba(0,0,0,.72)!important;backdrop-filter:blur(10px)!important}
+  .profile-dialog-shell{width:100%!important;height:100dvh!important;max-height:100dvh!important;overflow:hidden!important;border-radius:0!important}
+  .profile-dialog-shell>.fz-profile-v2,.fz-profile-v2{width:100%!important;height:100dvh!important;max-height:100dvh!important;border:0!important;border-radius:0!important;background:#232428!important}
+  .fz-profile-v2-hero{flex:0 0 330px!important}.fz-profile-v2-banner{height:180px!important}
+  .fz-profile-v2-identity{min-height:174px!important;padding:62px 16px 14px!important;background:linear-gradient(180deg,transparent,#232428 30%,#232428)!important}
+  .fz-profile-v2-avatar{left:20px!important;top:-50px!important;width:96px!important;height:96px!important;border-radius:50%!important;box-shadow:0 0 0 5px #232428!important}
+  .fz-profile-v2-avatar img{border-radius:50%!important}.fz-profile-v2-actions{top:12px!important;right:16px!important}
+  .fz-profile-v2-actions button{height:42px!important;min-width:42px!important;border-radius:10px!important;background:#3b3d44!important}
+  .fz-profile-v2-name>p{font-size:.82rem!important}.fz-profile-v2-meta{font-size:.67rem!important}
+  .fz-profile-v2-tabs{flex:0 0 52px!important;background:#232428!important;padding:0 10px!important}.fz-profile-v2-tabs button{height:52px!important;font-size:.75rem!important}
+  .fz-profile-v2-grid,.fz-profile-v2-list{background:#2b2d31!important;padding:12px 12px calc(22px + env(safe-area-inset-bottom))!important}
+  .fz-profile-v2-card{background:#232428!important;border-color:#ffffff12!important;border-radius:12px!important;padding:16px!important}
+  .fz-profile-v2-card-head h2{font-size:.84rem!important}.fz-profile-v2-about>p{font-size:.78rem!important}.fz-profile-v2-close{top:calc(12px + env(safe-area-inset-top))!important;right:12px!important;width:42px!important;height:42px!important;border-radius:12px!important}
+
+  /* Discovery: horizontal category bar, bold hero and wide media cards. */
+  .discovery-dialog{height:100dvh!important;grid-template-rows:auto minmax(0,1fr)!important;background:#2b2d31!important}
+  .discovery-nav{padding:calc(10px + env(safe-area-inset-top)) 54px 8px 10px!important;background:#2b2d31!important;position:sticky;top:0;z-index:3}
+  .discovery-nav nav button{height:42px!important;padding:0 13px!important;border-radius:10px!important;font-size:.78rem!important}.discovery-nav nav button svg{display:none}
+  .discovery-close{top:calc(10px + env(safe-area-inset-top))!important;right:10px!important;width:40px!important;height:40px!important;border-radius:10px!important}
+  .discovery-content{background:#2b2d31!important}
+  .discovery-hero{padding:38px 18px 28px!important;background:radial-gradient(circle at 0 0,#356fc4 0,transparent 48%),linear-gradient(110deg,#244b9a,#1e164f 70%,#151128)!important}
+  .discovery-hero>span{display:none}.discovery-hero h2{max-width:560px;margin:0!important;font-size:clamp(2.4rem,12vw,4rem)!important;line-height:.94!important;text-transform:uppercase;letter-spacing:-.055em!important}.discovery-hero h2 br{display:none}.discovery-hero h2 b{font-weight:inherit}
+  .discovery-hero p{margin-top:18px!important;font-size:.9rem!important;line-height:1.5!important;color:#c4c9d0!important}
+  .discovery-search{height:48px!important;background:#1e1f22!important;border-color:#ffffff18!important}
+  .discovery-chips{display:none!important}
+  .discovery-results{padding:24px 14px calc(30px + env(safe-area-inset-bottom))!important;gap:24px!important}
+  .discovery-section-title h3{font-size:1.1rem!important}
+  .discovery-card{grid-template-columns:52px minmax(0,1fr)!important;grid-template-rows:160px auto auto!important;min-height:320px!important;padding:0 14px 14px!important;border-radius:14px!important;background:#35373c!important}
+  .discovery-card-banner{height:170px!important;margin:0 -14px!important}.discovery-card-icon{margin-top:-22px!important}.discovery-card-copy{padding-top:7px!important}
+  .discovery-card-copy h3{font-size:1rem!important}.discovery-card-copy p{font-size:.8rem!important;line-height:1.45!important}.discovery-card-copy small{font-size:.7rem!important}
+}
+
+@media (max-width:380px){
+  .account-settings-nav{padding-inline:12px!important}.account-settings-main>.account-settings-content{padding-inline:14px!important}
+  .fz-profile-v2-title-row h1{font-size:1.12rem!important}.fz-profile-v2-tabs button{padding-inline:9px!important}
+  .discovery-hero h2{font-size:2.25rem!important}
+}

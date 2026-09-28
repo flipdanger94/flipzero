@@ -3,7 +3,7 @@
 import { type FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Dialog } from "./ui/dialog";
-import { AtSign, Bell, Check, Code2, Gem, Headphones, KeyRound, LoaderCircle, LogOut, Mic, RefreshCw, ShieldCheck, UserRound, Volume2, UserX } from "lucide-react";
+import { AtSign, Bell, Check, Code2, Gem, Headphones, KeyRound, LoaderCircle, LogOut, Mic, RefreshCw, Search, ShieldCheck, UserRound, Volume2, UserX } from "lucide-react";
 import { AppIcon } from "./app-icon";
 import { BrandMark } from "./brand-mark";
 import { ImageUpload } from "./image-upload";
@@ -42,6 +42,7 @@ export function AccountSettingsDialog({ user, initialSection = "profile", onClos
   const [media, setMedia] = useState({ avatarUrl: user.avatarUrl, bannerUrl: user.bannerUrl });
   const profileDirty = displayName !== user.displayName || username !== user.username || bio !== (user.bio ?? "");
   const [superflipBioLimit, setSuperflipBioLimit] = useState(190);
+  const [settingsQuery, setSettingsQuery] = useState("");
   useEffect(() => { void fetch("/api/superflip/status").then((response) => response.json()).then((status: { capabilities?: { profileBioLimit?: number } }) => setSuperflipBioLimit(status.capabilities?.profileBioLimit ?? 190)).catch(() => {}); }, []);
   useEffect(() => {
     const previousOverflow = document.body.style.overflow;
@@ -100,23 +101,26 @@ export function AccountSettingsDialog({ user, initialSection = "profile", onClos
   }
 
   const initials = user.displayName.split(/\s+/).map((part) => part[0]).join("").slice(0, 2).toLocaleUpperCase("ru");
+  const showSetting = (label: string) => !settingsQuery.trim() || label.toLocaleLowerCase("ru").includes(settingsQuery.trim().toLocaleLowerCase("ru"));
 
   return <Dialog backdropClassName="dialog-backdrop account-backdrop" className={`account-settings ${mobileSectionOpen ? "mobile-section-open" : "mobile-section-list"}`} labelledBy="account-settings-title" onClose={onClose}>
       <aside className="account-settings-nav">
         <div className="account-settings-brand"><span className="brand-symbol-wrap"><BrandMark /></span><strong>FlipZero</strong></div>
+        <div className="account-mobile-profile"><span>{media.avatarUrl ? <MediaImage src={media.avatarUrl} /> : initials}</span><div><strong>{user.displayName}</strong><small>@{user.username}</small></div></div>
+        <label className="account-settings-search"><Search size={18}/><input value={settingsQuery} onChange={(event)=>setSettingsQuery(event.target.value)} placeholder="Поиск настроек" aria-label="Поиск настроек"/></label>
         <small className="account-nav-label">НАСТРОЙКИ ПОЛЬЗОВАТЕЛЯ</small>
-        <button type="button" className={section === "profile" ? "active" : ""} onClick={() => openSection("profile")}><UserRound size={18} /> Мой профиль</button>
-        <button type="button" className={section === "security" ? "active" : ""} onClick={() => openSection("security")}><ShieldCheck size={18} /> Аккаунт и безопасность</button>
-        <button type="button" className={section === "privacy" ? "active" : ""} onClick={() => openSection("privacy")}><ShieldCheck size={18} /> Приватность</button>
-        <button type="button" className={section === "notifications" ? "active" : ""} onClick={() => openSection("notifications")}><Bell size={18} /> Уведомления</button>
+        {showSetting("Мой профиль")?<button type="button" className={section === "profile" ? "active" : ""} onClick={() => openSection("profile")}><UserRound size={18} /> Мой профиль</button>:null}
+        {showSetting("Аккаунт и безопасность")?<button type="button" className={section === "security" ? "active" : ""} onClick={() => openSection("security")}><ShieldCheck size={18} /> Аккаунт и безопасность</button>:null}
+        {showSetting("Приватность")?<button type="button" className={section === "privacy" ? "active" : ""} onClick={() => openSection("privacy")}><ShieldCheck size={18} /> Приватность</button>:null}
+        {showSetting("Уведомления")?<button type="button" className={section === "notifications" ? "active" : ""} onClick={() => openSection("notifications")}><Bell size={18} /> Уведомления</button>:null}
         <small className="account-nav-label account-nav-group">НАСТРОЙКИ ПРИЛОЖЕНИЯ</small>
-        <button type="button" className={section === "voice" ? "active" : ""} onClick={() => openSection("voice")}><Headphones size={18} /> Голос и видео</button>
-        <button type="button" className={section === "appearance" ? "active" : ""} onClick={() => openSection("appearance")}><AppIcon name="appearance" size={18}/> Внешний вид</button>
+        {showSetting("Голос и видео")?<button type="button" className={section === "voice" ? "active" : ""} onClick={() => openSection("voice")}><Headphones size={18} /> Голос и видео</button>:null}
+        {showSetting("Внешний вид")?<button type="button" className={section === "appearance" ? "active" : ""} onClick={() => openSection("appearance")}><AppIcon name="appearance" size={18}/> Внешний вид</button>:null}
         <small className="account-nav-label account-nav-group">ИНСТРУМЕНТЫ</small>
-        <a className="account-nav-link" href="/developers/console"><Code2 size={18}/>Платформа разработчиков</a>
+        {showSetting("Платформа разработчиков")?<a className="account-nav-link" href="/developers/console"><Code2 size={18}/>Платформа разработчиков</a>:null}
         <small className="account-nav-label account-nav-group">FLIPZERO</small>
-        <button type="button" className={`account-premium-nav ${section === "superflip" ? "active" : ""}`} onClick={() => openSection("superflip")}><AppIcon name="superflip" size={18}/> SuperFlip</button>
-        <button type="button" className={`account-superup-nav ${section === "superup" ? "active" : ""}`} onClick={() => openSection("superup")}><Gem size={18} /> SuperUp</button>
+        {showSetting("SuperFlip")?<button type="button" className={`account-premium-nav ${section === "superflip" ? "active" : ""}`} onClick={() => openSection("superflip")}><AppIcon name="superflip" size={18}/> SuperFlip</button>:null}
+        {showSetting("SuperUp")?<button type="button" className={`account-superup-nav ${section === "superup" ? "active" : ""}`} onClick={() => openSection("superup")}><Gem size={18} /> SuperUp</button>:null}
         <div className="account-nav-spacer" />
         <button type="button" className="account-logout" onClick={signOut} disabled={busy}><LogOut size={18} /> Выйти из аккаунта</button>
         <div className="account-nav-user"><span>{media.avatarUrl ? <MediaImage src={media.avatarUrl} /> : initials}</span><div><strong>{user.displayName}</strong><small>@{user.username}</small></div></div>

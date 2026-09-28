@@ -27,6 +27,7 @@ import "./runtime-theme.css";
 import "./themes.css";
 import "./store.css";
 import "./design-system.css";
+import "./mobile-discord.css";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://flipzeroapp.vercel.app"),
