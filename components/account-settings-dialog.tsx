@@ -105,6 +105,7 @@ export function AccountSettingsDialog({ user, initialSection = "profile", onClos
 
   return <Dialog backdropClassName="dialog-backdrop account-backdrop" className={`account-settings ${mobileSectionOpen ? "mobile-section-open" : "mobile-section-list"}`} labelledBy="account-settings-title" onClose={onClose}>
       <aside className="account-settings-nav">
+        <button className="account-settings-index-close" type="button" onClick={onClose} aria-label="Закрыть настройки"><AppIcon name="close" size={20}/></button>
         <div className="account-settings-brand"><span className="brand-symbol-wrap"><BrandMark /></span><strong>FlipZero</strong></div>
         <div className="account-mobile-profile"><span>{media.avatarUrl ? <MediaImage src={media.avatarUrl} /> : initials}</span><div><strong>{user.displayName}</strong><small>@{user.username}</small></div></div>
         <label className="account-settings-search"><Search size={18}/><input value={settingsQuery} onChange={(event)=>setSettingsQuery(event.target.value)} placeholder="Поиск настроек" aria-label="Поиск настроек"/></label>
