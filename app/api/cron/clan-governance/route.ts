@@ -4,10 +4,12 @@ import { NextResponse } from "next/server";
 import { getDatabase } from "@/db/client";
 import { clanEventRsvps, clanEvents, mediaAssets, notifications, userStories } from "@/db/schema";
 import { settleClosedSeasons } from "@/lib/clan-season";
+import { cleanupPendingAttachments } from "@/lib/media-upload";
 export async function GET(request:Request){
  const secret=process.env.CRON_SECRET,authorization=request.headers.get("authorization")??"";
  if(!secret||authorization.length!==`Bearer ${secret}`.length||!timingSafeEqual(Buffer.from(authorization),Buffer.from(`Bearer ${secret}`)))return NextResponse.json({message:"Нет доступа."},{status:403});
  await settleClosedSeasons();
+ await cleanupPendingAttachments();
  const db=getDatabase(),now=new Date(),later=new Date(now.getTime()+25*60*60_000);
  await db.delete(userStories).where(lt(userStories.expiresAt,now));
  await db.delete(mediaAssets).where(and(eq(mediaAssets.purpose,"story"),lt(mediaAssets.createdAt,new Date(now.getTime()-86400_000)),sql`not exists (select 1 from user_stories where image_url = '/api/v1/media/' || ${mediaAssets.id})`));

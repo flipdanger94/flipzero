@@ -2,8 +2,8 @@
 
 import { type FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  BadgeCheck, Ban, Check, CheckCircle2, Crown, Ellipsis, File as FileIcon, FilePlus2, Headphones, Image as ImageIcon,
-  LoaderCircle, LogOut, MessageCircle, Search, SendHorizontal, Settings2, Shield, ShieldCheck, Smile,
+  BadgeCheck, Ban, CheckCircle2, Crown, Ellipsis, File as FileIcon, Headphones, Image as ImageIcon,
+  LoaderCircle, LogOut, MessageCircle, Search, Settings2, Shield, ShieldCheck,
   Swords, UserMinus, UserPlus, Users, X,
 } from "lucide-react";
 import { ClanTag } from "./clan-tag";
@@ -70,7 +70,6 @@ export function ClanHub({currentUserId,onOpenDirect}:{currentUserId:string;onOpe
   const [loadingOlder,setLoadingOlder]=useState(false);
   const historyRef=useRef<ClanMessage[]>([]);
   const olderScrollRef=useRef<{height:number;top:number}|null>(null);
-  const eventSourceRef=useRef<EventSource|null>(null);
   useEffect(()=>{
     const params=new URLSearchParams(window.location.search),id=params.get("clan");
     if(id)queueMicrotask(()=>{setLeaderboard(true);setFocusClanId(id);if(params.get("voice")==="1")setTab("voice")});
@@ -102,9 +101,10 @@ export function ClanHub({currentUserId,onOpenDirect}:{currentUserId:string;onOpe
     setLoading(false);
   },[]);
 
-  const loadMessages=useCallback(async(clanId:string)=>{
-    const response=await fetch(`/api/v1/clans/${clanId}/messages`,{cache:"no-store"});
+  const loadMessages=useCallback(async(clanId:string,signal?:AbortSignal)=>{
+    const response=await fetch(`/api/v1/clans/${clanId}/messages`,{cache:"no-store",signal});
     const data=await response.json().catch(()=>null);
+    if(signal?.aborted)return;
     if(response.ok){
       const firstPage=historyRef.current.length===0;
       setMessages(current=>{const byId=new Map((historyRef.current.length?historyRef.current:current).map(message=>[message.id,message]));for(const message of data.messages??[])byId.set(message.id,message);const combined=[...byId.values()].sort((a,b)=>new Date(a.createdAt).getTime()-new Date(b.createdAt).getTime());historyRef.current=combined;return combined});
@@ -122,19 +122,22 @@ export function ClanHub({currentUserId,onOpenDirect}:{currentUserId:string;onOpe
   },[loadState]);
 
   useEffect(()=>{
-    eventSourceRef.current?.close();
     if(!detail?.clan.id||tab!=="chat") return;
-    historyRef.current=[];const initial=window.setTimeout(()=>setOlderCursor(null),0);
-    void loadMessages(detail.clan.id);
-    const source=new EventSource(`/api/v1/clans/${detail.clan.id}/events`);
-    eventSourceRef.current=source;
-    let syncTimer:number|undefined;
-    source.addEventListener("sync",()=>{window.clearTimeout(syncTimer);syncTimer=window.setTimeout(()=>void loadMessages(detail.clan.id),220)});
-    source.addEventListener("revoked",()=>{source.close();setDetail(null);setError("Доступ к клану больше недоступен.");});
-    return()=>{window.clearTimeout(initial);window.clearTimeout(syncTimer);source.close();eventSourceRef.current=null};
+    const clanId=detail.clan.id;
+    historyRef.current=[];
+    let stopped=false,busy=false;
+    const controller=new AbortController();
+    const initial=window.setTimeout(()=>{setOlderCursor(null);setMessages([])},0);
+    const refresh=async()=>{
+      if(stopped||busy||document.visibilityState!=="visible")return;
+      busy=true;
+      try{await loadMessages(clanId,controller.signal);if(!stopped)setError(current=>current==="Не удалось обновить чат. Повторяем подключение…"?"":current)}catch{if(!stopped)setError("Не удалось обновить чат. Повторяем подключение…");}finally{busy=false;}
+    };
+    void refresh();
+    const timer=window.setInterval(()=>void refresh(),2000);
+    document.addEventListener("visibilitychange",refresh);
+    return()=>{stopped=true;controller.abort();window.clearTimeout(initial);window.clearInterval(timer);document.removeEventListener("visibilitychange",refresh)};
   },[detail?.clan.id,tab,loadMessages]);
-
-  useEffect(()=>()=>{eventSourceRef.current?.close()},[]);
 
   const canModerate=detail?.permissions.moderate??false;
   const canManage=detail?.permissions.manage??false;

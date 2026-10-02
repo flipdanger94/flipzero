@@ -26,6 +26,7 @@ export async function authenticateApiRequest(request: Request) {
       .innerJoin(users, eq(users.id, developerOauthAccessTokens.userId))
       .where(and(
         eq(developerOauthAccessTokens.tokenHash, tokenHash),
+        isNull(users.bannedAt),
         isNull(developerOauthAccessTokens.revokedAt),
         gt(developerOauthAccessTokens.expiresAt, new Date()),
       )).limit(1);
@@ -48,6 +49,7 @@ export async function authenticateApiRequest(request: Request) {
     .innerJoin(users, eq(users.id, developerApps.ownerId))
     .where(and(
       eq(apiTokens.tokenHash, tokenHash),
+      isNull(users.bannedAt),
       isNull(apiTokens.revokedAt),
       or(isNull(apiTokens.expiresAt), gt(apiTokens.expiresAt, new Date())),
     )).limit(1);

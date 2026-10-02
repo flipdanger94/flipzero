@@ -1,3 +1,4 @@
+import { attachMedia, InvalidAttachmentError } from "@/lib/media-access";
 import { randomUUID } from "node:crypto";
 import { and, desc, eq, isNull, lt, or } from "drizzle-orm";
 import { NextResponse } from "next/server";
@@ -49,9 +50,13 @@ export async function POST(request:Request,{params}:{params:Promise<{clanId:stri
   const attachments=normalizeClanAttachments(body?.attachments);
   if(!raw&&!attachments.length) return NextResponse.json({message:"Введите сообщение или добавьте вложение."},{status:400});
   const id=randomUUID(), now=new Date();
-  const db=getDatabase();await db.transaction(async tx=>{
+  const db=getDatabase();try { await db.transaction(async tx=>{
+    await attachMedia(tx, user.id, attachments, "clan", clanId, id);
     await tx.insert(clanMessages).values({id,clanId,authorId:user.id,content:raw,attachments});
-  });
+  }); } catch (error) {
+    if (error instanceof InvalidAttachmentError) return NextResponse.json({ code: "INVALID_ATTACHMENT", message: error.message }, { status: 400 });
+    throw error;
+  }
   const [progress]=await db.select({globalXp:userProgress.totalXp,globalLevel:userProgress.level}).from(userProgress).where(eq(userProgress.userId,user.id)).limit(1);
   return NextResponse.json({message:{id,clanId,authorId:user.id,content:raw,attachments,createdAt:now.toISOString(),editedAt:null,username:user.username,displayName:user.displayName,avatarUrl:user.avatarUrl,globalXp:progress?.globalXp??0,globalLevel:progress?.globalLevel??1}},{status:201});
 }

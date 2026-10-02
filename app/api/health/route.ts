@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { getDatabase } from "@/db/client";
 import { getDatabaseTopology } from "@/db/topology";
 import { logEvent, requestId } from "@/lib/observability";
+import { checkVoiceReadiness } from "@/lib/voice-readiness";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -14,12 +15,26 @@ export async function GET(request: Request) {
   let databaseLatencyMs: number | null = null;
   let placementCount = 0;
   let migratingPlacementCount = 0;
+  let schemaReady = false;
+  const voicePromise = checkVoiceReadiness();
 
   try {
     const databaseStartedAt = performance.now();
     const database = getDatabase();
-    await database.execute(sql`select 1 as ready`);
-    const [placementSummary] = await database.execute(sql<{ total: number; migrating: number }>`select count(*)::int as total, count(*) filter (where state <> 'active')::int as migrating from space_placements`);
+    const placementSummary = await database.transaction(async tx => {
+      await tx.execute(sql`SET LOCAL statement_timeout = '2000ms'`);
+      const [schema] = await tx.execute(sql<{ ready: boolean }>`select
+        to_regclass('public.user_progress') is not null
+        and to_regclass('public.direct_call_sessions') is not null
+        and to_regclass('public.app_themes') is not null
+        and to_regclass('public.media_attachment_links') is not null
+        and to_regclass('public.xp_events_user_source_dedupe_unique') is not null
+        and exists (select 1 from information_schema.columns where table_schema='public' and table_name='media_assets' and column_name='attached_at')
+        as ready`);
+      schemaReady = schema?.ready === true;
+      const [summary] = await tx.execute(sql<{ total: number; migrating: number }>`select count(*)::int as total, count(*) filter (where state <> 'active')::int as migrating from space_placements`);
+      return summary;
+    });
     placementCount = Number(placementSummary?.total ?? 0);
     migratingPlacementCount = Number(placementSummary?.migrating ?? 0);
     databaseLatencyMs = Math.round(performance.now() - databaseStartedAt);
@@ -29,7 +44,8 @@ export async function GET(request: Request) {
   }
 
   const durationMs = Math.round(performance.now() - startedAt);
-  const healthy = databaseStatus === "ok";
+  const voice = await voicePromise;
+  const healthy = databaseStatus === "ok" && schemaReady && voice.status === "ok";
   const topology = getDatabaseTopology();
   logEvent(healthy ? "info" : "warn", "health_check_completed", { requestId: id, status: healthy ? "ok" : "degraded", durationMs, databaseLatencyMs });
 
@@ -47,7 +63,9 @@ export async function GET(request: Request) {
     checks: {
       api: { status: "ok", latencyMs: durationMs },
       database: { status: databaseStatus, latencyMs: databaseLatencyMs },
-      voice: { status: process.env.LIVEKIT_URL && process.env.LIVEKIT_API_KEY && process.env.LIVEKIT_API_SECRET ? "configured" : "not_configured" },
+      schema: { status: schemaReady ? "ok" : "error" },
+      voice,
+      chat: { status: "not_probed" },
     },
     topology: { ...topology, placementCount, migratingPlacementCount },
     slo: {

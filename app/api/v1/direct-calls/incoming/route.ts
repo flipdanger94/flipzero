@@ -61,16 +61,20 @@ export async function POST(request:Request){
 
   if(action==="cancel"){
     if(call.callerId!==user.id||call.status!=="ringing")return NextResponse.json({message:"Звонок уже изменился."},{status:409});
-    await db.update(directCallSessions).set({status:"cancelled",endedAt:new Date()}).where(eq(directCallSessions.id,callId));
+    const [changed] = await db.update(directCallSessions).set({status:"cancelled",endedAt:new Date()}).where(and(eq(directCallSessions.id,callId),eq(directCallSessions.status,"ringing"))).returning({id:directCallSessions.id});
+    if(!changed)return NextResponse.json({message:"Звонок уже изменился."},{status:409});
     return NextResponse.json({ok:true,status:"cancelled"});
   }
   if(action==="decline"){
     if(call.receiverId!==user.id||call.status!=="ringing")return NextResponse.json({message:"Звонок уже изменился."},{status:409});
-    await db.update(directCallSessions).set({status:"declined",endedAt:new Date()}).where(eq(directCallSessions.id,callId));
+    const [changed] = await db.update(directCallSessions).set({status:"declined",endedAt:new Date()}).where(and(eq(directCallSessions.id,callId),eq(directCallSessions.status,"ringing"))).returning({id:directCallSessions.id});
+    if(!changed)return NextResponse.json({message:"Звонок уже изменился."},{status:409});
     return NextResponse.json({ok:true,status:"declined"});
   }
   if(action==="end"){
-    await db.update(directCallSessions).set({status:"ended",endedAt:new Date()}).where(eq(directCallSessions.id,callId));
+    if(call.status==="ended")return NextResponse.json({ok:true,status:"ended"});
+    const [changed] = await db.update(directCallSessions).set({status:"ended",endedAt:new Date()}).where(and(eq(directCallSessions.id,callId),eq(directCallSessions.status,"accepted"))).returning({id:directCallSessions.id});
+    if(!changed)return NextResponse.json({message:"Звонок уже изменился."},{status:409});
     return NextResponse.json({ok:true,status:"ended"});
   }
 
@@ -78,7 +82,9 @@ export async function POST(request:Request){
   const lk=livekit();if(!lk)return NextResponse.json({message:"Сервис звонков пока не настроен."},{status:503});
   const token=new AccessToken(lk.key,lk.secret,{identity:user.id,name:user.displayName,ttl:"2m",metadata:JSON.stringify({directCall:true,callerId:call.callerId,callId})});
   token.addGrant({roomJoin:true,room:call.roomName,canPublish:true,canPublishSources:directCallPublishSources(call.video),canSubscribe:true});
-  await db.update(directCallSessions).set({status:"accepted",answeredAt:new Date()}).where(eq(directCallSessions.id,callId));
+  const [changed] = await db.update(directCallSessions).set({status:"accepted",answeredAt:new Date()})
+    .where(and(eq(directCallSessions.id,callId),eq(directCallSessions.status,"ringing"),gt(directCallSessions.expiresAt,new Date()))).returning({id:directCallSessions.id});
+  if(!changed)return NextResponse.json({message:"Звонок уже недоступен."},{status:409});
   const [caller]=await db.select({id:users.id,displayName:users.displayName,avatarUrl:users.avatarUrl}).from(users).where(eq(users.id,call.callerId)).limit(1);
   return NextResponse.json({ok:true,status:"accepted",token:await token.toJwt(),url:lk.url,room:call.roomName,video:call.video,callId,person:caller});
 }

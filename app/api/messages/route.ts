@@ -1,3 +1,4 @@
+import { attachMedia, InvalidAttachmentError } from "@/lib/media-access";
 import { clanTagsForUsers } from "@/lib/clan-tags";
 import { createHash, randomUUID } from "node:crypto";
 import { and, desc, eq, isNull, lt, ne, or, sql } from "drizzle-orm";
@@ -95,12 +96,16 @@ export async function POST(request: Request) {
   }
   const conversationId = conversationIdFor(user.id, receiverId); const id = randomUUID();
   const storedText = encodeDirectMessage(text || "", attachments);
-  await database.transaction(async (tx) => {
+  try { await database.transaction(async (tx) => {
+    await attachMedia(tx, user.id, attachments, "direct", conversationId, id);
     await tx.insert(directConversations).values({ id: conversationId }).onConflictDoUpdate({ target: directConversations.id, set: { updatedAt: new Date() } });
     await tx.insert(directConversationMembers).values([{ conversationId, userId: user.id }, { conversationId, userId: receiverId }]).onConflictDoNothing();
     await tx.insert(directMessages).values({ id, conversationId, senderId: user.id, receiverId, text: storedText });
     const preview = text || (attachments[0]?.type === "audio" ? "🎤 Голосовое сообщение" : attachments[0]?.type === "image" ? "🖼️ Изображение" : attachments[0] ? `📎 ${attachments[0].name}` : "Новое сообщение");
     await tx.insert(notifications).values({ id: randomUUID(), userId: receiverId, actorId: user.id, type: "direct_message", title: "Новое сообщение", body: preview.slice(0, 180), entityType: "conversation", entityId: conversationId });
-  });
+  }); } catch (error) {
+    if (error instanceof InvalidAttachmentError) return NextResponse.json({ code: "INVALID_ATTACHMENT", message: error.message }, { status: 400 });
+    throw error;
+  }
   return NextResponse.json({ message: { id, conversationId, senderId: user.id, receiverId, text: text || "", attachments, createdAt: new Date().toISOString(), readAt: null } }, { status: 201 });
 }

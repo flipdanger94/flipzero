@@ -63,7 +63,7 @@ export async function POST(request: Request) {
   const url = `/api/v1/media/${id}`;
 
   const updated = await database.transaction(async (tx) => {
-    await tx.insert(mediaAssets).values({ id, bytes: storedImage.bytes, contentType: storedImage.contentType,ownerId:imageKind==="story"?user.id:null,purpose:imageKind==="story"?"story":null });
+    await tx.insert(mediaAssets).values({ id, bytes: storedImage.bytes, contentType: storedImage.contentType,ownerId:user.id,purpose:imageKind==="story"?"story":"public" });
     if(imageKind==="story")return {story:{url}};
     if (imageKind === "avatar" || imageKind === "accountBanner") {
       const column = imageKind === "avatar" ? "avatarUrl" : "bannerUrl";

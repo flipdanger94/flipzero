@@ -55,14 +55,26 @@ export const users = pgTable("users", {
 }, (table) => [uniqueIndex("users_email_unique").on(table.email), uniqueIndex("users_username_unique").on(table.username)]);
 
 const imageBytes = customType<{ data: Buffer; driverData: Buffer }>({ dataType: () => "bytea" });
+export const appSchemaMigrations = pgTable("app_schema_migrations", {
+  name: text("name").primaryKey(),
+  appliedAt: timestamp("applied_at", { withTimezone: true }).defaultNow().notNull(),
+});
 export const mediaAssets = pgTable("media_assets", {
   id: text("id").primaryKey(),
   contentType: text("content_type").notNull(),
   ownerId:text("owner_id").references(()=>users.id,{onDelete:"set null"}),
   purpose:text("purpose"),
+  attachedAt: timestamp("attached_at", { withTimezone: true }),
   bytes: imageBytes("bytes").notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-});
+}, (table) => [index("media_assets_owner_idx").on(table.ownerId), index("media_assets_pending_idx").on(table.purpose, table.attachedAt, table.createdAt)]);
+
+export const mediaAttachmentLinks = pgTable("media_attachment_links", {
+  assetId: text("asset_id").notNull().references(() => mediaAssets.id, { onDelete: "cascade" }),
+  contextType: text("context_type").notNull(),
+  contextId: text("context_id").notNull(),
+  messageId: text("message_id").notNull(),
+}, (table) => [primaryKey({ columns: [table.assetId, table.contextType, table.messageId] }), index("media_attachment_links_context_idx").on(table.contextType, table.contextId)]);
 
 export const superflipPurchases = pgTable("superflip_purchases", {
   id: text("id").primaryKey(),
@@ -738,4 +750,3 @@ export const appThemes=pgTable("app_themes",{
   createdAt:timestamp("created_at",{withTimezone:true}).defaultNow().notNull(),
   updatedAt:timestamp("updated_at",{withTimezone:true}).defaultNow().notNull(),
 },table=>[index("app_themes_updated_idx").on(table.updatedAt)]);
-

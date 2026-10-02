@@ -63,7 +63,9 @@ export function isPrivateWebhookIp(address: string): boolean {
     const [a, b] = octets;
     return a === 0 || a === 10 || a === 127 || (a === 100 && b >= 64 && b <= 127) ||
       (a === 169 && b === 254) || (a === 172 && b >= 16 && b <= 31) ||
-      (a === 192 && b === 168) || (a === 198 && (b === 18 || b === 19)) || a >= 224;
+      (a === 192 && (b === 168 || (b === 0 && [0, 2].includes(octets[2])) || (b === 88 && octets[2] === 99))) ||
+      (a === 198 && (b === 18 || b === 19 || (b === 51 && octets[2] === 100))) ||
+      (a === 203 && b === 0 && octets[2] === 113) || a >= 224;
   }
   const normalized = address.toLowerCase();
   if (normalized === "::1" || normalized === "::") return true;
@@ -72,7 +74,12 @@ export function isPrivateWebhookIp(address: string): boolean {
     const mapped = normalized.slice(7);
     return isIP(mapped) === 4 ? isPrivateWebhookIp(mapped) : true;
   }
-  return false;
+  if (isIP(address) !== 6) return true;
+  // Allow only global unicast, excluding documentation and transition ranges.
+  if (!/^[23][0-9a-f]{0,3}:/.test(normalized)) return true;
+  const [first, second = "0"] = normalized.split(":");
+  return first === "2002" || (first === "2001" && (parseInt(second || "0", 16) < 0x200 || parseInt(second || "0", 16) === 0xdb8)) ||
+    (first === "3fff" && parseInt(second || "0", 16) < 0x1000);
 }
 
 function blockedWebhookHost(hostname: string) {

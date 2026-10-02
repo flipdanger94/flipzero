@@ -1,24 +1,15 @@
 import "server-only";
 import { and, eq } from "drizzle-orm";
 import { randomUUID } from "node:crypto";
-import { lookup } from "node:dns/promises";
 import { getDatabase } from "@/db/client";
 import { developerAppInstallations, developerWebhookDeliveries, developerWebhooks } from "@/db/developer-schema";
 import { developerApps } from "@/db/schema";
 import { decryptDeveloperSecret, signDeveloperPayload } from "@/lib/developer-secret";
-import { isPrivateWebhookIp } from "@/lib/developer-validation";
+import { postPublicWebhook } from "@/lib/webhook-http";
 
 export type DeveloperWebhookEvent = "message.created" | "member.joined" | "member.left" | "space.updated";
 type DeliverableEvent = DeveloperWebhookEvent | "webhook.test";
 type Endpoint = { id: string; url: string; secretCiphertext: string };
-
-async function assertPublicWebhookTarget(rawUrl: string) {
-  const url = new URL(rawUrl);
-  const addresses = await lookup(url.hostname, { all: true, verbatim: true });
-  if (!addresses.length || addresses.some(({ address }) => isPrivateWebhookIp(address))) {
-    throw new Error("Webhook target resolved to a private or reserved address");
-  }
-}
 
 async function deliverEndpoint(endpoint: Endpoint, event: DeliverableEvent, data: Record<string, unknown>, eventId = randomUUID()) {
   const database = getDatabase();
@@ -33,24 +24,18 @@ async function deliverEndpoint(endpoint: Endpoint, event: DeliverableEvent, data
   });
 
   try {
-    await assertPublicWebhookTarget(endpoint.url);
     const envelope = { id: eventId, event, createdAt: new Date().toISOString(), data };
     const payload = JSON.stringify(envelope);
     const timestamp = Math.floor(Date.now() / 1000).toString();
     const secret = decryptDeveloperSecret(endpoint.secretCiphertext);
     const signature = signDeveloperPayload(secret, `${timestamp}.${payload}`);
-    const response = await fetch(endpoint.url, {
-      method: "POST",
-      headers: {
+    const response = await postPublicWebhook(endpoint.url, payload, {
         "content-type": "application/json",
         "user-agent": "FlipZero-Webhooks/1.0",
         "x-flipzero-event": event,
         "x-flipzero-delivery": eventId,
         "x-flipzero-timestamp": timestamp,
         "x-flipzero-signature": `sha256=${signature}`,
-      },
-      body: payload,
-      signal: AbortSignal.timeout(5_000),
     });
 
     const durationMs = Date.now() - startedAt;

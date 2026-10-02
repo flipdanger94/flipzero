@@ -42,7 +42,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ spa
   const [count] = await result.db.select({ value: sql<number>`count(*)::int` }).from(spaceSounds).where(eq(spaceSounds.spaceId, spaceId));
   if (count.value >= 12) return NextResponse.json({ message: "Можно сохранить не более 12 звуков." }, { status: 409 });
   const id = randomUUID(), assetId = randomUUID();
-  await result.db.transaction(async (tx) => { await tx.insert(mediaAssets).values({ id: assetId, contentType: type, bytes }); await tx.insert(spaceSounds).values({ id, spaceId, assetId, name }); });
+  await result.db.transaction(async (tx) => { await tx.insert(mediaAssets).values({ id: assetId, contentType: type, bytes, purpose: "sound" }); await tx.insert(spaceSounds).values({ id, spaceId, assetId, name }); });
   return NextResponse.json({ sound: { id, name, url: `/api/v1/media/${assetId}` } }, { status: 201 });
 }
 

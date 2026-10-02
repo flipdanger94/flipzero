@@ -58,7 +58,7 @@ export function normalizeClanAttachments(value: unknown): ClanAttachment[] {
     const size = Number(row.size ?? 0);
     const duration = row.duration === undefined ? undefined : Number(row.duration);
     if (!["image","audio","file"].includes(type)) return [];
-    if (!/^\/api\/v1\/media\/[0-9a-f-]{36}$/i.test(url)) return [];
+    if (!/^\/api\/v1\/(?:media|attachments)\/[0-9a-f-]{36}$/i.test(url)) return [];
     if (!name || name.length > 180 || !mimeType || mimeType.length > 120) return [];
     if (!Number.isSafeInteger(size) || size <= 0 || size > 25 * 1024 * 1024) return [];
     if (duration !== undefined && (!Number.isFinite(duration) || duration <= 0 || duration > 300)) return [];

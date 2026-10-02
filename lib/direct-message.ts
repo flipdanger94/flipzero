@@ -30,7 +30,7 @@ export function normalizeDirectAttachments(value: unknown): DirectAttachment[] {
     const size = Number(attachment.size);
     const duration = attachment.duration === undefined ? undefined : Number(attachment.duration);
     if (!["image", "audio", "file"].includes(String(type))) return [];
-    if (typeof url !== "string" || !/^\/api\/v1\/media\/[0-9a-f-]{36}$/i.test(url)) return [];
+    if (typeof url !== "string" || !/^\/api\/v1\/(?:media|attachments)\/[0-9a-f-]{36}$/i.test(url)) return [];
     if (typeof name !== "string" || !name.trim() || name.length > 180) return [];
     if (typeof mimeType !== "string" || !mimeType || mimeType.length > 120) return [];
     if (!Number.isSafeInteger(size) || size <= 0 || size > 25 * 1024 * 1024) return [];

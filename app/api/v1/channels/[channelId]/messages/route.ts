@@ -1,3 +1,4 @@
+import { attachMedia, InvalidAttachmentError } from "@/lib/media-access";
 import { randomUUID } from "node:crypto";
 import { and, asc, desc, eq, gt, ilike, inArray, isNull, lt, or, sql } from "drizzle-orm";
 import { after, NextResponse } from "next/server";
@@ -29,6 +30,7 @@ async function accessChannel(channelId: string) {
 
 export async function GET(request: Request, { params }: { params: Promise<{ channelId: string }> }) {
   const { channelId } = await params; const access = await accessChannel(channelId); if ("error" in access) return access.error;
+  if (!access.owner && !hasPermission(access.permissions, SpacePermission.ReadHistory)) return NextResponse.json({ code: "FORBIDDEN", message: "Нет права читать историю сообщений." }, { status: 403 });
   const superflip = await getSuperFlipCapabilities(access.user.id);
   const url = new URL(request.url); const query = url.searchParams.get("q")?.trim(); const pinned = url.searchParams.get("pinned") === "1"; const threadRootId = url.searchParams.get("threadRootId");
   const before = url.searchParams.get("before");
@@ -80,10 +82,14 @@ export async function POST(request: Request, { params }: { params: Promise<{ cha
   }
   const assessment = assessMessageSafety(content);
   const id = randomUUID();
-  await access.database.transaction(async (tx) => {
+  try { await access.database.transaction(async (tx) => {
+    await attachMedia(tx, access.user.id, attachments, "channel", channelId, id);
     await tx.insert(messages).values({ id, channelId, authorId: access.user.id, content, attachments, replyToId, threadRootId, deletedAt: assessment.autoHide ? new Date() : null });
     if (assessment.flagged) await tx.insert(moderationFlags).values({ id: randomUUID(), spaceId: access.channel.spaceId, channelId, messageId: id, authorId: access.user.id, category: assessment.category!, severity: assessment.severity, confidence: assessment.confidence, summary: assessment.summary, evidence: assessment.signals, autoHidden: assessment.autoHide });
-  });
+  }); } catch (error) {
+    if (error instanceof InvalidAttachmentError) return NextResponse.json({ code: "INVALID_ATTACHMENT", message: error.message }, { status: 400 });
+    throw error;
+  }
   if (assessment.autoHide) return NextResponse.json({ code: "MODERATION_HELD", message: "Сообщение временно скрыто автоматической защитой и отправлено на проверку модератору." }, { status: 422 });
   const createdAt = new Date().toISOString();
   after(() => dispatchDeveloperEvent(access.channel.spaceId, "message.created", { message: { id, channelId, spaceId: access.channel.spaceId, authorId: access.user.id, username: access.user.username, displayName: access.user.displayName, content, attachments, replyToId, threadRootId, createdAt } }).catch(() => undefined));

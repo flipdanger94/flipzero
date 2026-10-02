@@ -1,5 +1,6 @@
 import { readFile } from "node:fs/promises";
 import postgres from "postgres";
+import { applyVersionedMigration } from "./versioned-migration.mjs";
 
 const databaseUrl = process.env.DATABASE_URL;
 if (!databaseUrl) {
@@ -55,21 +56,27 @@ try {
   await client.unsafe(voiceSpeakingSql);
   const voiceLimitSql = await readFile(new URL("../drizzle/0028_voice_channel_user_limit.sql", import.meta.url), "utf8");
   await client.unsafe(voiceLimitSql);
-  if (process.env.VERCEL_ENV !== "preview") {
-    const voiceWebhookSql = await readFile(new URL("../drizzle/0029_livekit_voice_webhooks.sql", import.meta.url), "utf8");
-    await client.unsafe(voiceWebhookSql);
-    for (const [index, shardUrl] of shardUrls().entries()) {
-      if (shardUrl === databaseUrl) continue;
-      await applySqlToUrl(shardUrl, voiceWebhookSql, `voice shard ${index + 1}`);
-    }
-
-    const customThemesSql = await readFile(new URL("../drizzle/0031_custom_themes.sql", import.meta.url), "utf8");
-    await client.unsafe(customThemesSql);
-    const directCallsSql = await readFile(new URL("../drizzle/0032_direct_call_sessions.sql", import.meta.url), "utf8");
-    await client.unsafe(directCallsSql);
+  const voiceWebhookSql = await readFile(new URL("../drizzle/0029_livekit_voice_webhooks.sql", import.meta.url), "utf8");
+  await client.unsafe(voiceWebhookSql);
+  for (const [index, shardUrl] of shardUrls().entries()) {
+    if (shardUrl === databaseUrl) continue;
+    await applySqlToUrl(shardUrl, voiceWebhookSql, `voice shard ${index + 1}`);
   }
+
+  const [xpSchema] = await client`SELECT
+    to_regclass('public.user_progress') IS NOT NULL
+    AND to_regclass('public.xp_events_user_source_dedupe_unique') IS NOT NULL
+    AND EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='xp_events' AND column_name='dedupe_key')
+    AND EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='xp_events' AND column_name='meta')
+    AS ready`;
+  if (!xpSchema.ready) throw new Error("XP schema is not ready. Run pnpm xp:audit and pnpm xp:reconcile; apply the reviewed reconciliation during a maintenance window, then rebuild.");
+  const customThemesSql = await readFile(new URL("../drizzle/0031_custom_themes.sql", import.meta.url), "utf8");
+  await client.unsafe(customThemesSql);
+  const directCallsSql = await readFile(new URL("../drizzle/0032_direct_call_sessions.sql", import.meta.url), "utf8");
+  await client.unsafe(directCallsSql);
   const storeInventorySql = await readFile(new URL("../drizzle/0033_store_inventory.sql", import.meta.url), "utf8");
   await client.unsafe(storeInventorySql);
+  await applyVersionedMigration(client, "0034_private_attachments", new URL("../drizzle/0034_private_attachments.sql", import.meta.url));
 
   const slotForCategory = (category) => ({
     avatar_frame: "avatar_decoration",

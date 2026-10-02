@@ -1,7 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
-import { getDatabase } from "@/db/client";
-import { mediaAssets } from "@/db/schema";
+import { storeAttachment } from "@/lib/media-upload";
 import { getCurrentUser } from "@/lib/auth";
 import { getSuperFlipCapabilities } from "@/lib/superflip";
 import { isTrustedMutationRequest } from "@/lib/security-controls";
@@ -41,13 +40,17 @@ export async function POST(request: Request) {
 
   const bytes = Buffer.from(await file.arrayBuffer());
   const id = randomUUID();
-  await getDatabase().insert(mediaAssets).values({ id, bytes, contentType: file.type });
+  const stored = await storeAttachment(user.id, id, bytes, file.type, access.active);
+  if (!stored.ok) return NextResponse.json({
+    code: stored.reason === "rate" ? "UPLOAD_RATE_LIMIT" : "UPLOAD_QUOTA",
+    message: stored.reason === "rate" ? "Слишком много загрузок. Попробуйте через 15 минут." : `Лимит хранилища вложений — ${stored.quotaBytes / 1024 / 1024} МБ.`,
+  }, { status: stored.reason === "rate" ? 429 : 413 });
   const type = attachmentType(file.type);
   const duration = type === "audio" && Number.isFinite(durationValue) && durationValue > 0 ? Math.min(300, durationValue) : undefined;
   return NextResponse.json({
     attachment: {
       type,
-      url: `/api/v1/media/${id}`,
+      url: `/api/v1/attachments/${id}`,
       name: file.name.slice(0, 180),
       mimeType: file.type,
       size: file.size,
