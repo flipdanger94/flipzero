@@ -87,7 +87,9 @@
   .clan-section-nav{display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:4px!important;overflow:visible!important;padding:6px!important}
   .clan-section-nav button{min-width:0!important;width:100%!important;min-height:42px!important;padding:3px 4px!important;justify-content:center!important;white-space:normal!important;text-align:center!important;font-size:.58rem!important;line-height:1.15!important}
   .clan-section-nav button svg{display:none!important}.clan-section-nav button b{position:absolute;transform:translate(22px,-12px)}
-  .clan-member-view{padding-bottom:var(--mobile-bottom-nav,66px)!important;overflow-y:auto!important;overflow-x:hidden!important;-webkit-overflow-scrolling:touch}
+  .clan-member-view{padding-bottom:0!important;overflow-y:auto!important;overflow-x:hidden!important;-webkit-overflow-scrolling:touch}
+  .clan-member-view:has(.clan-chat),.clan-member-view:has(.clan-voice-tab){overflow:hidden!important}
+  .clan-chat.chat-layout{height:auto;flex:1;display:flex;flex-direction:column;min-height:0}
   .clan-hero{min-height:190px!important;flex-basis:190px!important;padding:56px 12px 58px 94px!important;box-sizing:border-box!important}
   .clan-danger-ghost{top:auto!important;right:12px!important;bottom:12px!important;width:auto!important;height:40px!important;padding:0 13px!important;border:1px solid #ff69754d!important;border-radius:10px!important;background:#ff596515!important;color:#ff9aa3!important;font-size:.68rem!important;display:inline-flex!important;gap:7px!important;align-items:center!important;justify-content:center!important}
   .clan-danger-ghost svg{display:block!important}

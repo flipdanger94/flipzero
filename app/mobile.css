@@ -2391,10 +2391,10 @@ html[data-motion="off"] *::after {
 
 /* Voice mobile screen v2 */
 @media(max-width:767px){
-  .chat-panel:has(.voice-room-connected){position:relative;overflow:hidden!important}
-  .chat-panel:has(.voice-room-connected) .voice-room-connected{
+  .chat-panel>.voice-room-host-active{position:relative;min-height:0;overflow:hidden}
+  .chat-panel>.voice-room-host-active .voice-room-connected{
     position:absolute!important;
-    inset:56px 0 var(--mobile-bottom-nav,66px) 0!important;
+    inset:0!important;
     width:100%!important;
     height:auto!important;
     min-height:0!important;
@@ -2428,15 +2428,21 @@ html[data-motion="off"] *::after {
   .voice-channel-participants{padding-left:32px!important;max-height:320px!important}
   .voice-sidebar-person{min-height:38px!important}.voice-participant-main{height:38px!important}.voice-sidebar-avatar{width:28px!important;height:28px!important}.voice-participant-main{grid-template-columns:28px minmax(0,1fr)!important}
   .voice-live-badge{min-height:22px!important;padding:3px 7px!important}
-  .mobile-voice-session{position:fixed;left:8px;right:8px;bottom:calc(var(--mobile-bottom-nav,66px) + env(safe-area-inset-bottom) + 6px);z-index:110;min-height:52px;display:grid;grid-template-columns:minmax(0,1fr) 44px;align-items:center;border:1px solid rgba(72,213,145,.24);border-radius:13px;background:rgba(16,24,25,.97);box-shadow:0 10px 30px #0008;overflow:hidden}
+  .mobile-voice-session{position:fixed;left:8px;right:8px;bottom:calc(var(--mobile-bottom-nav,66px) + 6px);z-index:110;min-height:52px;display:grid;grid-template-columns:minmax(0,1fr) 44px;align-items:center;border:1px solid rgba(72,213,145,.24);border-radius:13px;background:rgba(16,24,25,.97);box-shadow:0 10px 30px #0008;overflow:hidden}
   .mobile-voice-session>button{height:100%;border:0;background:transparent;color:#d7e4df}.mobile-voice-session>button:first-child{min-width:0;display:flex;align-items:center;gap:9px;padding:7px 10px;text-align:left}.mobile-voice-session>button:first-child>svg{color:#55e19a;flex:0 0 auto}.mobile-voice-session span{min-width:0}.mobile-voice-session strong,.mobile-voice-session small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.mobile-voice-session strong{font-size:.66rem;color:#62e4a0}.mobile-voice-session small{margin-top:2px;color:#aab4bf;font-size:.58rem}.mobile-voice-session>button:last-child{display:grid;place-items:center;color:#ff7d8d}
-  .app-shell:has(.mobile-voice-session) .mobile-tab-bar{box-shadow:0 -58px 0 transparent}
+  .app-shell:not(.platform-view-active):has(.voice-room-host-active)>.mobile-voice-session{display:none}
+  .app-shell:has(.mobile-voice-session):not(:has(.voice-room-host-active)),
+  .app-shell.platform-view-active:has(.mobile-voice-session){--mobile-session-space:64px}
+  .app-shell .chat-panel{height:calc(100dvh - var(--mobile-bottom-nav) - var(--mobile-session-space,0px))}
+  .app-shell .platform-workspace{bottom:calc(var(--mobile-bottom-nav) + var(--mobile-session-space,0px))!important}
 }
 @media(max-width:370px){
   .voice-tile-grid{grid-template-columns:1fr!important}
 }
 @media(max-width:767px) and (orientation:landscape){
-  .chat-panel:has(.voice-room-connected) .voice-room-connected{inset:48px 0 0 0!important}
+  :root{--mobile-bottom-nav:0px}
+  .app-shell:has(.mobile-voice-session):not(:has(.voice-room-host-active)),
+  .app-shell.platform-view-active:has(.mobile-voice-session){--mobile-session-space:0px}
   .voice-room-connected.is-focus .voice-stage-layout{padding:0!important}
   .voice-room-connected.is-focus .video-grid{min-height:calc(100dvh - 112px)!important;border-radius:0!important}
   .voice-room-connected.is-focus .voice-bottom-controls{opacity:.92}
