@@ -3,7 +3,7 @@
 import { type DragEvent, type FormEvent, type ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import {
   ArrowLeft, Ban, Clock3, File as FileIcon, FilePlus2, Image as ImageIcon, LoaderCircle, MapPin, MessageCircle,
-  MessageSquarePlus, Mic, PanelRightClose, PanelRightOpen, Phone, SendHorizontal, ShieldCheck, Smile,
+  Mic, PanelRightClose, PanelRightOpen, Phone, SendHorizontal, ShieldCheck, Smile,
   Sparkles, Star, UserCheck, UserPlus, UserRoundPlus, Users, Video, Zap,
 } from "lucide-react";
 import { AppIcon } from "./app-icon";
@@ -218,7 +218,7 @@ export function SocialHubDialog({ currentUserId, initialTab = "messages", initia
     <aside className="social-nav-rail">
       <div className="social-nav-brand"><small>FLIPZERO SOCIAL</small><strong>Личное</strong></div>
       <label className="social-conversation-search"><AppIcon name="search" size={14}/><input value={conversationQuery} onChange={(event)=>setConversationQuery(event.target.value)} placeholder="Поиск диалогов"/></label>
-      <button className="social-new-message" onClick={()=>{setTab("friends");setFriendView("add");setActive(null)}}><MessageSquarePlus size={16}/>Новое сообщение</button><button className="social-messages-shortcut" onClick={()=>{setTab("messages");setActive(null);setProfileVisible(false)}} aria-label="Открыть диалоги" title="Диалоги"><MessageCircle size={16}/>Сообщения</button>
+      <button className="social-messages-shortcut" onClick={()=>{setTab("messages");setActive(null);setProfileVisible(false)}} aria-label="Открыть диалоги" title="Диалоги"><MessageCircle size={16}/>Сообщения</button>
       <button className={`social-friends-tab ${tab==="friends"?"active":""}`} onClick={()=>{setTab("friends");setFriendView("online")}}><Users size={16}/>Друзья{requests.length?<b>{requests.length}</b>:null}</button>
       <button className={`social-economy-tab ${tab==="economy"?"active":""}`} onClick={()=>setTab("economy")}><AppIcon name="store" size={16}/>Магазин</button>
       <button className={`social-superflip-tab ${tab==="superflip"?"active premium":"premium"}`} onClick={()=>setTab("superflip")}><AppIcon name="superflip" size={16}/>SuperFlip</button>
