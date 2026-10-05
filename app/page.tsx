@@ -1,4 +1,7 @@
+import { marketingMetadata } from "@/lib/marketing-metadata";
 import Link from "next/link";
+import Image from "next/image";
+import { MarketingShell } from "@/components/marketing-shell";
 import type { Metadata } from "next";
 import {
   ArrowRight,
@@ -9,7 +12,6 @@ import {
   Globe2,
   Hash,
   Monitor,
-  Menu,
   MessageCircle,
   Mic2,
   Search,
@@ -19,14 +21,15 @@ import {
 } from "lucide-react";
 import { BrandMark } from "@/components/brand-mark";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = marketingMetadata({
+  description: "FlipZero объединяет личные чаты, голосовые каналы и сообщества. Создайте пространство для друзей, игр или команды — в браузере и на Windows.",
   alternates: { canonical: "/" },
   openGraph: { url: "/", title: "FlipZero — чаты, голос и сообщества", images: ["/opengraph-image"] },
-};
+});
 
 const featureCards = [
-  { icon: MessageCircle, title: "Чаты без ограничений", text: "Общайся в личных и групповых чатах, делись файлами и эмоциями." },
-  { icon: Video, title: "Голос и видео", text: "Кристально чистый звук, стабильное соединение и быстрый вход в войс." },
+  { icon: MessageCircle, title: "Личные и групповые чаты", text: "Общайся в личных и групповых чатах, делись файлами и эмоциями." },
+  { icon: Video, title: "Голос и видео", text: "Голосовые каналы, видеосвязь и демонстрация экрана для встреч и игр." },
   { icon: Users, title: "Твои сообщества", text: "Создавай пространства с гибкими настройками, ролями и каналами." },
   { icon: Gamepad2, title: "Игры и совместный досуг", text: "Будь ближе к тем, кто разделяет твои интересы." },
   { icon: ShieldCheck, title: "Безопасность", text: "Твои данные под защитой. Ты контролируешь своё пространство." },
@@ -41,15 +44,6 @@ const members = [
   ["Artem", "В сети", "AR"],
   ["pixel_kid", "В игре", "PK"],
 ];
-
-function Logo() {
-  return (
-    <span className="fz-logo">
-      <span className="fz-logo-mark"><BrandMark size={34} /></span>
-      <span className="fz-logo-copy"><strong>FlipZero</strong><small>Больше, чем общение</small></span>
-    </span>
-  );
-}
 
 function HeroProduct() {
   return (
@@ -105,33 +99,8 @@ function HeroProduct() {
 
 export default function LandingPage() {
   return (
-    <main className="fz-landing">
-      <header className="fz-header">
-        <div className="fz-container fz-header-inner">
-          <Link href="/" aria-label="FlipZero — главная"><Logo /></Link>
-          <nav aria-label="Главная навигация">
-            <a href="#features">Возможности</a>
-            <a href="#voice">Голос и видео</a>
-            <a href="#communities">Сообщества</a>
-            <Link href="/download">Скачать</Link>
-            <Link className="fz-nav-super" href="/superflip"><Crown size={14} /> SUPER FLIP</Link>
-            <Link href="/developers">Для разработчиков</Link>
-          </nav>
-          <Link className="fz-header-button" href="/app">Открыть FlipZero</Link>
-          <details className="fz-mobile-menu">
-            <summary aria-label="Открыть меню"><Menu size={20} /></summary>
-            <nav>
-              <a href="#features">Возможности</a>
-              <a href="#voice">Голос и видео</a>
-              <a href="#communities">Сообщества</a>
-              <Link href="/download">Скачать</Link>
-              <Link className="fz-nav-super" href="/superflip"><Crown size={14} /> SUPER FLIP</Link>
-              <Link href="/developers">Для разработчиков</Link>
-              <Link href="/app">Открыть FlipZero</Link>
-            </nav>
-          </details>
-        </div>
-      </header>
+    <MarketingShell><main className="fz-home">
+
 
       <section className="fz-hero">
         <div className="fz-space-orb fz-orb-one" />
@@ -176,6 +145,16 @@ export default function LandingPage() {
         </div>
       </section>
 
+      <section className="fz-story fz-container">
+        <div><span className="fz-eyebrow">НА ОДНОЙ ВОЛНЕ</span><h2>Место для разговоров.<br />Простор для идей.</h2><p>Игровая команда, клуб по интересам или друзья из разных городов — собирайте людей в пространстве с отдельными каналами для каждой темы.</p><Link className="fz-button fz-button-secondary" href="/register">Создать своё пространство <ArrowRight size={17} /></Link></div>
+        <Image src="/images/community-orbit.svg" width={720} height={540} alt="Иллюстрация сообщества: участники объединены вокруг каналов общения, игр и творчества" />
+      </section>
+      <section className="fz-start fz-container"><header><span className="fz-eyebrow">ПРОСТО НАЧАТЬ</span><h2>От знакомства до своего сообщества</h2></header><ol><li><b>01</b><h3>Создай аккаунт</h3><p>Выбери имя, добавь аватар и расскажи немного о себе.</p></li><li><b>02</b><h3>Найди своих</h3><p>Вступи в пространство по приглашению или создай собственное.</p></li><li><b>03</b><h3>Начни разговор</h3><p>Напиши в канал, пригласи друзей и подключись к голосовому общению.</p></li></ol></section>
+      <section className="fz-faq fz-container"><span className="fz-eyebrow">ВОПРОСЫ И ОТВЕТЫ</span><h2>Познакомься с FlipZero</h2>{[
+        ["Можно ли пользоваться без установки?", "Да. Открой FlipZero в браузере и войди в аккаунт. Для Windows также доступна отдельная страница загрузки."],
+        ["Что такое пространство?", "Это сообщество с текстовыми и голосовыми каналами. Владелец управляет участниками, ролями и доступом к каналам."],
+        ["Нужен ли SuperFlip для общения?", "Основные чаты, голосовые каналы и сообщества доступны без SuperFlip. Он добавляет персонализацию и расширенные лимиты."],
+      ].map(([question, answer]) => <details key={question}><summary>{question}</summary><p>{answer}</p></details>)}</section>
       <section className="fz-levels"><div className="fz-container"><span className="fz-eyebrow">ПРОГРЕСС</span><h2>Общайся и открывай достижения</h2><p>Участвуй в жизни сообщества, набирай опыт и следи за своим уровнем в профиле.</p></div></section>
 
       <section className="fz-superflip" id="superflip">
@@ -195,44 +174,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <footer className="fz-footer">
-        <div className="fz-container">
-          <div className="fz-footer-main">
-            <div className="fz-footer-brand">
-              <Link href="/" aria-label="FlipZero — главная"><Logo /></Link>
-              <p>Чаты, голос, видео и сообщества в одном пространстве — без лишних барьеров.</p>
-              <Link className="fz-footer-app-link" href="/app">Открыть FlipZero <ArrowRight size={15} /></Link>
-            </div>
 
-            <nav className="fz-footer-column" aria-label="Продукт">
-              <strong>Продукт</strong>
-              <a href="#features">Возможности</a>
-              <a href="#voice">Голос и видео</a>
-              <a href="#communities">Сообщества</a>
-              <Link href="/superflip">SUPER FLIP</Link>
-            </nav>
-
-            <nav className="fz-footer-column" aria-label="Ресурсы">
-              <strong>Ресурсы</strong>
-              <Link href="/download">Скачать</Link>
-              <Link href="/developers">Для разработчиков</Link>
-              <Link href="/login">Войти</Link>
-              <Link href="/register">Создать аккаунт</Link>
-            </nav>
-
-            <nav className="fz-footer-column" aria-label="Документы">
-              <strong>Документы</strong>
-              <Link href="/privacy">Конфиденциальность</Link>
-              <Link href="/terms">Условия использования</Link>
-            </nav>
-          </div>
-
-          <div className="fz-footer-bottom">
-            <span>© 2026 FlipZero. Больше, чем общение.</span>
-            <a href="https://github.com/flipdanger94/flipzero/issues">Связаться с нами</a>
-          </div>
-        </div>
-      </footer>
 
 
       <script
@@ -247,6 +189,6 @@ export default function LandingPage() {
           description: "Платформа для чатов, голосовой и видеосвязи и сообществ."
         }) }}
       />
-    </main>
+    </main></MarketingShell>
   );
 }

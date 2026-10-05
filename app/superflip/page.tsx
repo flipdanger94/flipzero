@@ -1,10 +1,11 @@
+import { marketingMetadata } from "@/lib/marketing-metadata";
+import { MarketingShell } from "@/components/marketing-shell";
 import type { Metadata } from "next";
 import Link from "next/link";
-import { BrandMark } from "@/components/brand-mark";
 import { AppIcon, type AppIconName } from "@/components/app-icon";
 import styles from "./superflip.module.css";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = marketingMetadata({
   title: "SuperFlip",
   description: "SuperFlip — подписка FlipZero с расширенной персонализацией, лимитами и бонусами.",
   alternates: { canonical: "/superflip" },
@@ -13,7 +14,7 @@ export const metadata: Metadata = {
     description: "Больше возможностей, больше персонализации и бонусов в FlipZero.",
     url: "/superflip",
   },
-};
+});
 
 const whatsNew: Array<{icon:AppIconName;eyebrow:string;title:string;text:string;art:string}> = [
   { icon: "gift", eyebrow: "COIN BONUS", title: "Больше монет за активность", text: "Квесты с активным SuperFlip дают на 20% больше XP и монет — коллекция косметики растёт быстрее.", art: "orbs" },
@@ -43,14 +44,8 @@ const comparison = [
 
 export default function SuperFlipPage() {
   return (
-    <main className={styles.page} data-theme="superflip">
-      <header className={styles.topbar}>
-        <Link href="/" className={styles.logo} aria-label="FlipZero — главная"><BrandMark size={31}/><span>FlipZero</span></Link>
-        <nav aria-label="Навигация SuperFlip">
-          <a href="#home">Главная</a><a href="#new">Что нового</a><a href="#benefits">Лучшие бонусы</a><a href="#plans">Тарифы</a><a href="#compare">Сравнить</a>
-        </nav>
-        <Link href="/app" className={styles.giftButton}><AppIcon name="gift" size={16}/>Открыть FlipZero</Link>
-      </header>
+    <MarketingShell><main className={styles.page} data-theme="superflip">
+
 
       <section className={styles.hero} id="home">
         <div className={styles.heroGlow}/>
@@ -87,7 +82,7 @@ export default function SuperFlipPage() {
       </section>
 
       <section className={styles.plans} id="plans">
-        <div className={styles.sectionTitle}><span>ВЫБЕРИТЕ ТАРИФ</span><h2>Просто и прозрачно</h2><p>Платёжная система ещё не подключена, поэтому кнопка ведёт в текущий waitlist/status flow, а не на вымышленный checkout.</p></div>
+        <div className={styles.sectionTitle}><span>ВЫБЕРИТЕ ТАРИФ</span><h2>Просто и прозрачно</h2><p>Продажи пока не открыты. Присоединитесь к листу ожидания и узнайте о запуске в FlipZero.</p></div>
         <div className={styles.planGrid}>
           <article className={styles.freePlan}><small>FLIPZERO FREE</small><h3>Базовый</h3><strong>$0</strong><p>Все основные чаты, голос, сообщества и базовая персонализация.</p><ul><li><AppIcon name="equip" size={15}/>Основные функции FlipZero</li><li><AppIcon name="equip" size={15}/>Базовые лимиты профиля</li><li><AppIcon name="equip" size={15}/>Магазин и инвентарь</li></ul><Link href="/app">Открыть FlipZero</Link></article>
           <article className={styles.premiumPlan}><div className={styles.recommended}><AppIcon name="superflip" size={13}/>SUPERFLIP</div><small>ОЖИДАЕМАЯ ЦЕНА</small><h3>SuperFlip</h3><strong>$4.99 <em>/ месяц</em></strong><p>Все возможности Free плюс расширенная персонализация, награды и эксклюзивы.</p><ul><li><AppIcon name="equip" size={15}/>+20% XP и монет</li><li><AppIcon name="equip" size={15}/>Анимированные медиа</li><li><AppIcon name="equip" size={15}/>Эксклюзивная косметика</li></ul><Link href="/app">В лист ожидания <AppIcon name="forward" size={15}/></Link></article>
@@ -106,6 +101,6 @@ export default function SuperFlipPage() {
       </section>
 
       <div className={styles.stickyCta}><div><AppIcon name="superflip" size={17}/><span><strong>SuperFlip</strong><small>лист ожидания открыт</small></span></div><Link href="/app">Подключить <AppIcon name="forward" size={15}/></Link></div>
-    </main>
+    </main></MarketingShell>
   );
 }

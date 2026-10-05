@@ -1,17 +1,19 @@
+import { marketingMetadata } from "@/lib/marketing-metadata";
+import { MarketingShell } from "@/components/marketing-shell";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowLeft, ArrowRight, Bot, Code2, KeyRound, ShieldCheck, Webhook } from "lucide-react";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = marketingMetadata({
   title: "Документация API для разработчиков",
   description: "Быстрый старт API FlipZero: создание приложения, Bearer-токен, права доступа и установка в пространство.",
   alternates: { canonical: "/developers/docs" },
-};
+});
 
 const base = "https://flipzeroapp.vercel.app";
 
 export default function DeveloperDocsPage() {
-  return <main className="developer-docs-page"><div className="developer-docs-shell">
+  return <MarketingShell><main className="developer-docs-page"><div className="developer-docs-shell">
     <header><Link href="/developers"><ArrowLeft size={16} /> Разработчикам</Link><span>FlipZero / API</span><Link href="/developers/console">Открыть консоль <ArrowRight size={16} /></Link></header>
     <div className="developer-docs-grid"><nav aria-label="Разделы документации"><strong>Документация</strong><a href="#start">Быстрый старт</a><a href="#token">API-ключ и права</a><a href="#requests">Запросы к API</a><a href="#install">Установка в пространство</a><a href="#webhooks">События и OAuth</a></nav>
       <article>
@@ -24,5 +26,5 @@ export default function DeveloperDocsPage() {
         <footer><span>FlipZero Developer Platform</span><Link href="/developers/console">Перейти к приложениям <ArrowRight size={16} /></Link></footer>
       </article>
     </div>
-  </div></main>;
+  </div></main></MarketingShell>;
 }

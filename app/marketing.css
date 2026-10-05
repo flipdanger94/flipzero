@@ -1,0 +1,65 @@
+/* Public website styles are scoped so the messenger retains its own layout. */
+.fz-marketing{background:#070b18;color:#f4f6ff;overflow-x:clip}
+.fz-marketing #marketing-content{min-width:0}
+.fz-marketing .fz-header{position:sticky;top:0;height:80px;background:#070b18ed}
+.fz-marketing .fz-header nav{font-size:.86rem}
+.fz-marketing .fz-mobile-menu nav{display:grid;font-size:1rem;max-height:calc(100dvh - 100px);overflow-y:auto}
+.fz-marketing .fz-mobile-menu summary{cursor:pointer}
+.fz-marketing .fz-skip{position:fixed;top:8px;left:16px;z-index:100;transform:translateY(-150%);padding:12px 18px;border-radius:10px;background:#fff;color:#101322}
+.fz-marketing .fz-skip:focus{transform:none}
+.fz-marketing :is(a,summary):focus-visible{outline:2px solid #9edfff;outline-offset:5px}
+.fz-marketing :is(section,article)[id]{scroll-margin-top:100px}
+.fz-marketing .fz-hero{padding-top:72px;background:radial-gradient(ellipse at 80% 20%,#43277550,transparent 55%),#070b18}
+.fz-marketing .fz-hero-grid{gap:48px;min-height:530px}
+.fz-marketing .fz-hero h1{font-size:clamp(3.3rem,5.8vw,5.8rem);line-height:1.08}
+.fz-marketing .fz-hero-copy>p{color:#b9c3dd}
+.fz-marketing .fz-app-preview{border-color:#6359ad;box-shadow:0 32px 100px #0008}
+.fz-marketing .fz-feature-strip{padding-top:30px;gap:18px}
+.fz-marketing .fz-feature-strip article{border-color:#ffffff16;background:#10172a;border-radius:20px;padding:26px}
+.fz-marketing .fz-feature-strip h2{font-size:1.15rem;line-height:1.35;margin:18px 0 10px}
+.fz-marketing .fz-feature-strip p{color:#b2bfd8;font-size:.96rem;line-height:1.65}
+.fz-marketing .fz-section{background:#080e1c}
+.fz-marketing .fz-section-head h2{line-height:1.1}
+.fz-story{padding-block:90px;display:grid;grid-template-columns:1fr 1fr;align-items:center;gap:64px}
+.fz-story h2,.fz-start h2,.fz-faq h2{font-size:clamp(2rem,3.5vw,3.4rem);line-height:1.15;letter-spacing:-.045em;margin:18px 0}
+.fz-story p{color:#b7c2dc;line-height:1.75;font-size:1.05rem;margin-bottom:26px}
+.fz-story img{width:100%;height:auto;border-radius:28px;border:1px solid #ffffff14}
+.fz-start{padding-block:35px 90px}
+.fz-start ol{padding:0;margin:32px 0 0;list-style:none;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:22px}
+.fz-start li{padding:28px;border-top:1px solid #53628b;background:linear-gradient(#11192b,#080e1c);border-radius:0 0 18px 18px}
+.fz-start li>b{color:#a995ff;font-size:1.5rem}
+.fz-start h3{font-size:1.2rem;margin:18px 0 10px}
+.fz-start p,.fz-faq p{color:#b7c2dc;line-height:1.7}
+.fz-faq{padding-block:20px 90px;max-width:900px}
+.fz-faq details{border-bottom:1px solid #ffffff20;padding:22px 0}
+.fz-faq summary{cursor:pointer;font-size:1.1rem;font-weight:650;line-height:1.5}
+.fz-faq p{margin-bottom:0;max-width:760px}
+.fz-marketing .fz-levels{padding:55px 0;background:linear-gradient(110deg,#17203c,#211437)}
+.fz-marketing .fz-levels h2{font-size:clamp(1.8rem,3vw,2.6rem);margin:16px 0}
+.fz-marketing .fz-levels p{color:#b7c2dc;line-height:1.6}
+.fz-marketing .fz-footer-column :is(a,strong){font-size:.9rem}
+.fz-marketing .fz-footer-bottom{font-size:.82rem;color:#a2afcd}
+.fz-marketing :is(.legal-page,.download-page,.developer-public-page,.developer-docs-page){min-height:0;background:radial-gradient(circle at 85% 0,#4e35a52e,transparent 45%),#070b18}
+.fz-marketing .download-page{padding:80px 24px}
+.fz-marketing .download-card{width:min(880px,100%)}
+.fz-marketing .download-card p{color:#b8c1d6;margin-top:20px}
+.fz-marketing .download-requirements{font-size:.9rem;line-height:1.6;color:#c0c9df;border-color:#ffffff20}
+.fz-marketing .download-home{font-size:1rem;color:#b8b1ff;min-height:44px;display:flex;align-items:center;justify-content:center}
+.fz-marketing .download-checksum{overflow-wrap:anywhere}
+.fz-marketing .legal-page p{font-size:1rem;color:#b9c2d6}
+.fz-marketing .legal-page h1{line-height:1.15;overflow-wrap:anywhere}
+.fz-marketing .legal-page h2{font-size:1.25rem}
+.fz-marketing .developer-public-page>section{padding-top:70px}
+.fz-marketing .developer-public-page h1{line-height:1.1}
+.fz-marketing .developer-public-actions{display:flex;flex-wrap:wrap;align-items:center;gap:20px}
+.fz-marketing .developer-public-cta{width:auto;min-height:48px;margin-top:0}
+.fz-marketing .developer-public-docs{color:#b8b1ff}
+.fz-marketing .developer-public-page code{overflow-wrap:anywhere}
+.fz-marketing main[data-theme="superflip"]{min-height:0;padding-bottom:45px}
+.fz-marketing main[data-theme="superflip"]>div:last-child{position:static;margin:20px auto;max-width:700px}
+.fz-marketing .auth-page{min-height:calc(100dvh - 80px);height:auto}
+@media(max-width:1150px){.fz-marketing .fz-header-inner>nav{display:none}.fz-marketing .fz-mobile-menu{display:block}.fz-marketing .fz-header-button{display:none}}
+@media(max-width:900px){.fz-marketing .fz-hero-grid{grid-template-columns:1fr}.fz-story{grid-template-columns:1fr;gap:32px;padding-block:65px}.fz-start ol{grid-template-columns:1fr}.fz-marketing .fz-footer-main{gap:28px}}
+@media(max-width:600px){.fz-marketing .fz-header{height:68px}.fz-marketing .fz-hero{padding-top:44px}.fz-marketing .fz-hero h1{font-size:clamp(2.8rem,12vw,4rem)}.fz-marketing .fz-feature-strip{padding-top:0}.fz-marketing .fz-feature-strip article{padding:22px}.fz-story{padding-block:50px}.fz-start,.fz-faq{padding-bottom:55px}.fz-marketing .fz-footer-main{grid-template-columns:1fr 1fr}.fz-marketing .fz-footer-brand{min-width:0}.fz-marketing .download-page{padding:55px 20px}.fz-marketing .download-card h1{font-size:2.7rem;line-height:1.1}.fz-marketing .fz-mobile-menu nav{width:min(300px,calc(100vw - 32px))}.fz-marketing .legal-page article{padding:24px 20px}.fz-marketing .developer-public-actions>a{width:100%}.fz-marketing .fz-section-head h2{font-size:2.4rem}}
+@media(prefers-reduced-motion:reduce){.fz-marketing *{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+.fz-marketing .fz-download-art{display:block;width:min(420px,100%);height:auto;margin:30px auto;border-radius:22px;border:1px solid #ffffff20}
