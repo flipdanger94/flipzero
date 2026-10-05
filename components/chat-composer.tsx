@@ -53,11 +53,33 @@ export function ChatComposer({
   const fileRef = useRef<HTMLInputElement | null>(null);
   const mediaRef = useRef<HTMLInputElement | null>(null);
   const cameraRef = useRef<HTMLInputElement | null>(null);
+  const attachRef = useRef<HTMLDivElement | null>(null);
   const [attachOpen, setAttachOpen] = useState(false);
   const effectiveRef = textareaRef ?? localRef;
   const overLimit = value.length > limit;
   const showCounter = value.length >= Math.floor(limit * 0.8);
   const canSend = !disabled && !busy && !overLimit && (Boolean(value.trim()) || hasAttachments);
+
+  useEffect(() => {
+    if (!attachOpen) return;
+    function dismiss(event: PointerEvent) {
+      if (event.target instanceof Node && !attachRef.current?.contains(event.target)) setAttachOpen(false);
+    }
+    function escape(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        setAttachOpen(false);
+        attachRef.current?.querySelector<HTMLButtonElement>("button")?.focus();
+      }
+    }
+    document.addEventListener("pointerdown", dismiss);
+    document.addEventListener("keydown", escape, true);
+    return () => {
+      document.removeEventListener("pointerdown", dismiss);
+      document.removeEventListener("keydown", escape, true);
+    };
+  }, [attachOpen]);
 
   useEffect(() => {
     const input = effectiveRef.current;
@@ -87,7 +109,7 @@ export function ChatComposer({
         <>
           <div className="chat-composer-row">
             {onFiles ? (
-              <div className="chat-attach-wrap">
+              <div className="chat-attach-wrap" ref={attachRef}>
                 <button type="button" className="chat-composer-icon" aria-label="Добавить вложение" title="Добавить вложение" aria-expanded={attachOpen} onClick={() => setAttachOpen((open) => !open)}>
                   <FilePlus2 size={19} />
                 </button>
@@ -110,9 +132,11 @@ export function ChatComposer({
               value={value}
               disabled={busy}
               aria-invalid={overLimit}
+              aria-label={placeholder}
               placeholder={placeholder}
               onChange={(event) => onChange(event.target.value)}
               onKeyDown={(event) => {
+                if (event.nativeEvent.isComposing || event.keyCode === 229) return;
                 onKeyDown?.(event);
                 if (event.defaultPrevented) return;
                 if (event.key === "Enter" && !event.shiftKey) {
