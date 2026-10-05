@@ -85,6 +85,32 @@ beforeEach(async () => {
 afterAll(async () => { await pg?.close(); });
 
 describe("private attachment access with PostgreSQL", () => {
+  it("repairs legacy member history access without widening custom roles or overriding channel denies", async () => {
+    await spaceFixture();
+    await db.update(schema.roles).set({ permissions: 3139, isManaged: true, position: 0 }).where(eq(schema.roles.id, "role"));
+    await db.insert(schema.roles).values([
+      { id: "custom", spaceId: "space", name: "Custom", permissions: 3139, isManaged: false },
+      { id: "restricted", spaceId: "space", name: "Restricted", permissions: Permission.ViewChannels, isManaged: true, position: 0 },
+    ]);
+    state.viewer = "b";
+    const params = { params: Promise.resolve({ channelId: "channel" }) };
+    expect((await readHistory(new Request("https://flipzero.test/api"), params))?.status).toBe(403);
+    const sql = await readFile(new URL("../drizzle/0035_legacy_member_history.sql", import.meta.url), "utf8");
+    await pg.exec(sql);
+    await pg.exec(sql);
+    expect((await readHistory(new Request("https://flipzero.test/api"), params))?.status).toBe(200);
+    const custom = await db.select().from(schema.roles).where(eq(schema.roles.id, "custom"));
+    const restricted = await db.select().from(schema.roles).where(eq(schema.roles.id, "restricted"));
+    expect(Number(custom[0].permissions)).toBe(3139);
+    expect(Number(restricted[0].permissions)).toBe(Permission.ViewChannels);
+    await db.insert(schema.channelOverrides).values({ channelId: "channel", targetType: "member", targetId: "b", allow: 0, deny: Permission.ReadHistory });
+    expect((await readHistory(new Request("https://flipzero.test/api"), params))?.status).toBe(403);
+    state.viewer = "c";
+    expect((await readHistory(new Request("https://flipzero.test/api"), params))?.status).toBe(200);
+    await db.delete(schema.members).where(eq(schema.members.userId, "c"));
+    expect((await readHistory(new Request("https://flipzero.test/api"), params))?.status).toBe(403);
+  });
+
   it("permits only the uploader to preview a pending file and never caches a denial", async () => {
     const { id } = await uploaded();
     expect((await getFile(id)).status).toBe(200);

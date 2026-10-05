@@ -77,6 +77,7 @@ try {
   const storeInventorySql = await readFile(new URL("../drizzle/0033_store_inventory.sql", import.meta.url), "utf8");
   await client.unsafe(storeInventorySql);
   await applyVersionedMigration(client, "0034_private_attachments", new URL("../drizzle/0034_private_attachments.sql", import.meta.url));
+  await applyVersionedMigration(client, "0035_legacy_member_history", new URL("../drizzle/0035_legacy_member_history.sql", import.meta.url));
 
   const slotForCategory = (category) => ({
     avatar_frame: "avatar_decoration",
